@@ -1,0 +1,103 @@
+[tool.poetry]
+name = "cellseg_models_pytorch"
+version = "0.1.8"
+description = "Python library for 2D cell/nuclei instance segmentation models written with PyTorch."
+authors = ["Okunator <oskari.lehtonen@helsinki.fi>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/okunator/cellseg_models.pytorch"
+repository = "https://github.com/okunator/cellseg_models.pytorch"
+keywords = ["cell segmentation", "nuclei segmentation", "pytorch", "pytorch-lightning"]
+
+
+[tool.poetry.dependencies]
+python = "^3.7.1,<3.11"
+torch = "^1.8"
+torchvision = "^0.9"
+numpy = "^1.21"
+scipy = "^1.7"
+scikit-image = "^0.19"
+pathos = "^0.2.8"
+opencv-python = "^4.2.0.32"
+timm = ">=0.5.4,<0.7.0"
+numba = "^0.55.2"
+tqdm = "^4.64.0"
+scikit-learn = "^1.0.2"
+pytorch-lightning = {version = "^1.6.0", optional = true}
+torch-optimizer = {version = "^0.3.0", optional = true}
+tables = {version = "^3.6.0", optional = true}
+albumentations = {version = "^1.0.0", optional = true}
+requests = {version = "^2.28.0", optional = true}
+
+
+[tool.poetry.extras]
+all = ["pytorch-lightning", "tables", "requests", "albumentations", "torch-optimizer"]
+
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+pytest-cov = "^3.0.0"
+pytest-xdist = "^2.5.0"
+flake8 = "^4.0.1"
+flake8-docstrings = "^1.6.0"
+flake8-bugbear = "^22.1.11"
+pyproject-flake8 = "^0.0.1-alpha.2"
+pre-commit = "^2.17.0"
+matplotlib = "^3.5.1"
+mypy = "^0.931"
+isort = "^5.10.1"
+black = "^22.3.0"
+
+[tool.poetry.group.dev.dependencies]
+scriv = {extras = ["toml"], version = "^0.16.0"}
+
+[tool.scriv]
+format = "md"
+version = "literal: cellseg_models_pytorch/__init__.py: __version__"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -v"
+markers = ["cuda (deselect with '-m \"nocuda\"')"]
+
+[tool.isort]
+profile = "black"
+skip = [".gitignore", ".dockerignore", ".md", ".json"]
+multi_line_output = 3
+
+[tool.black]
+line-length = 88
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = "E203,D103,D104,"
+max-complexity = 10
+exclude = ".git,__pycache__,docs/source/conftest.py,old,build,dist,test,tests"
+
+[tool.coverage.run]
+source = ["cellseg_models_pytorch"]
+
+[tool.coverage.report]
+omit = ["*/tests/*", "*/__init__.py", "*/datamodules/*", "*/wandb_callbacks.py"]
+exclude_lines = [
+    "raise TypeError",
+    "raise ImportError",
+    "raise NotImplementedError",
+    "raise ZeroDivisionError",
+    "raise ValueError",
+    "raise IOError",
+    "except ImportError",
+    "except TypeError",
+    "except Exception",
+    "def extra_repr"
+]
+
+[tool.mypy]
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+plugins = "numpy.typing.mypy_plugin"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
