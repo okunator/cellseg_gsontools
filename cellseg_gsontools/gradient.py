@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
-from matplotlib import cm
 import numpy as np
-from helper import create_grid
 import shapely
+from helper import create_grid
+from matplotlib import cm
+
 
 def get_gradient(pdf):
-
-    """
-    Convert distribution into gradient distribution
+    """Convert distribution into gradient distribution.
 
     Args:
     ---------
@@ -17,18 +16,16 @@ def get_gradient(pdf):
     ---------
         np.ndarray: Shape (H, W) with gradient lengths
     """
-
     grad = np.gradient(np.array(pdf.T))
 
-    #Length for each vector
-    gradient_flat = np.sqrt(grad[0]**2 + grad[1]**2)
+    # Length for each vector
+    gradient_flat = np.sqrt(grad[0] ** 2 + grad[1] ** 2)
 
     return gradient_flat
 
-def development_metric(pdf):
 
-    """
-    Measures tissue differentiation based on cell distribution
+def development_metric(pdf):
+    """Measures tissue differentiation based on cell distribution.
 
     Args:
     ---------
@@ -38,13 +35,11 @@ def development_metric(pdf):
     ---------
         float: measure of development
     """
-
     return np.sum(np.abs(get_gradient(pdf)))
 
-def arrow_plot(z, points, dx, dy):
 
-    """
-        3D plot of cell distribution
+def arrow_plot(z, points, dx, dy):
+    """Arrow plot of cell distribution gradient.
 
     Args:
     ---------
@@ -56,18 +51,18 @@ def arrow_plot(z, points, dx, dy):
     ---------
         None
     """
-
     X, Y = create_grid(dx, dy)
 
     ddx, ddy = np.gradient(z)
 
     fig, ax = plt.subplots()
 
-    n=100
-    ax.quiver(X[::n,::n],Y[::n,::n],ddx[::n,::n], -ddy[::n,::n],
-            units="xy", width = 10)
+    n = 100
+    ax.quiver(
+        X[::n, ::n], Y[::n, ::n], ddx[::n, ::n], -ddy[::n, ::n], units="xy", width=10
+    )
 
-    #Cell area
+    # Cell area
     polygon = shapely.geometry.Polygon(points)
     convex_hull = polygon.convex_hull
     x, y = convex_hull.exterior.xy
@@ -76,10 +71,9 @@ def arrow_plot(z, points, dx, dy):
     plt.gca().invert_yaxis()
     plt.show()
 
-def multidim_plot(z, points, dx, dy):
 
-    """
-        Arrow plot of cell distribution gradient
+def multidim_plot(z, points, dx, dy):
+    """3D plot of cell distribution.
 
     Args:
     ---------
@@ -91,16 +85,14 @@ def multidim_plot(z, points, dx, dy):
     ---------
         None
     """
-
     hf = plt.figure()
-    ha = hf.add_subplot(111, projection='3d')
+    ha = hf.add_subplot(111, projection="3d")
 
     X, Y = create_grid(dx, dy)
 
-    ha.plot_surface(X,Y,z, cmap=cm.coolwarm,
-                        linewidth=0, antialiased=False)
+    ha.plot_surface(X, Y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
-    #Cell area
+    # Cell area
     polygon = shapely.geometry.Polygon(points)
     convex_hull = polygon.convex_hull
     x, y = convex_hull.exterior.xy
