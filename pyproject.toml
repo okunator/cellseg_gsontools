@@ -20,6 +20,8 @@ matplotlib = "^3.6.1"
 opencv-python = "^4.2.0.32"
 pandarallel = "^1.6.4"
 numba = "^0.56.4"
+mapclassify = "^2.5.0"
+libpysal = "^4.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
