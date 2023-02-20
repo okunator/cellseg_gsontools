@@ -61,12 +61,11 @@ def neighborhood(
 
     """
     nhood = np.nan
-    if node in spatial_weights.neighbors.keys():
-        if ret_n_neighbors:
-            nhood = len(spatial_weights.neighbors[node])
-        else:
-            # get spatial neighborhood
-            nhood = [node] + spatial_weights.neighbors[node]
+    if ret_n_neighbors:
+        nhood = spatial_weights.cardinalities[node]
+    elif node in spatial_weights.neighbors.keys():
+        # get spatial neighborhood
+        nhood = [node] + spatial_weights.neighbors[node]
 
     return nhood
 
@@ -113,7 +112,7 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
                 data,
                 nhood_vals,
                 col="nhood",
-                values=data[val_col],
+                values=values,
             )
 
         0                                   [0.42]
@@ -190,7 +189,7 @@ def nhood_counts(
                 data,
                 nhood_counts,
                 col="nhood",
-                values=data[val_col],
+                values=values,
                 bins=bins,
             )
 

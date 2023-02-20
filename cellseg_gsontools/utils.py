@@ -1,7 +1,9 @@
 import geopandas as gpd
 
 
-def set_uid(gdf: gpd.GeoDataFrame, id_col: str = "uid") -> gpd.GeoDataFrame:
+def set_uid(
+    gdf: gpd.GeoDataFrame, id_col: str = "uid", drop: bool = False
+) -> gpd.GeoDataFrame:
     """Set a unique identifier column to gdf.
 
     NOTE: by default sets a running index column to gdf as the uid.
@@ -10,6 +12,10 @@ def set_uid(gdf: gpd.GeoDataFrame, id_col: str = "uid") -> gpd.GeoDataFrame:
     ----------
         gdf : gpd.GeoDataFrame
             Input Geodataframe
+        id_col : str, default="uid"
+            The name of the column that will be used or set to the id.
+        drop : bool, default=True
+            Drop the column after it is added to index.
 
     Returns
     -------
@@ -22,7 +28,10 @@ def set_uid(gdf: gpd.GeoDataFrame, id_col: str = "uid") -> gpd.GeoDataFrame:
 
     if id_col == "uid":
         gdf[id_col] = range(1, len(gdf) + 1)
-    else:
-        gdf["uid"] = gdf[id_col]
+    # else:
+    #     gdf["uid"] = gdf[id_col]
+    # gdf = gdf.drop([id_col], axis=1)
+
+    gdf = gdf.set_index(id_col, drop=drop)
 
     return gdf

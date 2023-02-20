@@ -163,10 +163,10 @@ def local_diversity(
     Compute the simpson diversity of eccentricity values for each neighborhood
 
         >>> from libpysal.weights import DistanceBand
-        >>> from cellseg_gsontools.diversity import get_diversity
+        >>> from cellseg_gsontools.diversity import local_diversity
 
         >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-        >>> diversity(
+        >>> local_diversity(
                 gdf,
                 spatial_weights=w_dist,
                 val_col="eccentricity",
@@ -191,7 +191,7 @@ def local_diversity(
 
     # set uid
     data = set_uid(gdf)
-    data = data.set_index("uid", drop=False)
+    # data = data.set_index("uid", drop=False)
 
     # Get the immediate node neighborhood
     data["nhood"] = gdf_apply(
@@ -199,6 +199,7 @@ def local_diversity(
         neighborhood,
         col="uid",
         spatial_weights=spatial_weights,
+        parallel=False,
     )
 
     # Get bins if data not categorical
