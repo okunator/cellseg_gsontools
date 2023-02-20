@@ -78,20 +78,20 @@ def local_character(
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
         val_col: str
-            The name of the column in the gdf for which the diversity is computed
+            The name of the column in the gdf for which the reduction is computed
         reduction : str, default="sum"
             The reduction method for the neighborhood. One of "sum", "mean", "median".
         weight_by_area : bool, default=False
             Flag wheter to weight the neighborhood values by the area of the object.
         parallel : bool, default=False
-            Flag whether to use parallel apply operations when computing the diversities
+            Flag whether to use parallel apply operations when computing the character
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
 
     Returns
     -------
         gpd.GeoDataFrame:
-            The input geodataframe with computed diversity metric columns added.
+            The input geodataframe with computed character column added.
 
     Examples
     --------
