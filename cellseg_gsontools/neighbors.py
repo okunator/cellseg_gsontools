@@ -5,11 +5,14 @@ import numpy as np
 import pandas as pd
 from libpysal.weights import W
 
-__all__ = ["neighborhood", "nhood_counts", "nhood_vals"]
+__all__ = ["neighborhood", "nhood_counts", "nhood_vals", "nhood_type_count"]
 
 
 def neighborhood(
-    node: int, spatial_weights: W, ret_n_neighbors: bool = False
+    node: int,
+    spatial_weights: W,
+    include_self: bool = True,
+    ret_n_neighbors: bool = False,
 ) -> Union[List[int], int]:
     """Get immediate neighborhood of a node given the spatial weights obj.
 
@@ -21,6 +24,8 @@ def neighborhood(
             Input node uid.
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
+        include_self : bool, default=True
+            Flag, whether to include the node itself in the neighborhood.
         ret_n_neighbors : bool, default=False
             If True, instead of returnig a sequence of the neigbor node uids
             returns just the number of neighbors.
@@ -65,7 +70,9 @@ def neighborhood(
         nhood = spatial_weights.cardinalities[node]
     elif node in spatial_weights.neighbors.keys():
         # get spatial neighborhood
-        nhood = [node] + spatial_weights.neighbors[node]
+        nhood = spatial_weights.neighbors[node]
+        if include_self:
+            nhood = [node] + nhood
 
     return nhood
 
@@ -103,7 +110,7 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
                 data, neighborhood, col="uid", spatial_weights=w_dist
             )
 
-        >>> # Define the gdf column that will be binned
+        >>> # Define the gdf column of interest
         >>> val_col = "eccentricity"
         >>> values = data.set_index("uid")[val_col]
 
@@ -217,3 +224,96 @@ def nhood_counts(
             counts = sample_bins.counts
 
     return counts
+
+
+def nhood_type_count(
+    cls_neighbors: Sequence, cls: Union[int, str], frac: bool = True, **kwargs
+) -> float:
+    """Get the number of nodes of a specific category in a neighborhood of a node.
+
+    Parameters
+    ----------
+        cls_neihbors : Sequence
+            A array/list (int or str) containing a category for each value in the data.
+        cls : int or str
+            The specific category
+        frac : bool, default=True
+            Flag, whether to return the fraction instead of the count
+
+    Returns
+    -------
+        float:
+            The count or fraction of a node of specific category in a neighborhood.
+
+    Raises
+    ------
+        TypeError: If the `cls_neighbors` is not cadtegorical.
+
+    Example
+    -------
+        Use `gdf_apply` to get the neihgborhood fractions of immune cells for each node
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
+        >>> from cellseg_gsontools.utils import set_uid
+
+        >>> # Set uid to the gdf
+        >>> data = set_uid(gdf)
+
+        >>> # Get spatial weights
+        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+
+        >>> # Get the neihgboring nodes of the graph
+        >>> data["nhood"] = gdf_apply(
+                data, neighborhood, col="uid", spatial_weights=w_dist
+            )
+
+        >>> # Define the class name column
+        >>> val_col = "class_name"
+        >>> values = data.set_index("uid")[val_col]
+
+        >>> # get the neighborhood classes
+        >>> data[f"{val_col}_nhood_vals"] = gdf_apply(
+                data,
+                nhood_vals,
+                col="nhood",
+                values=values,
+            )
+
+        >>> data["local_infiltration_fraction"] = gdf_apply(
+                data,
+                nhood_type_count,
+                col=f"{val_col}_nhood_vals",
+                cls="inflammatory",
+                parallel=True
+            ).head(14)
+        uid
+        1     0.000000
+        2     0.500000
+        3     0.000000
+        4     0.250000
+        5     0.000000
+        6     1.000000
+        7     0.000000
+        8     0.250000
+        9     0.333333
+        10    0.333333
+        11    0.000000
+        12    0.250000
+        13    0.333333
+        14    0.000000
+        Name: class_name_nhood_vals, dtype: float64
+    """
+    if len(cls_neighbors) > 0:
+        if not isinstance(cls_neighbors[0], (int, str)):
+            raise TypeError("cls_neighbors must contain int of str values.")
+
+    t, c = np.unique(cls_neighbors, return_counts=True)
+
+    ret = 0.0
+    if cls in t:
+        ix = np.where(t == cls)
+        ret = c[ix][0]
+        if frac:
+            ret = ret / np.sum(c)
+
+    return ret

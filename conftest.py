@@ -15,5 +15,6 @@ def cell_gson() -> Path:
     df = pd.read_json(path)
     df["geometry"] = df["geometry"].apply(shapely.geometry.shape)
     df = gpd.GeoDataFrame(df).set_geometry("geometry")
+    df["class_name"] = df["properties"].apply(lambda x: x["classification"]["name"])
 
     return df
