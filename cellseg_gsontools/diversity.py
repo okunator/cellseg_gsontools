@@ -122,6 +122,7 @@ def local_diversity(
     spatial_weights: W,
     val_col: str,
     metrics: Tuple[str, ...] = ("simpson_index",),
+    scheme: str = "HeadTailBreaks",
     categorical: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
@@ -137,11 +138,12 @@ def local_diversity(
             The input GeoDataFrame.
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
-        val_col: str
+        val_col : str
             The name of the column in the gdf for which the diversity is computed
         metrics : Tuple[str, ...]
             A Tuple/List of diversity metrics. Allowed metrics: "shannon_entropy",
             "simpson_index", "gini_index", "theil_index"
+        scheme : str, default="HeadTailBreaks"
         categorical : bool, default=False
             A flag, signalling whether the `val_col` column of the gdf is categorical.
         parallel : bool, default=False
@@ -205,7 +207,7 @@ def local_diversity(
     # Get bins if data not categorical
     values = data[val_col]
     if not categorical:
-        bins = mapclassify.classify(values, scheme="HeadTailBreaks").bins
+        bins = mapclassify.classify(values, scheme=scheme).bins
     else:
         bins = None
 
