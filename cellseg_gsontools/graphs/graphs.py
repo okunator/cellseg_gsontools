@@ -81,7 +81,7 @@ def Delaunay(cells):
     points = np.array(list_to_pos(cells))
     A = np.zeros((len(cells), len(cells)))
 
-    G = nx.from_numpy_matrix(A)
+    G = nx.from_numpy_array(A)
 
     tri = scipy.spatial.Delaunay(points, incremental=True)
 
@@ -136,7 +136,7 @@ def create_knn(cells, k=3):
     ---------
         nx.Graph object and array of weights
     """
-    G = nx.from_numpy_matrix(KNNgraph(cells, k))
+    G = nx.from_numpy_array(KNNgraph(cells, k))
     G_weights = graph_weights(cells, G)
 
     return G, G_weights

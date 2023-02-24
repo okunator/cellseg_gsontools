@@ -1,3 +1,3 @@
-from .helper import shape_metric
+from .geometry import alpha_shape
 
-__all__ = ["shape_metric"]
+__all__ = ["alpha_shape"]

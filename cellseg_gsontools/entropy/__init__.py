@@ -7,6 +7,7 @@ from .entropy import (
     image_sharpen,
     image_smooth,
     spatial_entropy,
+    array_entropy
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "image_sharpen",
     "image_smooth",
     "spatial_entropy",
+    "array_entropy"
 ]
