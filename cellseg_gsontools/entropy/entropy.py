@@ -14,6 +14,10 @@ def array_entropy(array: np.array) -> float:
     ---------
         float: entropy
     """
+    bins = np.linspace(50,2000,50)
+    digitized = np.histogram(array, bins)
+    array = digitized[0]
+
     samples_probability = [float(h) / np.sum(array) for h in array]
     return -np.sum([p * np.log(p) for p in samples_probability if p != 0])
 
