@@ -22,15 +22,13 @@ def set_uid(
         gpd.GeoDataFrame:
             The inputr gdf with a "uid" column added to it
     """
-    allowed = list(gdf.columns) + ["uid"]
+    allowed = list(gdf.columns) + ["uid", "id"]
     if id_col not in allowed:
         raise ValueError(f"Illegal `id_col`. Got: {id_col}. Allowed: {allowed}.")
 
-    if id_col == "uid":
+    gdf = gdf.copy()
+    if id_col in ("uid", "id"):
         gdf[id_col] = range(1, len(gdf) + 1)
-    # else:
-    #     gdf["uid"] = gdf[id_col]
-    # gdf = gdf.drop([id_col], axis=1)
 
     gdf = gdf.set_index(id_col, drop=drop)
 

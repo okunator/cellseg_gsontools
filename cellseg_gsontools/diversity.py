@@ -9,7 +9,12 @@ from .apply import gdf_apply
 from .neighbors import neighborhood, nhood_counts, nhood_vals
 from .utils import set_uid
 
-__all__ = ["simpson_index", "shannon_index", "gini_index", "local_diversity"]
+__all__ = [
+    "simpson_index",
+    "shannon_index",
+    "gini_index",
+    "local_diversity",
+]
 
 
 def simpson_index(counts: Sequence) -> float:
