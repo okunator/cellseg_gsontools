@@ -22,6 +22,7 @@ pandarallel = "^1.6.4"
 numba = "^0.56.4"
 mapclassify = "^2.5.0"
 libpysal = "^4.7.0"
+esda = "^2.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
