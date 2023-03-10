@@ -1,9 +1,8 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import shapely
 from distribution import gauss2d
-from helper import alpha_shape, create_grid
-from plotting import plot_polygon
+from geometry import alpha_shape
+from helper import create_grid
 
 
 def get_gradient(pdf: np.ndarray) -> np.ndarray:
@@ -25,7 +24,7 @@ def get_gradient(pdf: np.ndarray) -> np.ndarray:
     return gradient_flat
 
 
-def dist_grad_sum(pdf: np.ndarray) -> float:
+def total_gradient(pdf: np.ndarray) -> float:
     """Sum gradient of distribution.
 
     Args:
@@ -39,7 +38,7 @@ def dist_grad_sum(pdf: np.ndarray) -> float:
     return np.sum(get_gradient(pdf))
 
 
-def development_metric(
+def differentiation(
     z: np.ndarray, points: list[tuple[float, float]], dx: int, dy: int, n: int = 100
 ) -> float:
     """Calculate differentioation metric for cells.
@@ -62,19 +61,6 @@ def development_metric(
     center_area = shapely.affinity.scale(
         connective_hull, xfact=0.8, yfact=0.8, zfact=0.8, origin="center"
     )
-
-    p = 0
-    if p:
-        xs = [o[0] for o in points]
-        ys = [o[1] for o in points]
-
-        fig, ax = plt.subplots()
-        plot_polygon(connective_hull, "red", ax)
-        ax.scatter(xs, ys)
-        plt.gca().invert_yaxis()
-        plt.show()
-
-    x, y = center_area.exterior.xy
 
     X = X[::n, ::n]
     Y = Y[::n, ::n]
@@ -111,7 +97,7 @@ def gradient_bootstrap(
     for i in range(length):
         spoints = np.array(points)[np.random.randint(np.shape(points)[0], size=size), :]
         z = gauss2d(H, W, spoints)
-        val = development_metric(z, spoints, H, W)
+        val = differentiation(z, spoints, H, W)
         sample.append(val)
 
     return sample

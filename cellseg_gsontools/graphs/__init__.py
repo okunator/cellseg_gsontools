@@ -1,6 +1,4 @@
 from .graphs import (
-    Delaunay,
-    KNNgraph,
     create_knn,
     draw_graph,
     graph_pos,
@@ -10,8 +8,6 @@ from .graphs import (
 )
 
 __all__ = [
-    "Delaunay",
-    "KNNgraph",
     "create_knn",
     "draw_graph",
     "graph_pos",

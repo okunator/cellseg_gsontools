@@ -1,20 +1,21 @@
+import geopandas as gpd
 import numpy as np
 from helper import get_points
 from sklearn.cluster import DBSCAN
 
 
-def array_entropy(array: np.array) -> float:
+def array_entropy(array: np.array, bins: np.linspace) -> float:
     """Calculate Shannon entropy for array.
 
     Args:
     ---------
         array: numerical array
+        bins: numerical array
 
     Returns:
     ---------
         float: entropy
     """
-    bins = np.linspace(50,2000,50)
     digitized = np.histogram(array, bins)
     array = digitized[0]
 
@@ -122,7 +123,7 @@ def image_min(img: np.array, k: int) -> np.array:
     return results
 
 
-def add_cell_shape(cells) -> float:
+def add_cell_shape(cells: gpd.geodataframe) -> float:
     """Add cell shape metric to cell table.
 
     Args:
@@ -142,7 +143,7 @@ def add_cell_shape(cells) -> float:
     return cells
 
 
-def cell_shape_metric(cells) -> float:
+def cell_shape_metric(cells: gpd.geodataframe) -> float:
     """Calculate entropy of cell shapes.
 
     Args:
@@ -156,7 +157,7 @@ def cell_shape_metric(cells) -> float:
     return array_entropy(cells)
 
 
-def lesion_segment(cells, points):
+def lesion_segment(cells: gpd.geodataframe, points, eps=200):
     """Cluster lesions.
 
     Args:
@@ -168,21 +169,14 @@ def lesion_segment(cells, points):
     ---------
         Geodataframe of cells
     """
-    db = DBSCAN(eps=200, min_samples=0).fit(points, cells["weight"])
+    db = DBSCAN(eps=eps, min_samples=0).fit(points, cells["weight"])
     labels = db.labels_
-
-    # Number of clusters in labels, ignoring noise if present.
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise_ = list(labels).count(-1)
-
-    print("Estimated number of clusters: %d" % n_clusters_)
-    print("Estimated number of noise points: %d" % n_noise_)
 
     cells["label"] = labels
     return cells
 
 
-def spatial_entropy(cells):
+def spatial_entropy(cells: gpd.geodataframe):
     """Calculate entropy of marginal coordinate distributions of cells.
 
     Args:

@@ -1,9 +1,9 @@
+import libpysal
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import scipy.spatial
 import shapely
-from sklearn.neighbors import kneighbors_graph
 
 
 def points_to_coords(points):
@@ -49,22 +49,6 @@ def list_to_pos(cells):
         list of cell coordinates
     """
     return list(graph_pos(cells).values())
-
-
-def KNNgraph(cells, k=3):
-    """Build graph edges based KNN.
-
-    Args:
-    ---------
-        cells: Geodataframe of cells
-    Returns:
-    ---------
-        nx.Graph object
-    """
-    X = np.array(list_to_pos(cells))
-    A = kneighbors_graph(X, k, mode="connectivity", include_self=False)
-    adj = A.toarray()
-    return adj
 
 
 def Delaunay(cells):
@@ -136,7 +120,7 @@ def create_knn(cells, k=3):
     ---------
         nx.Graph object and array of weights
     """
-    G = nx.from_numpy_array(KNNgraph(cells, k))
+    G = libpysal.weights.KNN.from_dataframe(cells, k=k).to_networkx()
     G_weights = graph_weights(cells, G)
 
     return G, G_weights
