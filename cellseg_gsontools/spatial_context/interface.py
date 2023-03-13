@@ -2,6 +2,7 @@ import warnings
 from typing import List, Tuple, Union
 
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import pandas as pd
 from libpysal.weights import DistanceBand, w_subset
 from shapely.geometry import Polygon
@@ -84,7 +85,8 @@ class InterfaceContext(_SpatialContext):
     ) -> None:
         """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
 
-        I.e. Interface of the areas of type `label1` and `label2`
+        Interface is the band-like area b/w the areas of type `label1` and `label2`.
+        The bredth of the interface is given by the `buffer_dist` param.
 
         Parameters
         ----------
@@ -334,3 +336,75 @@ class InterfaceContext(_SpatialContext):
             set(roi_w.neighbors.keys()) & set(iface_w.neighbors.keys()),
             silence_warnings=True,
         )
+
+    def plot(
+        self,
+        show_area: bool = True,
+        show_cells: bool = True,
+        show_legends: bool = True,
+        color: str = None,
+        figsize: Tuple[int, int] = (12, 12),
+    ) -> None:
+        """Plot the slide with areas, cells, and interface areas highlighted.
+
+        Parameters
+        ----------
+            show_area : bool, default=True
+                Flag, whether to include the tissue areas in the plot.
+            show_cells : bool, default=True
+                Flag, whether to include the cells in the plot.
+            show_legends : bool, default=True
+                Flag, whether to include legends for each in the plot.
+            color : str, optional
+                A color for the interfaces, Ignored if `show_legends=True`.
+            figsize : Tuple[int, int], default=(12, 12)
+                Size of the figure.
+
+        Returns
+        -------
+            AxesSubplot
+        """
+        _, ax = plt.subplots(figsize=figsize)
+
+        if show_area:
+            ax = self.area_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                alpha=0.1,
+                legend_kwds={
+                    "loc": "upper center",
+                },
+            )
+            leg1 = ax.legend_
+
+        if show_cells:
+            ax = self.cell_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                legend_kwds={
+                    "loc": "upper right",
+                },
+            )
+            leg2 = ax.legend_
+
+        ifaces = self.context2gdf("interface_area")
+        ax = ifaces.plot(
+            ax=ax,
+            color=color,
+            column="label",
+            alpha=0.7,
+            legend=show_legends,
+            categorical=True,
+            legend_kwds={"loc": "upper left"},
+        )
+        if show_legends:
+            if show_area:
+                ax.add_artist(leg1)
+            if show_cells:
+                ax.add_artist(leg2)
+
+        return ax

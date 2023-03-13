@@ -1,6 +1,7 @@
-from typing import Union
+from typing import Tuple, Union
 
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 from libpysal.cg import alpha_shape_auto
 
@@ -66,7 +67,7 @@ class PointClusterContext(WithinContext):
         >>> from cellseg_gsontools.spatial_context import ClusterContext
 
         >>> cell_gdf = pre_proc_gdf(read_gdf("cells.json"))
-        >>> cluster_context = ClusterContext(
+        >>> cluster_context = PointClusterContext(
                 cell_gdf=cell_gdf,
                 label="inflammatory",
                 cluster_method="adbscan",
@@ -112,3 +113,75 @@ class PointClusterContext(WithinContext):
             verbose=verbose,
             silence_warnings=silence_warnings,
         )
+
+    def plot(
+        self,
+        show_area: bool = True,
+        show_cells: bool = True,
+        show_legends: bool = True,
+        color: str = None,
+        figsize: Tuple[int, int] = (12, 12),
+    ) -> None:
+        """Plot the slide with areas, cells, and clustered areas highlighted.
+
+        Parameters
+        ----------
+            show_area : bool, default=True
+                Flag, whether to include the tissue areas in the plot.
+            show_cells : bool, default=True
+                Flag, whether to include the cells in the plot.
+            show_legends : bool, default=True
+                Flag, whether to include legends for each category in the plot.
+            color : str, optional
+                A color for the cluster areas, Ignored if `show_legends=True`.
+            figsize : Tuple[int, int], default=(12, 12)
+                Size of the figure.
+
+        Returns
+        -------
+            AxesSubplot
+        """
+        _, ax = plt.subplots(figsize=figsize)
+
+        if show_area:
+            ax = self.area_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                alpha=0.1,
+                legend_kwds={
+                    "loc": "upper center",
+                },
+            )
+            leg1 = ax.legend_
+
+        if show_cells:
+            ax = self.cell_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                legend_kwds={
+                    "loc": "upper right",
+                },
+            )
+            leg2 = ax.legend_
+
+        roi = self.context2gdf("roi_area")
+        ax = roi.plot(
+            ax=ax,
+            color=color,
+            column="label",
+            alpha=0.7,
+            legend=show_legends,
+            categorical=True,
+            legend_kwds={"loc": "upper left"},
+        )
+        if show_legends:
+            if show_area:
+                ax.add_artist(leg1)
+            if show_cells:
+                ax.add_artist(leg2)
+
+        return ax
