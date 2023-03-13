@@ -37,6 +37,8 @@ def test_interface_context(cells_and_areas):
         min_area_size="median",
     )
 
+    interface_context.context2gdf("interface_area")
+    interface_context.context2weights("interface_cells", threshold=40.0)
     assert len(interface_context.context[1]["roi_area"]) == 1
 
 
