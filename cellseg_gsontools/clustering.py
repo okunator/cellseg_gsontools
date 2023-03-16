@@ -13,6 +13,7 @@ def cluster_points(
     min_samples: int = 30,
     method: str = "dbscan",
     n_jobs: int = -1,
+    **kwargs,
 ) -> gpd.GeoDataFrame:
     """Apply a clustering to centroids in a gdf.
 
@@ -38,6 +39,8 @@ def cluster_points(
         n_jobs : int, default=-1
             The number of parallel jobs to run. None means 1. -1 means using all
             processors.
+        **kwargs:
+            Arbitrary key-word arguments passed to the clustering methods.
 
     Raises
     ------
@@ -64,11 +67,13 @@ def cluster_points(
 
     if method == "adbscan":
         xy = pd.DataFrame({"X": xy[:, 0], "Y": xy[:, 1]})
-        clusterer = ADBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs)
+        clusterer = ADBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs)
     elif method == "dbscan":
-        clusterer = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs)
+        clusterer = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs)
     elif method == "optics":
-        clusterer = OPTICS(max_eps=eps, min_samples=min_samples, n_jobs=n_jobs)
+        clusterer = OPTICS(
+            max_eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs
+        )
 
     labels = clusterer.fit(xy).labels_
     gdf["labels"] = labels
