@@ -202,7 +202,6 @@ def local_diversity(
 
     # set uid
     data = set_uid(gdf)
-    # data = data.set_index("uid", drop=False)
 
     # Get the immediate node neighborhood
     data["nhood"] = gdf_apply(

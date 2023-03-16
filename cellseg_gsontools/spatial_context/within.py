@@ -102,9 +102,7 @@ class WithinContext(_SpatialContext):
                 pbar.set_description(f"Processing roi area: {ix}")
             self.context[ix] = {"roi_area": self.roi(ix)}
             self.context[ix]["roi_cells"] = self.roi_cells(ix)
-
-            roi_net = self.cell_neighbors(ix)
-            self.context[ix]["roi_network"] = roi_net
+            self.context[ix]["roi_network"] = self.cell_neighbors(ix)
 
     def cell_neighbors(
         self,

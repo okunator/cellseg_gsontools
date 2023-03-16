@@ -22,6 +22,7 @@ class PointClusterContext(WithinContext):
         verbose: bool = False,
         silence_warnings: bool = True,
         n_jobs: int = -1,
+        **kwargs
     ) -> None:
         """Handle & extract dense point clusters from `cell_gdf`.
 
@@ -46,6 +47,8 @@ class PointClusterContext(WithinContext):
                 Flag, whether to silence all the warnings.
             n_jobs : int,default=-1
                 Number of jobs used when clustering. None=1, and -1 means all available.
+            **kwargs:
+                Arbitrary key-word arguments passed to the clustering methods.
 
         Attributes
         ----------
@@ -85,7 +88,7 @@ class PointClusterContext(WithinContext):
 
         """
         cells = cell_gdf[cell_gdf["class_name"] == label].copy()
-        cells = cluster_points(cells, method=cluster_method, n_jobs=n_jobs)
+        cells = cluster_points(cells, method=cluster_method, n_jobs=n_jobs, **kwargs)
 
         labs = cells["labels"].unique()
         area_data = {"geometry": []}

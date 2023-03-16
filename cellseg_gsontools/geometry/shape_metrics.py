@@ -397,6 +397,7 @@ SHAPE_LOOKUP = {
     "rectangularity": rectangularity,
     "squareness": squareness,
     "equivalent_rectangular_index": equivalent_rectangular_index,
+    "area": None,
 }
 
 
