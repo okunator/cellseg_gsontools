@@ -114,14 +114,15 @@ class _SpatialContext:
         """
         con = []
         for i in self.context.keys():
-            if isinstance(self.context[i][key], tuple):
-                con.append(self.context[i][key][0])
-            else:
-                con.append(self.context[i][key])
+            if self.context[i][key] is not None:
+                if isinstance(self.context[i][key], tuple):
+                    con.append(self.context[i][key][0])
+                else:
+                    con.append(self.context[i][key])
 
         gdf = pd.concat(
             con,
-            keys=[i for i in self.context.keys()],
+            keys=[i for i in self.context.keys() if self.context[i][key] is not None],
         )
         return set_uid(gdf.reset_index(level=0, names="label"))
 

@@ -1,5 +1,6 @@
 from .ashape import alpha_shape
 from .shape_metrics import (
+    SHAPE_LOOKUP,
     circularity,
     compactness,
     convexity,
@@ -38,4 +39,5 @@ __all__ = [
     "squareness",
     "equivalent_rectangular_index",
     "shape_metric",
+    "SHAPE_LOOKUP",
 ]
