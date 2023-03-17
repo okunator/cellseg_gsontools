@@ -9,6 +9,8 @@ import pandas as pd
 from cellseg_gsontools.multiproc import run_pool
 from cellseg_gsontools.utils import pre_proc_gdf, read_gdf
 
+__all__ = ["Pipeline"]
+
 
 class Pipeline(ABC):
     def __init__(
@@ -43,6 +45,9 @@ class Pipeline(ABC):
         """
         if in_path_areas is None and in_path_cells is None:
             raise ValueError(
+                "If you wish to inherit `Pipeline` class, the class constructor must "
+                "have atleast one of the parameters: `in_path_cells` or `in_path_areas`"
+                ". These indicate the paths to the folders that contain geojson files. "
                 "Both `in_path_cells` & `in_path_areas` can't be None simultaneously."
             )
 
@@ -85,6 +90,13 @@ class Pipeline(ABC):
             " to implement and override the `pipeline` method."
         )
 
+    def collect(self, res_list: List[Any]) -> pd.DataFrame:
+        """Collect the individual results and convert them to a dataframe."""
+        if isinstance(res_list[0], pd.Series):
+            res_df = pd.DataFrame(res_list)
+
+        return res_df
+
     def __call__(self) -> pd.DataFrame:
         """Run the pipeline.
 
@@ -96,15 +108,13 @@ class Pipeline(ABC):
             res = []
             if self.in_path_cells is None and self.in_path_areas is not None:
                 for fn in self.in_files_areas:
-                    res.append(self.pipeline(fn_aree_gdf=fn, parallel=self.parallel_df))
+                    res.append(self.pipeline(fn_aree_gdf=fn))
             elif self.in_path_cells is not None and self.in_path_areas is None:
                 for fn in self.in_files_cells:
-                    res.append(
-                        self.pipeline(fn_cells_gdf=fn, parallel=self.parallel_df)
-                    )
+                    res.append(self.pipeline(fn_cells_gdf=fn))
             elif self.in_path_cells is not None and self.in_path_areas is not None:
                 for fn1, fn2 in zip(self.in_files_cells, self.in_files_areas):
-                    res.append(self.pipeline(fn1, fn2, parallel=self.parallel_df))
+                    res.append(self.pipeline(fn1, fn2))
             else:
                 raise ValueError(
                     "The pipeline method has to take in one of the arguments "
@@ -113,13 +123,12 @@ class Pipeline(ABC):
                 )
         else:
             if self.in_path_cells is None and self.in_path_areas is not None:
-                self.pipeline = partial(self.pipeline, parallel=False, fn_cell_gdf=None)
+                self.pipeline = partial(self.pipeline, fn_cell_gdf=None)
                 args = self.in_files_areas
             elif self.in_path_cells is not None and self.in_path_areas is None:
-                self.pipeline = partial(self.pipeline, parallel=False, fn_area_gdf=None)
+                self.pipeline = partial(self.pipeline, fn_area_gdf=None)
                 args = self.in_files_cells
             elif self.in_path_cells is not None and self.in_path_areas is not None:
-                self.pipeline = partial(self.pipeline, parallel=False)
                 args = list(zip(self.in_files_cells, self.in_files_areas))
             else:
                 raise ValueError(
@@ -130,4 +139,4 @@ class Pipeline(ABC):
 
             res = run_pool(self._pipe_unpack, args=args)
 
-        return res
+        return self.collect(res)
