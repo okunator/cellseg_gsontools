@@ -1,6 +1,10 @@
+from typing import Tuple
+
+import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon
 
+from ..apply import gdf_apply
 from .axis import axis_angle, axis_len
 from .circle import circumscribing_circle, inscribing_circle
 
@@ -21,6 +25,8 @@ __all__ = [
     "rectangularity",
     "squareness",
     "equivalent_rectangular_index",
+    "shape_metric",
+    "SHAPE_LOOKUP",
 ]
 
 
@@ -372,3 +378,91 @@ def equivalent_rectangular_index(polygon: Polygon) -> float:
     mrr = polygon.minimum_rotated_rectangle
 
     return np.sqrt(polygon.area / mrr.area) / (mrr.length / polygon.length)
+
+
+SHAPE_LOOKUP = {
+    "major_axis_len": major_axis_len,
+    "minor_axis_len": minor_axis_len,
+    "major_axis_angle": major_axis_angle,
+    "minor_axis_angle": minor_axis_angle,
+    "compactness": compactness,
+    "circularity": circularity,
+    "convexity": convexity,
+    "solidity": solidity,
+    "elongation": elongation,
+    "eccentricity": eccentricity,
+    "fractal_dimension": eccentricity,
+    "sphericity": sphericity,
+    "shape_index": shape_index,
+    "rectangularity": rectangularity,
+    "squareness": squareness,
+    "equivalent_rectangular_index": equivalent_rectangular_index,
+    "area": None,
+}
+
+
+def shape_metric(
+    gdf: gpd.GeoDataFrame,
+    metrics: Tuple[str, ...],
+    parallel: bool = False,
+    col_prefix: str = None,
+) -> gpd.GeoDataFrame:
+    """Compute a set of shape metrics for every row of the gdf.
+
+    Parameters
+    ----------
+        gdf : gpd.GeoDataFrame
+            The input GeoDataFrame.
+        metrics : Tuple[str, ...]
+            A Tuple/List of shape metrics.
+        parallel : bool, default=False
+            Flag whether to use parallel apply operations when computing the diversities
+        col_prefix : str, optional
+            Prefix for the new column names.
+
+    Raises
+    ------
+        ValueError: If an illegal metric is given.
+
+    Returns
+    -------
+        gpd.GeoDataFrame:
+            The input geodataframe with computed shape metric columns added.
+
+    Examples
+    --------
+    Compute the eccentricity and solidity for each polygon in gdf
+
+        >>> from cellseg_gsontools.geometry import shape_metric
+
+        >>> shape_metric(
+                gdf,
+                metrics=["eccentricity", "solidity"],
+                parallel=True
+            )
+    """
+    allowed = list(SHAPE_LOOKUP.keys()) + ["area"]
+    if not all(m in allowed for m in metrics):
+        raise ValueError(
+            f"Illegal metric in `metrics`. Got: {metrics}. Allowed metrics: {allowed}."
+        )
+
+    if col_prefix is None:
+        col_prefix = ""
+    else:
+        col_prefix += "_"
+
+    met = list(metrics)
+    if "area" in metrics:
+        gdf[f"{col_prefix}area"] = gdf.area
+        met.remove("area")
+
+    for metric in met:
+        gdf[f"{col_prefix}{metric}"] = gdf_apply(
+            gdf,
+            SHAPE_LOOKUP[metric],
+            col="geometry",
+            parallel=parallel,
+        )
+
+    return gdf

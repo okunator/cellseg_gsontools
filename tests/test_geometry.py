@@ -16,6 +16,7 @@ from cellseg_gsontools.geometry import (
     minor_axis_len,
     rectangularity,
     shape_index,
+    shape_metric,
     solidity,
     sphericity,
     squareness,
@@ -55,3 +56,7 @@ def test_alpha_shape(cell_gson):
     ash = alpha_shape(cell_gson.geometry.loc[0])
 
     assert len(list(ash.exterior.coords)) > 3
+
+
+def test_shape_met(cell_gson):
+    shape_metric(cell_gson, ["solidity", "squareness"])

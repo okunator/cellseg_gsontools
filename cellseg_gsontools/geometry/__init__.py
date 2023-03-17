@@ -7,6 +7,7 @@ from .mean_shape import (
     prep_shapes,
 )
 from .shape_metrics import (
+    SHAPE_LOOKUP,
     circularity,
     compactness,
     convexity,
@@ -20,6 +21,7 @@ from .shape_metrics import (
     minor_axis_len,
     rectangularity,
     shape_index,
+    shape_metric,
     solidity,
     sphericity,
     squareness,
@@ -43,6 +45,8 @@ __all__ = [
     "rectangularity",
     "squareness",
     "equivalent_rectangular_index",
+    "shape_metric",
+    "SHAPE_LOOKUP",
     "interpolate",
     "frechet_mean",
     "prep_shapes",

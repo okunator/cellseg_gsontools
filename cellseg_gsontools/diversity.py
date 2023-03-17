@@ -131,6 +131,7 @@ def local_diversity(
     categorical: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
+    col_prefix: str = None,
 ) -> gpd.GeoDataFrame:
     """Compute the local diversity/heterogenity metric for each row in a gdf.
 
@@ -146,15 +147,18 @@ def local_diversity(
         val_col : str
             The name of the column in the gdf for which the diversity is computed
         metrics : Tuple[str, ...]
-            A Tuple/List of diversity metrics. Allowed metrics: "shannon_entropy",
+            A Tuple/List of diversity metrics. Allowed metrics: "shannon_index",
             "simpson_index", "gini_index", "theil_index"
         scheme : str, default="HeadTailBreaks"
+            `pysal.mapclassify` classification scheme.
         categorical : bool, default=False
             A flag, signalling whether the `val_col` column of the gdf is categorical.
         parallel : bool, default=False
             Flag whether to use parallel apply operations when computing the diversities
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
+        col_prefix : str, optional
+            Prefix for the new column names.
 
     Raises
     ------
@@ -198,7 +202,6 @@ def local_diversity(
 
     # set uid
     data = set_uid(gdf)
-    # data = data.set_index("uid", drop=False)
 
     # Get the immediate node neighborhood
     data["nhood"] = gdf_apply(
@@ -235,6 +238,11 @@ def local_diversity(
             values=values,
         )
 
+    if col_prefix is None:
+        col_prefix = ""
+    else:
+        col_prefix += "_"
+
     # Compute the diversity metrics for the neighborhood counts
     for metric in metrics:
         colname = (
@@ -243,7 +251,7 @@ def local_diversity(
             else f"{val_col}_nhood_vals"
         )
 
-        data[f"{val_col}_{metric}"] = gdf_apply(
+        data[f"{col_prefix}{val_col}_{metric}"] = gdf_apply(
             data,
             DIVERSITY_LOOKUP[metric],
             col=colname,

@@ -64,6 +64,7 @@ def local_character(
     weight_by_area: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
+    col_prefix: str = None,
 ) -> gpd.GeoDataFrame:
     """Compute the local sum/mean/median of a specified metric for each row in a gdf.
 
@@ -87,6 +88,8 @@ def local_character(
             Flag whether to use parallel apply operations when computing the character
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
+        col_prefix : str, optional
+            Prefix for the new column names.
 
     Returns
     -------
@@ -131,8 +134,13 @@ def local_character(
         data, nhood_vals, col="nhood", values=values, parallel=False
     )
 
+    if col_prefix is None:
+        col_prefix = ""
+    else:
+        col_prefix += "_"
+
     # Compute the neighborhood characters
-    data[f"{val_col}_nhood_{reduction}"] = gdf_apply(
+    data[f"{col_prefix}{val_col}_nhood_{reduction}"] = gdf_apply(
         data,
         reduce,
         col=char_col,

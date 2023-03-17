@@ -1,4 +1,10 @@
+import warnings
+
 import geopandas as gpd
+import pandas as pd
+import shapely
+
+__all__ = ["set_uid", "read_gdf", "pre_proc_gdf"]
 
 
 def set_uid(
@@ -31,5 +37,45 @@ def set_uid(
         gdf[id_col] = range(1, len(gdf) + 1)
 
     gdf = gdf.set_index(id_col, drop=drop)
+
+    return gdf
+
+
+def read_gdf(fname: str) -> gpd.GeoDataFrame:
+    """Read a gson file into geodataframe."""
+    gdf = pd.read_json(fname)
+    gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
+    gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
+
+    # add class name column
+    gdf["class_name"] = gdf["properties"].apply(lambda x: x["classification"]["name"])
+
+    return gdf
+
+
+def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Apply some light pre-processing of a geodataframe.
+
+    Namely, remove invalid polygons, empty geometries and add bounds to the gdf.
+    """
+    # drop invalid geometries if there are any after buffer
+    gdf.geometry = gdf.geometry.buffer(0)
+    gdf = gdf[gdf.is_valid]
+
+    # drop empty geometries
+    gdf = gdf[~gdf.is_empty]
+
+    # drop geometries that are not polygons
+    gdf = gdf[gdf.geom_type == "Polygon"]
+
+    try:
+        # add bounding box coords of the polygons to the gdfs
+        # and correct for the max coords
+        gdf["xmin"] = gdf.bounds["minx"].astype(int)
+        gdf["ymin"] = gdf.bounds["miny"].astype(int)
+        gdf["ymax"] = gdf.bounds["maxy"].astype(int) + 1
+        gdf["xmax"] = gdf.bounds["maxx"].astype(int) + 1
+    except Exception:
+        warnings.warn("Could not create bounds cols to gdf.", RuntimeWarning)
 
     return gdf

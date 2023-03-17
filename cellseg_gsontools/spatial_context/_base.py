@@ -4,6 +4,7 @@ from typing import Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from libpysal.weights import DistanceBand, W
 
 from cellseg_gsontools.utils import set_uid
 
@@ -38,6 +39,7 @@ class _SpatialContext:
         self.silence_warnings = silence_warnings
         self.label = label
         self.cell_gdf = set_uid(cell_gdf)
+        self.area_gdf = area_gdf
         thresh = self._get_thresh(
             area_gdf[area_gdf["class_name"] == label], min_area_size, q
         )
@@ -103,14 +105,48 @@ class _SpatialContext:
             key : str
                 The key of the context dictionary that contains the data to be converted
                 to gdf. One of "roi_area", "roi_cells", "interface_area",
-                "interface_cells", "roi_network", "interface_network", "border_network"
+                "interface_cells", "roi_interface_cells"
 
         Returns
         -------
             gpd.GeoDataFrame:
                 Geo dataframe containing all the objects
         """
-        return pd.concat([self.context[i][key] for i in self.context.keys()])
+        con = []
+        for i in self.context.keys():
+            if self.context[i][key] is not None:
+                if isinstance(self.context[i][key], tuple):
+                    con.append(self.context[i][key][0])
+                else:
+                    con.append(self.context[i][key])
+
+        gdf = pd.concat(
+            con,
+            keys=[i for i in self.context.keys() if self.context[i][key] is not None],
+        )
+        return set_uid(gdf.reset_index(level=0, names="label"))
+
+    def context2weights(self, key: str, **kwargs) -> W:
+        """Fit a network on the cells inside the context.
+
+        Parameters
+        ----------
+            key : str
+                The key of the context dictionary that contains the data to be converted
+                to gdf. One of "roi_area", "roi_cells", "interface_area",
+                "interface_cells", "roi_interface_cells"
+        """
+        allowed = ("roi_cells", "interface_cells", "roi_interface_cells")
+        if key not in allowed:
+            raise ValueError(
+                "Illegal key. Note that network can be only fitted to cell gdfs. "
+                f"Got: {key}. Allowed: {allowed}"
+            )
+
+        cells = self.context2gdf(key)
+        w = DistanceBand.from_dataframe(cells, silence_warnings=True, **kwargs)
+
+        return w
 
     def _get_thresh(self, area_gdf, min_area_size, q=None) -> float:
         """Get the threshold value for filtering by area."""
