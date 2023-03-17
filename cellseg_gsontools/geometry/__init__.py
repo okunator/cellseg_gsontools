@@ -1,4 +1,11 @@
 from .ashape import alpha_shape
+from .mean_shape import (
+    apply_func_to_ds,
+    exhaustive_align,
+    frechet_mean,
+    interpolate,
+    prep_shapes,
+)
 from .shape_metrics import (
     circularity,
     compactness,
@@ -36,4 +43,9 @@ __all__ = [
     "rectangularity",
     "squareness",
     "equivalent_rectangular_index",
+    "interpolate",
+    "frechet_mean",
+    "prep_shapes",
+    "exhaustive_align",
+    "apply_func_to_ds",
 ]

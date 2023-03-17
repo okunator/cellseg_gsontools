@@ -1,8 +1,7 @@
+import geopandas as gpd
 import libpysal
 import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
-import scipy.spatial
 import shapely
 
 
@@ -19,7 +18,7 @@ def points_to_coords(points):
     return [p.coords[0] for p in points]
 
 
-def graph_pos(cells):
+def graph_pos(cells: gpd.geodataframe):
     """Get cell coordinate object from Geodataframe.
 
     Args:
@@ -38,7 +37,7 @@ def graph_pos(cells):
     return graph_pos
 
 
-def list_to_pos(cells):
+def list_to_pos(cells: gpd.geodataframe):
     """Convert graph_pos to array of cell coordinates.
 
     Args:
@@ -51,39 +50,7 @@ def list_to_pos(cells):
     return list(graph_pos(cells).values())
 
 
-def Delaunay(cells):
-    """Build graph edges based on Delaunay triangulation.
-
-    Args:
-    ---------
-        cells: Geodataframe of cells
-
-    Returns:
-    ---------
-        nx.Graph object
-    """
-    points = np.array(list_to_pos(cells))
-    A = np.zeros((len(cells), len(cells)))
-
-    G = nx.from_numpy_array(A)
-
-    tri = scipy.spatial.Delaunay(points, incremental=True)
-
-    edges = []
-    for n in range(tri.nsimplex):
-
-        edge = sorted([tri.vertices[n, 0], tri.vertices[n, 1]])
-        edges.append((edge[0], edge[1]))
-        edge = sorted([tri.vertices[n, 0], tri.vertices[n, 2]])
-        edges.append((edge[0], edge[1]))
-        edge = sorted([tri.vertices[n, 1], tri.vertices[n, 2]])
-        edges.append((edge[0], edge[1]))
-
-    G = nx.Graph(list(edges))
-    return G
-
-
-def graph_weights(cells, G):
+def graph_weights(cells: gpd.geodataframe, G: nx.graph):
     """Calculate weights for graph nodes based on connecting edge lengths.
 
     Args:
@@ -108,7 +75,7 @@ def graph_weights(cells, G):
     return weights
 
 
-def create_knn(cells, k=3):
+def create_knn(cells: gpd.geodataframe, k=3):
     """Construct KNN graph from geodataframe.
 
     Args:
@@ -126,7 +93,7 @@ def create_knn(cells, k=3):
     return G, G_weights
 
 
-def draw_graph(G, pos, weights):
+def draw_graph(G: nx.graph, pos, weights):
     """Draw graph with preset graphics.
 
     Args:
