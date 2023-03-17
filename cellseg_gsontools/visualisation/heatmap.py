@@ -3,10 +3,10 @@ from numba import jit
 
 
 @jit
-def gauss2d(
+def heatmap(
     dx: int, dy: int, points: list[tuple[float, float]], sx: int = 25, sy: int = 25
 ) -> np.array:
-    """Convert coordinates to normalized density map.
+    """Convert cell coordinates to normalized density map.
 
     Args:
     ---------

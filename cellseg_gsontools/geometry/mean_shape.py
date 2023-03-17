@@ -14,7 +14,7 @@ PRESHAPE_SPACE = PreShapeSpace(m_ambient=M_AMBIENT, k_landmarks=k_sampling_point
 PRESHAPE_METRIC = PRESHAPE_SPACE.embedding_space.metric
 
 
-def prep_shapes(df: gpd.geodataframe):
+def center_curves(df: gpd.geodataframe) -> gpd.geodataframe:
     """Prepare curves by centering them.
 
     Parameters
@@ -24,21 +24,23 @@ def prep_shapes(df: gpd.geodataframe):
 
     Returns
     -------
-    np.array
+    gpd.geodataframe
     """
-    sample = []
+    curves = []
 
-    for cell in df["geometry"]:
-        a, b = cell.exterior.coords.xy
-        a = a - np.median(a)
-        b = b - np.median(b)
+    for curve in df["geometry"]:
+        x, y = curve.exterior.coords.xy
+        x = x - np.median(x)
+        y = y - np.median(y)
 
-        ac = list(zip(a, b))
-        ec = interpolate(ac, n=k_sampling_points)
+        centered = list(zip(x, y))
+        curves.append(centered)
 
-        sample.append(ec)
-    sample = np.array(sample)
-    return sample
+    curves = np.array(curves)
+
+    df["geometry"] = curves
+
+    return df
 
 
 def interpolate(contours, n: int = k_sampling_points):
@@ -162,7 +164,7 @@ def frechet_mean(df: gpd.geodataframe, metric=curves_r2.srv_metric):
     -------
     np.array
     """
-    ds_proj = prep_shapes(df)
+    ds_proj = [interpolate(curve) for curve in center_curves(df)["geometry"]]
 
     BASE_CURVE = ds_proj[0]
     ds_align = apply_func_to_ds(ds_proj, func=lambda x: exhaustive_align(x, BASE_CURVE))

@@ -1,10 +1,10 @@
 from .ashape import alpha_shape
 from .mean_shape import (
     apply_func_to_ds,
+    center_curves,
     exhaustive_align,
     frechet_mean,
     interpolate,
-    prep_shapes,
 )
 from .shape_metrics import (
     SHAPE_LOOKUP,
@@ -49,7 +49,7 @@ __all__ = [
     "SHAPE_LOOKUP",
     "interpolate",
     "frechet_mean",
-    "prep_shapes",
+    "center_curves",
     "exhaustive_align",
     "apply_func_to_ds",
 ]
