@@ -102,19 +102,24 @@ class Pipeline(ABC):
 
         Returns
         -------
-            pd.DataFrame or None
+            pd.DataFrame:
+                Slide summaries in a df.
         """
         if not self.parallel_sample:
             res = []
+            index = []
             if self.in_path_cells is None and self.in_path_areas is not None:
                 for fn in self.in_files_areas:
                     res.append(self.pipeline(fn_aree_gdf=fn))
+                    index.append(fn.with_suffix("").name)
             elif self.in_path_cells is not None and self.in_path_areas is None:
                 for fn in self.in_files_cells:
                     res.append(self.pipeline(fn_cells_gdf=fn))
+                    index.append(fn.with_suffix("").name)
             elif self.in_path_cells is not None and self.in_path_areas is not None:
                 for fn1, fn2 in zip(self.in_files_cells, self.in_files_areas):
                     res.append(self.pipeline(fn1, fn2))
+                    index.append(fn1.with_suffix("").name)
             else:
                 raise ValueError(
                     "The pipeline method has to take in one of the arguments "
@@ -136,7 +141,14 @@ class Pipeline(ABC):
                     "with names `fn_cell_gdf`, or `fn_area_gdf`. Override the method "
                     "such that these argument names are in the function parameters."
                 )
+            if isinstance(args[0], tuple):
+                index = [fn1.with_suffix("").name for fn1, _ in args]
+            else:
+                index = [fn.with_suffix("").name for fn in args]
 
             res = run_pool(self._pipe_unpack, args=args)
 
-        return self.collect(res)
+        res = self.collect(res)
+        res.index = index
+
+        return res
