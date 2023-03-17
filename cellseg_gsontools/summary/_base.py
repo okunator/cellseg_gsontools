@@ -97,6 +97,55 @@ class Summary(ABC):
         return sum_vec
 
     @staticmethod
+    def get_counts(
+        summary: pd.Series,
+        thresh: int,
+        rule: str = "above",
+        prefix: str = None,
+        pat: str = None,
+    ) -> pd.Series:
+        """Get the counts of objects that are under or above some threshold.
+
+        Parameters
+        ----------
+            summary : pd.Series
+                A summary vector with named indices.
+            thresh : int
+                The threshold value.
+            rule : str, default="above"
+                One of: "above", "under", "equal"
+            prefix : str, optional
+                Prefix to the result series indices.
+            pat : str, optional
+                A pattern to filter out values based whose index does not contain this
+                pattern.
+
+        Returns
+        -------
+            pd.Series:
+                A count vector of negative and positive cases.
+        """
+        allowed = ("above", "under", "equal")
+        if rule not in allowed:
+            raise ValueError(f"Illegal rule. Got: {rule}. Allowed: {allowed}")
+
+        if pat is not None:
+            summary = summary[summary.index.str.contains(pat)]
+
+        if rule == "above":
+            vals = summary > thresh
+        elif rule == "under":
+            vals = summary < thresh
+        if rule == "equal":
+            vals = summary == thresh
+
+        count_thresh = pd.value_counts(vals).astype(int)
+        if prefix is not None:
+            count_thresh.index = prefix + count_thresh.index.astype(str)
+
+        return count_thresh
+
+    @staticmethod
     def _gen_sum_vec(
         s: pd.Series,
         metric: str,

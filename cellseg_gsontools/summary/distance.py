@@ -164,13 +164,14 @@ class DistanceSummary(Summary):
         self.summary = self.gen_metric_summary(
             self.gdf1, (isclose_col,), self.groups, self.prefix
         )
-        if filter_pattern is not None:
-            self.summary = self.summary.loc[
-                ~self.summary.index.str.contains(filter_pattern)
-            ]
 
         # filter
         pat = "min|max|25%|50%|75%|total-count|mean|std"
         self.summary = self.summary.loc[~self.summary.index.str.contains(pat)]
+
+        if filter_pattern is not None:
+            self.summary = self.summary.loc[
+                ~self.summary.index.str.contains(filter_pattern)
+            ]
 
         return self.summary

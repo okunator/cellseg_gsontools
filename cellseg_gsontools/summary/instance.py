@@ -144,10 +144,6 @@ class InstanceSummary(Summary):
         self.summary = self.gen_metric_summary(
             self.cell_gdf, self.metrics, self.groups, self.prefix
         )
-        if filter_pattern is not None:
-            self.summary = self.summary.loc[
-                ~self.summary.index.str.contains(filter_pattern)
-            ]
 
         # filter
         if not return_counts:
@@ -159,5 +155,10 @@ class InstanceSummary(Summary):
 
         if not return_std:
             self.summary = self.summary.loc[~self.summary.index.str.contains("std")]
+
+        if filter_pattern is not None:
+            self.summary = self.summary.loc[
+                ~self.summary.index.str.contains(filter_pattern)
+            ]
 
         return self.summary
