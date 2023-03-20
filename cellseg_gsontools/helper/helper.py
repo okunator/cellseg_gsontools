@@ -5,7 +5,7 @@ import pandas as pd
 import shapely
 
 
-def import_slide(slide_path: str):
+def import_slide(slide_path: str) -> np.array:
     """Import image into matrix objects.
 
     Args:
@@ -35,7 +35,7 @@ def get_size(slide_path: str) -> tuple[int, int]:
     return (int(x), int(y))
 
 
-def import_json(json_path: str):
+def import_json(json_path: str) -> gpd.geodataframe:
     """Read geojson file into Geodataframe object.
 
     Args:
@@ -84,7 +84,7 @@ def prep_json(gdf: gpd.geodataframe) -> gpd.geodataframe:
     return gdf
 
 
-def get_cells(gdf: gpd.geodataframe, offset: tuple[int, int]):
+def get_cells(gdf: gpd.geodataframe, offset: tuple[int, int]) -> gpd.geodataframe:
     """Retrieve cell centroid.
 
     Args:
@@ -102,7 +102,7 @@ def get_cells(gdf: gpd.geodataframe, offset: tuple[int, int]):
     return cells
 
 
-def get_coords(cells):
+def get_coords(cells: gpd.geodataframe):
     """Retrieve points objects from geodataframe.
 
     Args:
@@ -120,7 +120,7 @@ def get_coords(cells):
     return points
 
 
-def get_points(cells):
+def get_points(cells: gpd.geodataframe):
     """Retrieve cell coordinates from geodataframe.
 
     Args:
@@ -156,7 +156,7 @@ def create_grid(dx: int, dy: int, n: int = 1) -> np.meshgrid:
     return np.meshgrid(X, Y)
 
 
-def filter_outliers(cells, dist: np.array):
+def filter_outliers(cells: gpd.geodataframe, dist: np.array) -> gpd.geodataframe:
     """Filter least meaningful cells based on a distribution.
 
     Args:
@@ -180,7 +180,7 @@ def filter_outliers(cells, dist: np.array):
     return cells[cells["weight"] > 10 ** (-th)]
 
 
-def sample_table(cells, k=2500):
+def sample_table(cells: gpd.geodataframe, k: int) -> gpd.geodataframe:
     """Take random sample of cells.
 
     Args:

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shapely
 from descartes import PolygonPatch
-from helper import create_grid
 from geometry import alpha_shape
+from helper import create_grid
 from matplotlib import cm
 
 
