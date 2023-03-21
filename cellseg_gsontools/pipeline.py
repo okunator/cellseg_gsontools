@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from functools import partial
 from pathlib import Path
 from typing import Any, List, Tuple, Union
 
@@ -74,8 +73,11 @@ class Pipeline(ABC):
         return gdf
 
     def _pipe_unpack(self, args: List[Tuple[Any, ...]]) -> Any:
-        """Uunpack tuple args to pipeline."""
-        return self.pipeline(*args)
+        """Unpack tuple args to pipeline."""
+        if isinstance(args, tuple):
+            return self.pipeline(*args)
+        else:
+            return self.pipeline(args)
 
     @abstractmethod
     def pipeline(
@@ -128,10 +130,8 @@ class Pipeline(ABC):
                 )
         else:
             if self.in_path_cells is None and self.in_path_areas is not None:
-                self.pipeline = partial(self.pipeline, fn_cell_gdf=None)
                 args = self.in_files_areas
             elif self.in_path_cells is not None and self.in_path_areas is None:
-                self.pipeline = partial(self.pipeline, fn_area_gdf=None)
                 args = self.in_files_cells
             elif self.in_path_cells is not None and self.in_path_areas is not None:
                 args = list(zip(self.in_files_cells, self.in_files_areas))
