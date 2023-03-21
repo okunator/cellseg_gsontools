@@ -14,7 +14,7 @@ PRESHAPE_SPACE = PreShapeSpace(m_ambient=M_AMBIENT, k_landmarks=k_sampling_point
 PRESHAPE_METRIC = PRESHAPE_SPACE.embedding_space.metric
 
 
-def center_curves(df: gpd.geodataframe) -> gpd.geodataframe:
+def center_curves(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Prepare curves by centering them.
 
     Parameters
@@ -149,7 +149,7 @@ def exhaustive_align(curve, base_curve):
     return aligned_curve
 
 
-def frechet_mean(df: gpd.geodataframe, metric=curves_r2.srv_metric):
+def frechet_mean(df: gpd.GeoDataFrame, metric=curves_r2.srv_metric):
     """Calculate the Frechet mean in a give metric on an array of curves.
 
     Parameters

@@ -1,11 +1,12 @@
 from .ashape import alpha_shape
-from .mean_shape import (
-    apply_func_to_ds,
-    center_curves,
-    exhaustive_align,
-    frechet_mean,
-    interpolate,
-)
+
+# from .mean_shape import (
+#     apply_func_to_ds,
+#     center_curves,
+#     exhaustive_align,
+#     frechet_mean,
+#     interpolate,
+# )
 from .shape_metrics import (
     SHAPE_LOOKUP,
     circularity,
@@ -47,9 +48,9 @@ __all__ = [
     "equivalent_rectangular_index",
     "shape_metric",
     "SHAPE_LOOKUP",
-    "interpolate",
-    "frechet_mean",
-    "center_curves",
-    "exhaustive_align",
-    "apply_func_to_ds",
+    # "interpolate",
+    # "frechet_mean",
+    # "center_curves",
+    # "exhaustive_align",
+    # "apply_func_to_ds",
 ]
