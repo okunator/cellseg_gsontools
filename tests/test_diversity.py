@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 from libpysal.weights import DistanceBand
 
@@ -8,7 +9,13 @@ from cellseg_gsontools.utils import set_uid
 
 
 @pytest.mark.parametrize(
-    "index", ["shannon_index", "simpson_index", "gini_index", "theil_index"]
+    "index",
+    [
+        "shannon_index",
+        "simpson_index",
+        "gini_index",
+        "theil_index",
+    ],
 )
 @pytest.mark.parametrize("parallel", [True, False])
 def test_diversity(cell_gson, index, parallel):
