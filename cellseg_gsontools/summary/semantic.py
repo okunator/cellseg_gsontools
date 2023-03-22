@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import geopandas as gpd
 import pandas as pd
 
+from ..diversity import GROUP_DIVERSITY_LOOKUP
 from ..geometry import shape_metric
 from ..geometry.shape_metrics import SHAPE_LOOKUP
 from ._base import Summary
@@ -111,8 +112,24 @@ class SemanticSummary(Summary):
 
         # get the summary vec
         self.summary = self.gen_metric_summary(
-            self.area_gdf, self.metrics, self.groups, self.prefix
+            self.area_gdf, shape_mets, self.groups, self.prefix
         )
+
+        group_div_mets = [m for m in self.metrics if m in GROUP_DIVERSITY_LOOKUP.keys()]
+        if group_div_mets is not None:
+            for m in group_div_mets:
+                if self.groups is None:
+                    raise ValueError(
+                        f"Group diversity metric: {m} require a group, but "
+                        "`self.groups` was set to None."
+                    )
+                for met in shape_mets:
+                    for group in self.groups:
+                        self.summary[
+                            f"{self.prefix}{m}-{group}-{met}"
+                        ] = GROUP_DIVERSITY_LOOKUP[m](
+                            self.area_gdf[met], self.area_gdf[group]
+                        )
 
         # filter
         if not return_counts:

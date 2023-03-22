@@ -4,7 +4,7 @@ import geopandas as gpd
 import pandas as pd
 from libpysal.weights import W
 
-from ..diversity import DIVERSITY_LOOKUP, local_diversity
+from ..diversity import DIVERSITY_LOOKUP, GROUP_DIVERSITY_LOOKUP, local_diversity
 from ..geometry import SHAPE_LOOKUP, shape_metric
 from ._base import Summary
 
@@ -141,9 +141,25 @@ class InstanceSummary(Summary):
             )
 
         # get the summary vec
+        group_div_mets = [m for m in self.metrics if m in GROUP_DIVERSITY_LOOKUP.keys()]
         self.summary = self.gen_metric_summary(
-            self.cell_gdf, self.metrics, self.groups, self.prefix
+            self.cell_gdf, div_mets + shape_mets, self.groups, self.prefix
         )
+
+        if group_div_mets is not None:
+            for m in group_div_mets:
+                if self.groups is None:
+                    raise ValueError(
+                        f"Group diversity metric: {m} require a group, but "
+                        "`self.groups` was set to None."
+                    )
+                for met in shape_mets + div_mets:
+                    for group in self.groups:
+                        self.summary[
+                            f"{self.prefix}{m}-{group}-{met}"
+                        ] = GROUP_DIVERSITY_LOOKUP[m](
+                            self.cell_gdf[met], self.cell_gdf[group]
+                        )
 
         # filter
         if not return_counts:
