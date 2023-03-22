@@ -1,3 +1,36 @@
+"""Indices adapted from: https://github.com/pysal/inequality.
+
+BSD 3-Clause License
+
+Copyright (c) 2018, pysal-inequality developers
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
 from typing import Sequence, Tuple
 
 import geopandas as gpd
@@ -114,11 +147,76 @@ def theil_index(x: Sequence) -> float:
     return t
 
 
+def theil_between_group(x: Sequence, partition: Sequence) -> float:
+    """Between group Theil index.
+
+    Parameters
+    ----------
+        x : Sequence
+            The input value-vector. Shape (n, )
+        partition : Sequence
+            The groups for each x value. Shape (n, ).
+
+    Returns
+    -------
+        float:
+            The computed between group Theil index.
+    """
+    groups = np.unique(partition)
+    x_total = x.sum(0)
+
+    # group totals
+    g_total = np.array([x[partition == gid].sum(axis=0) for gid in groups])
+
+    if x_total.size == 1:  # y is 1-d
+        sg = g_total / (x_total * 1.0)
+        sg.shape = (sg.size, 1)
+    else:
+        sg = np.dot(g_total, np.diag(1.0 / x_total))
+
+    ng = np.array([np.sum(partition == gid) for gid in groups])
+    ng.shape = (ng.size,)  # ensure ng is 1-d
+    n = x.shape[0]
+
+    # between group inequality
+    sg = sg + (sg == 0)  # handle case when a partition has 0 for sum
+    bg = np.multiply(sg, np.log(np.dot(np.diag(n * 1.0 / ng), sg))).sum(axis=0)
+
+    return float(bg)
+
+
+def theil_within_group(x: Sequence, partition: Sequence) -> float:
+    """Within group Theil index.
+
+    Parameters
+    ----------
+        x : Sequence
+            The input value-vector. Shape (n, )
+        partition : Sequence
+            The groups for each x value. Shape (n, ).
+
+    Returns
+    -------
+        float:
+            The computed within group Theil index.
+    """
+    theil = theil_index(x)
+    theil_bg = theil_between_group(x, partition)
+
+    return float(theil - theil_bg)
+
+
 DIVERSITY_LOOKUP = {
     "simpson_index": simpson_index,
     "shannon_index": shannon_index,
     "gini_index": gini_index,
     "theil_index": theil_index,
+}
+
+
+GROUP_DIVERSITY_LOOKUP = {
+    "theil_between_group": theil_between_group,
+    "theil_within_group": theil_within_group,
 }
 
 
@@ -196,8 +294,9 @@ def local_diversity(
         ret_counts = True
 
     # If Gini is in metrics, neighboring values are needed
+    gt = ("gini_index", "theil_index")
     ret_vals = False
-    if any([m in metrics for m in ("gini_index", "theil_index")]):
+    if any([m in metrics for m in gt]):
         ret_vals = True
 
     # set uid
@@ -246,9 +345,7 @@ def local_diversity(
     # Compute the diversity metrics for the neighborhood counts
     for metric in metrics:
         colname = (
-            f"{val_col}_nhood_counts"
-            if metric not in ("gini_index", "theil_index")
-            else f"{val_col}_nhood_vals"
+            f"{val_col}_nhood_counts" if metric not in gt else f"{val_col}_nhood_vals"
         )
 
         data[f"{col_prefix}{val_col}_{metric}"] = gdf_apply(
