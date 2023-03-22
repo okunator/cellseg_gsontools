@@ -416,6 +416,33 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "geomstats"
+version = "2.5.0"
+description = "Geometric statistics on manifolds"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+joblib = ">=0.14.1"
+matplotlib = ">=3.3.4"
+numpy = ">=1.18.1"
+pandas = ">=1.1.5"
+scikit-learn = ">=0.22.1"
+scipy = ">=1.4.1"
+
+[package.extras]
+all = ["geomstats[opt,test]"]
+autograd = ["autograd (>=1.3)"]
+ci = ["codecov", "coverage"]
+dev = ["black", "flake8", "flake8-docstrings", "isort", "pre-commit", "pytest", "pytest-cov"]
+doc = ["cloudpickle", "dask-sphinx-theme (>=1.1.0)", "distributed", "jupyter", "nbsphinx", "nbsphinx-link", "numpydoc (==0.8)", "sphinx", "sphinx-click", "sphinx-gallery", "sphinx-rtd-theme", "toolz"]
+opt = ["geomstats[autograd,tensorflow,torch]"]
+tensorflow = ["tensorflow (>=2.2)", "tensorflow-probability (>=0.9)"]
+test = ["geomstats[dev]"]
+torch = ["torch (==1.9.1)"]
+
+[[package]]
 name = "geopandas"
 version = "0.11.1"
 description = "Geographic pandas extensions"
@@ -1611,7 +1638,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "647c160d546e469555be898321e3dfbf9811be51d83851a5087504912af48a86"
+content-hash = "b77657cae3c503ce4b19643c3a45e375a920325159876f8fba28558261bc3333"
 
 [metadata.files]
 appnope = [
@@ -2040,6 +2067,10 @@ fonttools = [
 geojson = [
     {file = "geojson-2.5.0-py2.py3-none-any.whl", hash = "sha256:ccbd13368dd728f4e4f13ffe6aaf725b6e802c692ba0dde628be475040c534ba"},
     {file = "geojson-2.5.0.tar.gz", hash = "sha256:6e4bb7ace4226a45d9c8c8b1348b3fc43540658359f93c3f7e03efa9f15f658a"},
+]
+geomstats = [
+    {file = "geomstats-2.5.0-py3-none-any.whl", hash = "sha256:45214d551139dd34f598dca843af692a20f56fe6113d955831fee1b40c079326"},
+    {file = "geomstats-2.5.0.tar.gz", hash = "sha256:0bb271b3e2f99964306f31a7583679c88f097b54b92d0c13d094cbe800f4f0b8"},
 ]
 geopandas = [
     {file = "geopandas-0.11.1-py3-none-any.whl", hash = "sha256:f3344937f3866e52996c7e505d56dae78be117dc840cd1c23507da0b33c0af71"},
