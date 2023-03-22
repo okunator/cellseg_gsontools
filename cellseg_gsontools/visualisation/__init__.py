@@ -1,3 +1,3 @@
-from .heatmap import heatmap
+from .density_map import density_map
 
-__all__ = ["heatmap"]
+__all__ = ["density_map"]
