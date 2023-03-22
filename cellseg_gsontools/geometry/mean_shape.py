@@ -1,10 +1,20 @@
-import geomstats.backend as gs
 import geopandas as gpd
 import numpy as np
-from geomstats.geometry.discrete_curves import DiscreteCurves, SRVMetric
-from geomstats.geometry.euclidean import Euclidean
-from geomstats.geometry.pre_shape import PreShapeSpace
-from geomstats.learning.frechet_mean import FrechetMean
+
+try:
+    import geomstats.backend as gs
+    from geomstats.geometry.discrete_curves import DiscreteCurves, SRVMetric
+    from geomstats.geometry.euclidean import Euclidean
+    from geomstats.geometry.pre_shape import PreShapeSpace
+    from geomstats.learning.frechet_mean import FrechetMean
+except ImportError:
+    raise ImportError(
+        "`geomstats` package required. Install from github: "
+        """git clone https://github.com/geomstats/geomstats.git
+           cd geomstats
+           pip3 install ."""
+    )
+
 
 M_AMBIENT = 2
 r2 = Euclidean(dim=2)
