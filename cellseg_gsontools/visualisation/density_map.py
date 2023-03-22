@@ -3,7 +3,7 @@ from numba import jit
 
 
 @jit
-def heatmap(
+def density_map(
     dx: int, dy: int, points: list[tuple[float, float]], sx: int = 25, sy: int = 25
 ) -> np.array:
     """Convert cell coordinates to normalized density map.

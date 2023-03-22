@@ -1,8 +1,6 @@
 import cv2
 import geopandas as gpd
 import numpy as np
-import pandas as pd
-import shapely
 
 
 def import_slide(slide_path: str) -> np.array:
@@ -33,55 +31,6 @@ def get_size(slide_path: str) -> tuple[int, int]:
     x = slide_path.split("x-")[1].split("_")[0]
     y = slide_path.split("y-")[1].split(".")[0]
     return (int(x), int(y))
-
-
-def import_json(json_path: str) -> gpd.geodataframe:
-    """Read geojson file into Geodataframe object.
-
-    Args:
-    ---------
-        json_path
-
-    Returns:
-    ---------
-        gpd.Geodataframe
-    """
-    df = pd.read_json(json_path)
-    df["geometry"] = df["geometry"].apply(shapely.geometry.shape)
-    return gpd.GeoDataFrame(df).set_geometry("geometry")
-
-
-def prep_json(gdf: gpd.geodataframe) -> gpd.geodataframe:
-    """Clean imported geodataframe.
-
-    Args:
-    ---------
-        Geodataframe
-
-    Returns:
-    ---------
-        Cleaned Geodataframe
-    """
-    # drop invalid geometries if there are any after buffer
-    gdf.geometry = gdf.geometry.buffer(0)
-    gdf = gdf[gdf.is_valid]
-
-    # drop empty geometries
-    gdf = gdf[~gdf.is_empty]
-
-    # drop geometries that are not polygons
-    gdf = gdf[gdf.geom_type == "Polygon"]
-
-    # add bounding box coords of the polygons to the gdfs
-    # and correct for the max coords
-    gdf["xmin"] = gdf.bounds["minx"].astype(int)
-    gdf["ymin"] = gdf.bounds["miny"].astype(int)
-    gdf["ymax"] = gdf.bounds["maxy"].astype(int) + 1
-    gdf["xmax"] = gdf.bounds["maxx"].astype(int) + 1
-
-    gdf["class_name"] = gdf["properties"].apply(lambda x: x["classification"]["name"])
-
-    return gdf
 
 
 def get_cells(gdf: gpd.geodataframe, offset: tuple[int, int]) -> gpd.geodataframe:
