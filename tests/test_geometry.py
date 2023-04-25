@@ -2,7 +2,6 @@ import pytest
 
 from cellseg_gsontools.apply import gdf_apply
 from cellseg_gsontools.geometry import (
-    alpha_shape,
     circularity,
     compactness,
     convexity,
@@ -50,12 +49,6 @@ def test_shape_metrics(cell_gson, func, parallel):
     gdf["m"] = gdf_apply(gdf, func, parallel=parallel)
 
     assert gdf["m"].mean() >= 0
-
-
-def test_alpha_shape(cell_gson):
-    ash = alpha_shape(cell_gson.geometry.loc[0])
-
-    assert len(list(ash.exterior.coords)) > 3
 
 
 def test_shape_met(cell_gson):

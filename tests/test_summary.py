@@ -1,7 +1,16 @@
 import pytest
 
-from cellseg_gsontools.spatial_context import PointClusterContext, WithinContext
-from cellseg_gsontools.summary import DistanceSummary, InstanceSummary, SemanticSummary
+from cellseg_gsontools.spatial_context import (
+    InterfaceContext,
+    PointClusterContext,
+    WithinContext,
+)
+from cellseg_gsontools.summary import (
+    DistanceSummary,
+    InstanceSummary,
+    SemanticSummary,
+    SpatialWeightSummary,
+)
 
 
 @pytest.mark.parametrize("groups", [["label", "class_name"], None])
@@ -78,3 +87,20 @@ def test_distance_summary(cells_and_areas):
     ic_dists = immune_proximities.summarize()
 
     assert "icc-close2lesion-1-count" in ic_dists.index
+
+
+def test_sweight_summary(cells_and_areas):
+    cells = cells_and_areas[0]
+    areas = cells_and_areas[1]
+
+    iface_context = InterfaceContext(
+        area_gdf=areas,
+        cell_gdf=cells,
+        label1="area_cin",
+        label2="areastroma",
+        min_area_size=100000.0,
+    )
+
+    s = SpatialWeightSummary(iface_context, prefix="n-")
+    summary = s.summarize("border_network")
+    assert "n-inflammatory-inflammatory" in summary.index
