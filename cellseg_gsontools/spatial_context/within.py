@@ -63,7 +63,6 @@ class WithinContext(_SpatialContext):
 
         >>> from cellseg_gsontools.spatial_context import WithinContext
 
-
         >>> area_gdf = read_gdf("area.json")
         >>> cell_gdf = pre_proc_gdf(read_gdf("cells.json"))
         >>> within_context = WithinContext(

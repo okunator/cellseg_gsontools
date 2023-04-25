@@ -84,6 +84,8 @@ class Summary(ABC):
         counts = sum_vec[sum_vec.index.str.contains("count")]
         counts = counts[counts.index.str.contains(metrics[0])]
         counts.index = counts.index.str.replace(f"{metrics[0]}-", "")
+
+        prefix = prefix if prefix is not None else ""
         if groups is not None:
             counts = pd.concat(
                 [counts, pd.Series(counts.sum(), index=[f"{prefix}total-count"])]

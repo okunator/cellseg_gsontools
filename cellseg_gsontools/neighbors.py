@@ -95,6 +95,7 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
     Examples
     --------
     Use `gdf_apply` to get the neihgborhood values for each node/cell given a metric
+        >>> from libpysal.weights import DistanceBand
         >>> from cellseg_gsontools.apply import gdf_apply
         >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
         >>> from cellseg_gsontools.utils import set_uid
