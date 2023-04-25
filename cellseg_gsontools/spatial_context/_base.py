@@ -4,7 +4,7 @@ from typing import Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from libpysal.weights import DistanceBand, W
+from libpysal.weights import DistanceBand, W, w_subset, w_union
 
 from cellseg_gsontools.utils import set_uid
 
@@ -97,6 +97,35 @@ class _SpatialContext:
 
         return roi_c
 
+    def merge_weights(self, key: str) -> W:
+        """Merge libpysal spatial weights of the context.
+
+        Parameters
+        ----------
+            key : str
+                The key of the context dictionary that contains the spatial
+                weights to be merged. One of "roi_network", "ful_network",
+                "interface_network", "border_network"
+
+        Returns
+        -------
+            libpysal.weights.W:
+                A spatial weights object containing all the distinct networks
+                in the context.
+        """
+        allowed = ("roi_network", "ful_network", "interface_network", "border_network")
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
+
+        cxs = list(self.context.items())
+        wout = W({0: [0]})
+        for _, c in cxs:
+            w = c[key]
+            wout = w_union(wout, w, silence_warnings=True)
+        wout = w_subset(wout, list(wout.neighbors.keys())[1:], silence_warnings=True)
+
+        return wout
+
     def context2gdf(self, key: str) -> gpd.GeoDataFrame:
         """Convert the context of type `key` into a geodataframe.
 
@@ -124,7 +153,8 @@ class _SpatialContext:
             con,
             keys=[i for i in self.context.keys() if self.context[i][key] is not None],
         )
-        return set_uid(gdf.reset_index(level=0, names="label"))
+        # return set_uid(gdf.reset_index(level=0, names="label"))
+        return gdf.reset_index(level=0, names="label")
 
     def context2weights(self, key: str, **kwargs) -> W:
         """Fit a network on the cells inside the context.
