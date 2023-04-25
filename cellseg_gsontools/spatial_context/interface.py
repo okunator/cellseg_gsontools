@@ -203,6 +203,10 @@ class InterfaceContext(_SpatialContext):
             iface = get_interface_zones(
                 roi=roi, gdf=self.context_area2, buffer_dist=self.buffer_dist
             )
+            if len(iface) > 1:
+                aggfuncs = {c: "first" for c in iface.columns if c != "geometry"}
+                aggfuncs["area"] = "sum"
+                iface = iface.dissolve(aggfunc=aggfuncs).set_geometry("geometry")
 
         return iface
 
