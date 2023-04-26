@@ -1,19 +1,148 @@
-from typing import Dict, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 import geopandas as gpd
 import numpy as np
 import shapely
-from libpysal.weights import KNN, W
+from libpysal.weights import (
+    KNN,
+    Delaunay,
+    DistanceBand,
+    Gabriel,
+    Kernel,
+    Relative_Neighborhood,
+    Voronoi,
+    W,
+)
 
 from .apply import gdf_apply
 from .neighbors import neighborhood, nhood_dists
+from .utils import set_uid
 
 __all__ = [
+    "fit_graph",
     "dist_thresh_weights",
     "_drop_neighbors",
     "graph_pos",
     "neighborhood_density",
 ]
+
+
+def fit_graph(
+    gdf: gpd.GeoDataFrame,
+    type: str,
+    id_col: Optional[str] = None,
+    thresh: Optional[float] = None,
+    **kwargs,
+) -> W:
+    """Fit a libpysal spatial weights graph to a gdf.
+
+    Optionally, a distance threshold can be set for edges that are too long.
+
+    Basically, a wrapper to fit libpysal graph with additional distance threshing.
+
+    Parameters
+    ----------
+        gdf : gpd.GeoDataFrame
+            The input geodataframe.
+        type : str
+            The type of the libpysal graph. Allowed: "delaunay", "gabriel", "knn",
+            "distband", "voronoi", "relative_nhood", "kernel"
+        id_col : str, optional
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
+        thresh : float, optional
+            A distance threshold for too long edges.
+        **kwargs:
+            Arbitrary keyword arguments for the Graph init functions.
+
+    Returns
+    -------
+        libpysal.weights.W:
+            A libpysal spatial weights object, containing the neighbor graph data.
+
+    Examples
+    --------
+    Fit a DistanceBand to a gdf with a dist threshold of 120.0.
+    >>> from cellseg_gsontools.graphs import fit_graph
+    >>> w = fit_graph(gdf, type="distband", thresh=120)
+
+    Fit a kernel graph to a gdf with k=5, and a triangular non-fixed kernel.
+    >>> from cellseg_gsontools.graphs import fit_graph
+    >>> w = fit_graph(
+            gdf, type="kernel", thresh=None, k=5, fixed=False, function="triangular"
+        )
+
+    Fit a delaunay graph to a gdf without a dist threshold.
+    >>> from cellseg_gsontools.graphs import fit_graph
+    >>> w = fit_graph(gdf, type="delaunay", thresh=None)
+    """
+
+    def shift_indices(w):
+        neighbors = {k + 1: [n + 1 for n in ngh] for k, ngh in w.neighbors.items()}
+        weights = {k + 1: it for k, it in w.weights.items()}
+
+        return W(neighbors, weights)
+
+    allowed = (
+        "delaunay",
+        "gabriel",
+        "knn",
+        "distband",
+        "voronoi",
+        "relative_nhood",
+        "kernel",
+    )
+    if type not in allowed:
+        raise ValueError(f"Illegal graph type given. Got: {type}. Allowed: {allowed}.")
+
+    if id_col is None:
+        id_col = "uid"
+        gdf = set_uid(gdf, drop=False)
+
+    if type == "delaunay":
+        w = Delaunay.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
+        if id_col == "uid":
+            w = shift_indices(
+                w
+            )  # delaunay does not work with ids that are manually set
+    elif type == "gabriel":
+        w = Gabriel.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
+        if id_col == "uid":
+            w = shift_indices(w)  # gabriel does not work with ids that are manually set
+    elif type == "knn":
+        w = KNN.from_dataframe(gdf, silence_warnings=True, **kwargs)
+    elif type == "distband":
+        if thresh is None:
+            raise ValueError("DistBand requires `thresh` param. Not provided.")
+
+        w = DistanceBand.from_dataframe(
+            gdf, threshold=thresh, alpha=-1.0, silence_warnings=True, **kwargs
+        )
+    elif type == "voronoi":
+        w = Voronoi(
+            np.array(list(zip(gdf.centroid.x, gdf.centroid.y))),
+            silence_warnings=True,
+            **kwargs,
+        )
+        if id_col == "uid":
+            w = shift_indices(w)  # voronoi does not work with ids that are manually set
+    elif type == "relative_nhood":
+        w = Relative_Neighborhood.from_dataframe(
+            gdf.centroid, silence_warnings=True, **kwargs
+        )
+        if id_col == "uid":
+            w = shift_indices(
+                w
+            )  # relative_nhood does not work with ids that are manually set
+    elif type == "kernel":
+        w = Kernel.from_dataframe(
+            gdf, silence_warnings=True, **kwargs
+        )  # includes self-loop in neighbors
+
+    # Threshold edges based on distance to center node.
+    if thresh is not None and type != "distband":
+        w = dist_thresh_weights(gdf, w, thresh, id_col=id_col)
+
+    return w
 
 
 def dist_thresh_weights(

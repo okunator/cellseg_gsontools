@@ -26,7 +26,7 @@ def link_counts(
         w : libysal.weights.W
             Libpysal spatial weights object of the gdf.
         classes : Tuple[str, ...]
-            A list/tuple contianing the classes of your dataset.
+            A list/tuple containing the classes of your dataset.
 
     Returns
     -------
