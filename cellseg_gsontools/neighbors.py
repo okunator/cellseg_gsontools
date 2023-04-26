@@ -5,7 +5,15 @@ import numpy as np
 import pandas as pd
 from libpysal.weights import W
 
-__all__ = ["neighborhood", "nhood_counts", "nhood_vals", "nhood_type_count"]
+from .geometry.axis import _dist
+
+__all__ = [
+    "neighborhood",
+    "nhood_counts",
+    "nhood_vals",
+    "nhood_type_count",
+    "nhood_dists",
+]
 
 
 def neighborhood(
@@ -318,3 +326,56 @@ def nhood_type_count(
             ret = ret / np.sum(c)
 
     return ret
+
+
+def nhood_dists(nhood: Sequence[int], centroids: pd.Series) -> np.ndarray:
+    """Compute the neihborhood distances between the center node.
+
+    NOTE: It is assumed that the center node is the first index in the `nhood`
+    array. To get the neighborhoods use for example:
+    `gdf_apply(d, neighborhood, col="uid", spatial_weights=w_dist, include_self=True)`
+
+    Parameters
+    ----------
+        nhood : Sequence[int]
+            An array containig neighbor indices. The first index is assumed to be
+            the center node.
+        centroids : pd.Series
+            A pd.Series array containing the centroid Points of the full gdf.
+
+    Returns
+    -------
+        np.ndarray:
+            An array containing the distances between the center node and it's nhood.
+
+    Example
+    -------
+    >>> from libpysal.weights import Delaney
+    >>> from cellseg_gsontools.apply import gdf_apply
+    >>> from cellseg_gsontools.neighbors import neighborhood
+
+    >>> id_col = "iid"
+    >>> gdf[id_col] = range(len(gdf))
+    >>> gdf = gdf.set_index(id_col, drop=False)
+    >>> ids = list(gdf.index.values)
+    >>> w = Delaunay.from_dataframe(gdf.centroid, id_order=ids, ids=ids)
+
+    >>> gdf["nhood"] = gdf_apply(gdf, neighborhood, col="iid", spatial_weights=w)
+
+    >>> gdf["nhood_dists"] = gdf_apply(
+            gdf,
+            nhood_dists,
+            col="nhood",
+            centroids=gdf.centroid,
+        )
+    """
+    node = nhood[0]
+    nhood_dists = np.array([0])
+    if nhood not in (None, np.nan):
+        center_node = centroids.loc[node]
+        nhood_nodes = centroids.loc[nhood].to_numpy()
+        nhood_dists = np.array(
+            [np.round(_dist(center_node, c), 2) for c in nhood_nodes]
+        )
+
+    return nhood_dists
