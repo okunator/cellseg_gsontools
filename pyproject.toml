@@ -78,7 +78,8 @@ exclude_lines = [
     "except ImportError",
     "except TypeError",
     "except Exception",
-    "def extra_repr"
+    "def extra_repr",
+    "plot()"
 ]
 
 
