@@ -69,4 +69,4 @@ def test_dist_thresh(cell_gson):
     w = Delaunay.from_dataframe(gdf.centroid, id_order=ids, ids=ids)
 
     # drop the edges
-    w = dist_thresh_weights(gdf, w, thresh=120.0)
+    w = dist_thresh_weights(gdf, w, thresh=120.0, id_col="iid")
