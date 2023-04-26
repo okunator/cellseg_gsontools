@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 from shapely.geometry import Point, Polygon
 
-__all__ = ["axis_len", "axis_angle"]
+__all__ = ["axis_len", "axis_angle", "_dist", "_azimuth"]
 
 
 def _dist(p1: Point, p2: Point) -> float:
