@@ -55,6 +55,14 @@ class SpatialWeightSummary(Summary):
                     min_area_size=100000.0
                 )
 
+            >>> t = [
+                    "inflammatory",
+                    "connective",
+                    "glandular_epithel",
+                    "squamous_epithel",
+                    "neoplastic"
+                ]
+
             >>> s = SpatialWeightSummary(iface_context, t, prefix="n-")
             >>> s.summarize("border_network")
             Processing interface area: 4: 100%|██████████| 4/4 [00:01<00:00,  2.21it/s]
