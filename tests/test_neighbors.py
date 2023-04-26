@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
-from libpysal.weights import DistanceBand
+from libpysal.weights import Delaunay, DistanceBand
 
 from cellseg_gsontools.apply import gdf_apply
+from cellseg_gsontools.graphs import dist_thresh_weights
 from cellseg_gsontools.neighbors import neighborhood, nhood_type_count, nhood_vals
 from cellseg_gsontools.utils import set_uid
 
@@ -56,3 +57,16 @@ def test_nhood_type_count(cell_gson, frac):
         cls="inflammatory",
         frac=frac,
     )
+
+
+def test_dist_thresh(cell_gson):
+    gdf = cell_gson
+
+    id_col = "iid"
+    gdf[id_col] = range(len(gdf))
+    gdf = gdf.set_index(id_col, drop=False)
+    ids = list(gdf.index.values)
+    w = Delaunay.from_dataframe(gdf.centroid, id_order=ids, ids=ids)
+
+    # drop the edges
+    w = dist_thresh_weights(gdf, w, thresh=120.0)
