@@ -20,7 +20,7 @@ def set_uid(
             Input Geodataframe
         id_col : str, default="uid"
             The name of the column that will be used or set to the id.
-        drop : bool, default=True
+        drop : bool, default=False
             Drop the column after it is added to index.
 
     Returns
