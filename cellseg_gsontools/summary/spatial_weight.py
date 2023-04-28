@@ -31,6 +31,8 @@ class SpatialWeightSummary(Summary):
 
         Attributes
         ----------
+            summary : pd.Series
+                The summary vector after running `summarize()`
             link_counts : pd.DataFrame
                 A dataframe containing link-counts for each context area.
             link_props : pd.DataFrame
@@ -129,7 +131,11 @@ class SpatialWeightSummary(Summary):
         """Return link proportions instead of counts."""
         return self.link_counts.div(self.link_counts.sum(axis=1), axis=0)
 
-    def summarize(self, key: str) -> pd.Series:
+    def summarize(
+        self,
+        key: str,
+        filter_pattern: Optional[str] = None,
+    ) -> pd.Series:
         """Summarize the cell networks.
 
         Parameters
@@ -137,6 +143,9 @@ class SpatialWeightSummary(Summary):
             key : str
                 The network name to summarize. One of: "full_network", "border_network",
                 "interface_network", "roi_network".
+            filter_pattern : str, optional
+                A string pattern. All off the values containing this pattern
+                in the result pd.Series are filtered out.
 
         Raises
         ------
@@ -165,4 +174,10 @@ class SpatialWeightSummary(Summary):
         df = pd.DataFrame(counts).set_index("label")
         self.link_counts = df.loc[~(df == 0).all(axis=1)]
 
-        return self.link_counts.sum(axis=0)
+        self.summary = self.link_counts.sum(axis=0)
+        if filter_pattern is not None:
+            self.summary = self.summary.loc[
+                ~self.summary.index.str.contains(filter_pattern)
+            ]
+
+        return self.summary
