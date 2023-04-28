@@ -37,6 +37,11 @@ class SemanticSummary(Summary):
             prefix : str, optional
                 A prefix for the named indices.
 
+        Attributes
+        ----------
+            summary : pd.Series
+                The summary vector after running `summarize()`
+
         Examples
         --------
         Compute a summary of the areas of different immune cell clusters in a gdf.

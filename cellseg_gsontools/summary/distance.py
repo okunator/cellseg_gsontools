@@ -35,6 +35,11 @@ class DistanceSummary(Summary):
             prefix : str, optional
                 A prefix for the named indices.
 
+        Attributes
+        ----------
+            summary : pd.Series
+                The summary vector after running `summarize()`
+
         Examples
         --------
         Get the proximities of immune clusters to the neoplastic areas. Assumes that the
