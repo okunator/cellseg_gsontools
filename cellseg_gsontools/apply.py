@@ -9,7 +9,7 @@ __all__ = ["gdf_apply"]
 def gdf_apply(
     gdf: gpd.GeoDataFrame,
     func: Callable,
-    col: str = "geometry",
+    col: Optional[str] = "geometry",
     extra_col: Optional[str] = None,
     parallel: bool = False,
     pbar: bool = False,
@@ -23,7 +23,7 @@ def gdf_apply(
             Input GeoDataFrame.
         func : Callable
             A callable function.
-        col : str, default="geometry"
+        col : str, optional, default="geometry"
             The name of the column of the gdf that is used as the input
             to apply operation.
         extra_col : str, optional
@@ -44,21 +44,33 @@ def gdf_apply(
 
     Examples
     --------
-        >>> # Get the compactness of the polygons in a gdf
-        >>> gdf["compactness"] = gdf_apply(gdf, compactness, parallel=True)
+    Get the compactness of the polygons in a gdf
+    >>> from cellseg_gsontools.utils import gdf_apply
+    >>> gdf["compactness"] = gdf_apply(gdf, compactness, parallel=True)
+
+    Get a list of QuPath readable geojson dict objects from a gdf
+    >>> from cellseg_gsontools.utils import gdf_apply
+    >>> from cellseg_gsontools.merging.save_utils import row_to_qupath
+    >>> gdf_apply(gdf, row_to_qupath, col=None, axis=1, parallel=True).tolist()
     """
     if not parallel:
-        if extra_col is None:
-            res = gdf[col].apply(func, **kwargs)
+        if col is None:
+            res = gdf.apply(func, **kwargs)
         else:
-            res = gdf[[col, extra_col]].apply(lambda x: func(*x, **kwargs), axis=1)
+            if extra_col is None:
+                res = gdf[col].apply(func, **kwargs)
+            else:
+                res = gdf[[col, extra_col]].apply(lambda x: func(*x, **kwargs), axis=1)
     else:
         pandarallel.initialize(verbose=1, progress_bar=pbar)
-        if extra_col is None:
-            res = gdf[col].parallel_apply(func, **kwargs)
+        if col is None:
+            res = gdf.parallel_apply(func, **kwargs)
         else:
-            res = gdf[[col, extra_col]].parallel_apply(
-                lambda x: func(*x, **kwargs), axis=1
-            )
+            if extra_col is None:
+                res = gdf[col].parallel_apply(func, **kwargs)
+            else:
+                res = gdf[[col, extra_col]].parallel_apply(
+                    lambda x: func(*x, **kwargs), axis=1
+                )
 
     return res
