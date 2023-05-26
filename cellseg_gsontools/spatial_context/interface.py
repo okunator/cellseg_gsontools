@@ -243,14 +243,14 @@ class InterfaceContext(_SpatialContext):
             iface = self.interface_cells(ix)
             if iface is not None and roi is not None:
                 roi_iface_cells = (
-                    set_uid(pd.concat([roi, iface]), "id"),
+                    set_uid(pd.concat([roi, iface]), id_col="id"),
                     len(roi),
                     len(iface),
                 )
             elif iface is None and roi is not None:
-                roi_iface_cells = (set_uid(roi, "id"), len(roi), 0)
+                roi_iface_cells = (set_uid(roi, id_col="id"), len(roi), 0)
             elif iface is not None and roi is None:
-                roi_iface_cells = (set_uid(iface, "id"), 0, len(iface))
+                roi_iface_cells = (set_uid(iface, id_col="id"), 0, len(iface))
             else:
                 roi_iface_cells = None
 
