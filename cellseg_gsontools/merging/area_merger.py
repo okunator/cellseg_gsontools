@@ -18,7 +18,7 @@ class AreaMerger(BaseGSONMerger):
     def __init__(
         self, in_dir: Union[Path, str], tile_size: Tuple[int, int] = (1000, 1000)
     ) -> None:
-        """Merge the area/tissue annotation files of the tiles to one geojson file.
+        """Merge the area/tissue annotation files of the tiles to one file.
 
         NOTE: Assumes
         - The input files contain area/tissue semantic segmentation annotations.
@@ -39,10 +39,10 @@ class AreaMerger(BaseGSONMerger):
 
         Examples
         --------
-        Merge the annotations of the tiles in a directory.
+        Merge the annotations of the QuPath-formatted tiles in a directory.
         >>> from cellseg_gsontools.merging import AreaMerger
         >>> merger = AreaMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir(out.geojson, format="geojson", qupath_format="latest")
+        >>> merger.merge_dir(out.geojson, format="geojson", in_qupath_format="latest")
         """
         super().__init__(in_dir, tile_size)
 
@@ -50,7 +50,8 @@ class AreaMerger(BaseGSONMerger):
         self,
         out_fn: Optional[Union[Path, str]] = None,
         format: Optional[str] = None,
-        qupath_format: Optional[str] = None,
+        in_qupath_format: Optional[str] = None,
+        out_qupath_format: Optional[str] = None,
         verbose: bool = True,
     ) -> None:
         """Merge all the semantic segmentation files in the input directory into one.
@@ -68,9 +69,16 @@ class AreaMerger(BaseGSONMerger):
             format : str, optional
                 The format of the output geojson file. One of: "feather", "parquet",
                 "geojson", None. This is ignored if `out_fn` is None.
-            qupath_format : str, optional
+            in_qupath_format : str, optional
+                This specifies the qupath format of the input files. If they are not in
+                QuPath-readable format set this to None. One of: "old", "latest",
+                NOTE: `old` works for versions less than 0.3.0. `latest` works for
+                newer versions. This is ignored if `out_fn` is None or format is not
+                "geojson".
+            out_qupath_format : str, optional
                 If this is not None, some additional metadata is added to the geojson
-                file to make it properly readable by QuPath. One of: "old", "latest",
+                file to make it properly readable by QuPath when the file is written.
+                One of: "old", "latest",
                 NOTE: `old` works for versions less than 0.3.0. `latest` works for
                 newer versions. This is ignored if `out_fn` is None or format is not
                 "geojson".
@@ -79,11 +87,11 @@ class AreaMerger(BaseGSONMerger):
 
         Examples
         --------
-        Write input geojson files to qupath readable '.json' file.
+        Write standard formatted geojson files to a QuPath-readable '.geojson' file.
         >>> from cellseg_gsontools.merging import AreaMerger
         >>> merger = AreaMerger("/path/to/geojsons/", tile_size=(1000, 1000))
         >>> merger.merge_dir(
-        ...     "/path/to/output.json", format="geojson", qupath_format="latest"
+        ...     "/path/to/output.json", format="geojson", out_qupath_format="latest"
         ... )
 
         Write input geojson files to feather file.
@@ -97,17 +105,19 @@ class AreaMerger(BaseGSONMerger):
         >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
         """
         # merge the tiles
-        self._merge(qupath_format=qupath_format, verbose=verbose)
+        self._merge(qupath_format=in_qupath_format, verbose=verbose)
 
         if out_fn is not None:
             msg = f"{format}-format" if format is not None else "`self.annots`"
             qmsg = (
-                f"{qupath_format} QuPath-readable" if qupath_format is not None else ""
+                f"{out_qupath_format} QuPath-readable"
+                if out_qupath_format is not None
+                else ""
             )
             print(f"Saving the merged geojson file to {qmsg} {msg}")
 
             # save the merged geojson
-            gdf_to_file(self.annots, out_fn, format, qupath_format)
+            gdf_to_file(self.annots, out_fn, format, out_qupath_format)
 
     def _merge(
         self,
