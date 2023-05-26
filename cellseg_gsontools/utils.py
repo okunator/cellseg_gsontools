@@ -1,4 +1,6 @@
 import warnings
+from pathlib import Path
+from typing import Optional, Union
 
 import geopandas as gpd
 import pandas as pd
@@ -8,7 +10,7 @@ __all__ = ["set_uid", "read_gdf", "pre_proc_gdf"]
 
 
 def set_uid(
-    gdf: gpd.GeoDataFrame, id_col: str = "uid", drop: bool = False
+    gdf: gpd.GeoDataFrame, start_ix: int = 1, id_col: str = "uid", drop: bool = False
 ) -> gpd.GeoDataFrame:
     """Set a unique identifier column to gdf.
 
@@ -17,7 +19,9 @@ def set_uid(
     Parameters
     ----------
         gdf : gpd.GeoDataFrame
-            Input Geodataframe
+            Input Geodataframe.
+        start_ix : int, default=1
+            The starting index of the id column.
         id_col : str, default="uid"
             The name of the column that will be used or set to the id.
         drop : bool, default=False
@@ -34,30 +38,113 @@ def set_uid(
 
     gdf = gdf.copy()
     if id_col in ("uid", "id"):
-        gdf[id_col] = range(1, len(gdf) + 1)
+        gdf[id_col] = range(start_ix, len(gdf) + start_ix)
 
     gdf = gdf.set_index(id_col, drop=drop)
 
     return gdf
 
 
-def read_gdf(fname: str) -> gpd.GeoDataFrame:
-    """Read a gson file into geodataframe."""
-    gdf = pd.read_json(fname)
-    gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
-    gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
+def read_gdf(
+    fname: Union[Path, str],
+    qupath_format: Optional[str] = None,
+    suppress_warnigns: bool = True,
+) -> gpd.GeoDataFrame:
+    """Read a file into geodataframe.
 
-    # add class name column
-    gdf["class_name"] = gdf["properties"].apply(lambda x: x["classification"]["name"])
+    Allowed formats:
+    ".json", ".geojson", ".feather", ".parquet"
+
+    Parameters
+    ----------
+        fname : Union[Path, str]
+            The filename of the gson file.
+        qupath_format : str, optional
+            One of: "old", "latest", None.
+
+    Raises
+    ------
+        ValueError: If suffix is not one of ".json", ".geojson", ".feather", ".parquet".
+        ValueError: If `qupath_format` is not one of "old", "latest", None.
+
+    Returns
+    -------
+        gpd.GeoDataFrame:
+            The geodataframe.
+
+    Examples
+    --------
+    Read a geojson file that is QuPath-readable.
+        >>> from cellseg_gsontools.utils import read_gdf
+        >>> gdf = read_gdf(
+        ...    "path/to/file.json", format="geojson", qupath_format="latest"
+        ... )
+
+    """
+    fname = Path(fname)
+    format = fname.suffix
+    allowed_formats = (".json", ".geojson", ".feather", ".parquet")
+    if format not in allowed_formats:
+        raise ValueError(
+            f"Illegal `format`. Got: {format}. Allowed: {allowed_formats}."
+        )
+
+    allowed_qupath_formats = ("old", "latest", None)
+    if qupath_format not in allowed_qupath_formats:
+        raise ValueError(
+            f"Illegal `qupath_format`. Got: {qupath_format}. "
+            f"Allowed: {allowed_qupath_formats}."
+        )
+
+    if format in (".geojson", ".json"):
+        if qupath_format == "old":
+            gdf = pd.read_json(fname)
+
+            if gdf.empty or gdf is None:
+                if not suppress_warnigns:
+                    warnings.warn(
+                        f"Empty geojson file: {fname.name}. Returning empy gdf."
+                    )
+                return gpd.GeoDataFrame()
+
+            gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
+            gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
+
+            # add class name column
+            gdf["class_name"] = gdf["properties"].apply(
+                lambda x: x["classification"]["name"]
+            )
+        else:
+            gdf = gpd.read_file(fname)
+    elif format == ".feather":
+        gdf = gpd.read_feather(fname)
+    elif format == ".parquet":
+        gdf = gpd.read_parquet(fname)
+
+    if gdf.empty:
+        warnings.warn(f"Empty geojson file: {fname.name}. Returning empty gdf.")
 
     return gdf
 
 
-def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> Union[gpd.GeoDataFrame, None]:
     """Apply some light pre-processing of a geodataframe.
 
     Namely, remove invalid polygons, empty geometries and add bounds to the gdf.
+
+    Parameters
+    ----------
+        gdf : gpd.GeoDataFrame
+            Input geodataframe.
+
+    Returns
+    -------
+        gpd.GeoDataFrame:
+            The pre-processed gdf or None if input gdf is empty or None.
     """
+    if gdf.empty or gdf is None:
+        return gdf
+
     # drop invalid geometries if there are any after buffer
     gdf.geometry = gdf.geometry.buffer(0)
     gdf = gdf[gdf.is_valid]
