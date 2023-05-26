@@ -46,14 +46,14 @@ def gdf_to_file(
     ----------
         out_fn : Union[Path, str]
             Filename for the output file.
-        format : str, default="qupath"
-            The format of the output geojson file. If None, the merged gdf is saved
+        format : str
+            The format of the output file. If None, the merged gdf is saved
             to the class attribute `self.annots` only. One of: "feather",
-            "parquet", "geojson", None.
-        qupath_format : str, optional, default="qupath_old"
+            "parquet", "geojson", "json" or None.
+        qupath_format : str, optional, default="old"
             If this is not None, additional metadata is added to the geojson file to
             make it properly readable by QuPath. One of: "old", "latest", None
-            NOTE: `qupath_old` works for versions less than 0.3.0. `latest` works for
+            NOTE: `old` works for versions less than 0.3.0. `latest` works for
             newer versions.
 
     Raises

@@ -17,7 +17,7 @@ __all__ = ["get_interface_zones", "InterfaceContext"]
 def get_interface_zones(
     roi: Union[Polygon, gpd.GeoDataFrame], gdf: gpd.GeoDataFrame, buffer_dist: int = 200
 ) -> gpd.GeoDataFrame:
-    """Get the interfaces b/w the polygons defined in a gdf and a given a roi/area.
+    """Get the interfaces b/w the polygons defined in a gdf and a given roi/area.
 
     Interface is the region around the border of two touching polygons. The interface
     radius is determined by the `buffer_dist` parameter.

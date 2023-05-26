@@ -77,7 +77,7 @@ def read_gdf(
     Read a geojson file that is QuPath-readable.
         >>> from cellseg_gsontools.utils import read_gdf
         >>> gdf = read_gdf(
-        ...    "path/to/file.json", format="geojson", qupath_format="latest"
+        ...    "path/to/file.json", qupath_format="latest"
         ... )
 
     """
@@ -114,6 +114,11 @@ def read_gdf(
             gdf["class_name"] = gdf["properties"].apply(
                 lambda x: x["classification"]["name"]
             )
+        elif qupath_format == "latest":
+            gdf = gpd.read_file(fname)
+            gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
+            gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
+            gdf["class_name"] = gdf["classification"].apply(lambda x: x["name"])
         else:
             gdf = gpd.read_file(fname)
     elif format == ".feather":
