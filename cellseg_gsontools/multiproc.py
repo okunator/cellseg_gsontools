@@ -1,11 +1,16 @@
+import os
+import warnings
 from typing import Any, Callable, Generator, List, Union
 
 from pathos.pools import ProcessPool, SerialPool, ThreadPool
+from tqdm import tqdm
 
 __all__ = ["run_pool"]
 
 
-def iter_pool_generator(it: Generator, res: List = None) -> Union[List[Any], None]:
+def iter_pool_generator(
+    it: Generator, res: List = None, pbar: bool = True, length: int = None
+) -> Union[List[Any], None]:
     """Iterate over a pool generator object.
 
     Parameters
@@ -15,12 +20,17 @@ def iter_pool_generator(it: Generator, res: List = None) -> Union[List[Any], Non
         res : List | None
             An empty list, where the results from the generator will be saved.
             If None, no results will be saved.
+        pbar : bool, default=True
+            Flag, whether to use tqdm or not.
+        length : int, optional
+            The length of the generator object. If None, will not use tqdm.
 
     Returns
     -------
         Union[List[Any], None]:
             A list of results or None.
     """
+    it = tqdm(it, total=length) if pbar else it
     if res is not None:
         for x in it:
             res.append(x)
@@ -37,6 +47,8 @@ def run_pool(
     ret: bool = True,
     pooltype: str = "thread",
     maptype: str = "amap",
+    n_jobs: int = -1,
+    pbar: bool = True,
 ) -> Union[List[Any], None]:
     """Run a pathos Thread, Process or Serial pool object.
 
@@ -57,6 +69,11 @@ def run_pool(
         maptype : str, default="amap"
             The map type of the pathos Pool object.
             Allowed: ("map", "amap", "imap", "uimap")
+        n_jobs : int, default=-1
+            Number of processes/threads to use. If -1, will use all available cores.
+        pbar : bool, default=True
+            Flag, whether to use tqdm or not. Does not work with `maptype` "amap".
+            Makes sense to use only with `maptype` "uimap" and "imap".
 
     Raises
     ------
@@ -93,21 +110,24 @@ def run_pool(
             )
         Pool = SerialPool
 
+    n_jobs = os.cpu_count() if n_jobs == -1 else n_jobs
     results = [] if ret else None
     if maptype == "map":
-        with Pool() as pool:
+        with Pool(nodes=n_jobs) as pool:
             it = pool.map(func, args)
-            results = iter_pool_generator(it, results)
+            results = iter_pool_generator(it, results, pbar=pbar, length=len(args))
     elif maptype == "amap":
-        with Pool() as pool:
+        if pbar:
+            warnings.warn("`amap` does not support progress bar.")
+        with Pool(nodes=n_jobs) as pool:
             results = pool.amap(func, args).get()
     elif maptype == "imap":
-        with Pool() as pool:
+        with Pool(nodes=n_jobs) as pool:
             it = pool.imap(func, args)
-            results = iter_pool_generator(it, results)
+            results = iter_pool_generator(it, results, pbar=pbar, length=len(args))
     elif maptype == "uimap":
-        with Pool() as pool:
+        with Pool(nodes=n_jobs) as pool:
             it = pool.uimap(func, args)
-            results = iter_pool_generator(it, results)
+            results = iter_pool_generator(it, results, pbar=pbar, length=len(args))
 
     return results
