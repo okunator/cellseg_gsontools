@@ -31,3 +31,19 @@ def cells_and_areas() -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     areas = gpd.read_feather(path_areas)
 
     return cells, areas
+
+
+@pytest.fixture(scope="package")
+def merge_data_cell() -> Path:
+    path = Path().resolve()
+    path = path / "tests/data/merge_data/cell"
+
+    return path
+
+
+@pytest.fixture(scope="package")
+def merge_data_area() -> Path:
+    path = Path().resolve()
+    path = path / "tests/data/merge_data/area"
+
+    return path
