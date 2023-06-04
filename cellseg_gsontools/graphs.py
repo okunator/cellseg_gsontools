@@ -1,29 +1,15 @@
-from typing import Dict, Optional, Sequence, Tuple
+import warnings
+from typing import Optional, Sequence
 
 import geopandas as gpd
 import numpy as np
-import shapely
-from libpysal.weights import (
-    KNN,
-    Delaunay,
-    DistanceBand,
-    Gabriel,
-    Kernel,
-    Relative_Neighborhood,
-    Voronoi,
-    W,
-)
-
-from .apply import gdf_apply
-from .neighbors import neighborhood, nhood_dists
-from .utils import set_uid
+import pandas as pd
+from libpysal.weights import KNN, Delaunay, DistanceBand, Relative_Neighborhood, W
 
 __all__ = [
     "fit_graph",
-    "dist_thresh_weights",
+    "dist_thresh_weights_sequential",
     "_drop_neighbors",
-    "graph_pos",
-    "neighborhood_density",
 ]
 
 
@@ -45,8 +31,8 @@ def fit_graph(
         gdf : gpd.GeoDataFrame
             The input geodataframe.
         type : str
-            The type of the libpysal graph. Allowed: "delaunay", "gabriel", "knn",
-            "distband", "voronoi", "relative_nhood", "kernel"
+            The type of the libpysal graph. Allowed: "delaunay", "knn", "distband",
+            "relative_nhood"
         id_col : str, optional
             The unique id column in the gdf. If None, this uses `set_uid` to set it.
         thresh : float, optional
@@ -65,241 +51,178 @@ def fit_graph(
     >>> from cellseg_gsontools.graphs import fit_graph
     >>> w = fit_graph(gdf, type="distband", thresh=120)
 
-    Fit a kernel graph to a gdf with k=5, and a triangular non-fixed kernel.
-    >>> from cellseg_gsontools.graphs import fit_graph
-    >>> w = fit_graph(
-            gdf, type="kernel", thresh=None, k=5, fixed=False, function="triangular"
-        )
-
     Fit a delaunay graph to a gdf without a dist threshold.
     >>> from cellseg_gsontools.graphs import fit_graph
     >>> w = fit_graph(gdf, type="delaunay", thresh=None)
     """
-
-    def shift_indices(w):
-        neighbors = {k + 1: [n + 1 for n in ngh] for k, ngh in w.neighbors.items()}
-        weights = {k + 1: it for k, it in w.weights.items()}
-
-        return W(neighbors, weights)
-
     allowed = (
         "delaunay",
-        "gabriel",
         "knn",
         "distband",
-        "voronoi",
         "relative_nhood",
-        "kernel",
     )
     if type not in allowed:
         raise ValueError(f"Illegal graph type given. Got: {type}. Allowed: {allowed}.")
 
-    if id_col is None:
-        id_col = "uid"
-        gdf = set_uid(gdf, drop=False)
+    # warn if id_col is not provided
+    _graph_warn(type, id_col)
 
     if type == "delaunay":
+        # NOTE: neighbor keys start from 0
         w = Delaunay.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
-        if id_col == "uid":
-            w = shift_indices(
-                w
-            )  # delaunay does not work with ids that are manually set
-    elif type == "gabriel":
-        w = Gabriel.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
-        if id_col == "uid":
-            w = shift_indices(w)  # gabriel does not work with ids that are manually set
+    elif type == "relative_nhood":
+        # NOTE: neighbor indices start from 0
+        w = Relative_Neighborhood.from_dataframe(
+            gdf.centroid, silence_warnings=True, **kwargs
+        )
     elif type == "knn":
-        w = KNN.from_dataframe(gdf, silence_warnings=True, **kwargs)
+        if "ids" in list(kwargs.keys()):  # drop ids kwarg since it fails
+            kwargs.pop("ids")
+
+        # NOTE: neighbor indices equal gdf[`ìd_col`]
+        w = KNN.from_dataframe(gdf, silence_warnings=True, ids=id_col, **kwargs)
     elif type == "distband":
         if thresh is None:
             raise ValueError("DistBand requires `thresh` param. Not provided.")
 
+        if "ids" in list(kwargs.keys()):  # drop ids kwarg since it fails
+            kwargs.pop("ids")
+
+        # NOTE: neighbor indices equal gdf[`ìd_col`]
         w = DistanceBand.from_dataframe(
-            gdf, threshold=thresh, alpha=-1.0, silence_warnings=True, **kwargs
-        )
-    elif type == "voronoi":
-        w = Voronoi(
-            np.array(list(zip(gdf.centroid.x, gdf.centroid.y))),
+            gdf,
+            threshold=thresh,
+            alpha=-1.0,
+            ids=id_col,
             silence_warnings=True,
             **kwargs,
         )
-        if id_col == "uid":
-            w = shift_indices(w)  # voronoi does not work with ids that are manually set
-    elif type == "relative_nhood":
-        w = Relative_Neighborhood.from_dataframe(
-            gdf.centroid, silence_warnings=True, **kwargs
-        )
-        if id_col == "uid":
-            w = shift_indices(
-                w
-            )  # relative_nhood does not work with ids that are manually set
-    elif type == "kernel":
-        w = Kernel.from_dataframe(
-            gdf, silence_warnings=True, **kwargs
-        )  # includes self-loop in neighbors
 
-    # Threshold edges based on distance to center node.
+    # convert graph indices to global ids
+    if type in ("delaunay", "relative_nhood"):
+        w = _graph_to_index(w, gdf)
+        if id_col is not None:
+            w = _graph_to_global_ids(w, gdf, id_col)
+
+    # # Threshold edges based on distance to center node.
     if thresh is not None and type != "distband":
-        w = dist_thresh_weights(gdf, w, thresh, id_col=id_col)
+        w = dist_thresh_weights_sequential(gdf, w, thresh, id_col=id_col)
 
     return w
 
 
-def dist_thresh_weights(
+def dist_thresh_weights_sequential(
     gdf: gpd.GeoDataFrame,
     w: W,
-    thresh: float = 120.0,
-    id_col: str = "uid",
-    includes_self: bool = True,
+    thresh: float,
+    id_col: Optional[str] = None,
+    include_self: bool = False,
 ) -> W:
-    """Drop edges from the spatial weights graph that are longer than `thresh`.
+    """Threshold edges based on distance to center node.
 
     Parameters
     ----------
         gdf : gpd.GeoDataFrame
-            Input geodataframe.
+            The input geodataframe.
         w : libpysal.weights.W
-            Spatial weights object. Needs to be created from the `gdf`.
-        thresh : float, default=120.0
-            Distance threshold value.
-        id_col : str, default="uid"
-            Column in the `gdf` indicating the unique id.
-        includes_self : bool, default=False
-            Sometimes the weights object includes a self-loop in the neighbors.
-            I.e. {0: [0, 1, 2]} (weights.Kernel). This is a flag, whether that is
-            the case. This needs to be considered when using `neighborhood`.
+            The input spatial weights object.
+        thresh : float
+            The distance threshold.
+        id_col : str, optional
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
+        include_self : bool, default=True
+            Whether to include self-loops in the neighbors.
 
     Returns
     -------
         libpysal.weights.W:
-            A new libpysal spatial weights object with long edges dropped.
-
-    Example
-    -------
-    Create a Delaunay graph and drop too long edges away.
-    >>> from libpysal.weights import Delaunay
-    >>> from cellseg_gsontools.graphs import dist_thresh_weights
-
-    >>> id_col = "iid"
-    >>> gdf[id_col] = range(len(gdf))
-    >>> gdf = gdf.set_index(id_col, drop=False)
-    >>> ids = list(gdf.index.values)
-    >>> w = Delaunay.from_dataframe(gdf.centroid, id_order=ids, ids=ids)
-
-    >>> # drop the edges
-    >>> w = dist_thresh_weights(gdf, w, thresh=120.0)
-    >>> ax = gdf.plot(edgecolor='grey', facecolor='w', figsize=(25, 25))
-    >>> f, ax = w.plot(
-            gdf,
-            ax=ax,
-            edge_kws=dict(color='r', linestyle=':', linewidth=1),
-            node_kws=dict(marker='')
-        )
-    >>> ax.set_axis_off()
+            A libpysal spatial weights object, containing the neighbor graph data.
     """
-    gdf["nhood"] = gdf_apply(
-        gdf, neighborhood, col=id_col, spatial_weights=w, include_self=includes_self
-    )
+    gdf = gdf.copy()
+    gdf["nhood"] = pd.Series(list(w.neighbors.values()), index=gdf.index)
 
-    gdf["nhood_dists"] = gdf_apply(
-        gdf,
-        nhood_dists,
-        col="nhood",
-        centroids=gdf.centroid,
-    )
+    new_neighbors = []
+    for _, row in gdf.iterrows():
+        neighbor_rows = gdf[gdf.loc[:, id_col].isin(row.nhood)]
+        nhood_dist = [
+            np.round(row.geometry.centroid.distance(ngh), 2)
+            for ngh in neighbor_rows.geometry.centroid
+        ]
 
-    gdf["new_neighbors"] = gdf_apply(
-        gdf, _drop_neighbors, col="nhood", extra_col="nhood_dists", thresh=thresh
-    )
+        new_neighbors.append(
+            _drop_neighbors(row.nhood, nhood_dist, thresh, include_self=include_self)
+        )
 
-    return W(gdf["new_neighbors"].to_dict())
+    gdf["new_neighbors"] = new_neighbors
+    return W(dict(zip(gdf[id_col], gdf["new_neighbors"])), silence_warnings=True)
 
 
 def _drop_neighbors(
-    nhood: Sequence[int], nhood_dists: Sequence[float], thresh: float
+    nhood: Sequence[int],
+    nhood_dist: Sequence[float],
+    thresh: float,
+    include_self: bool = False,
 ) -> np.ndarray:
-    """Drop neihgbors that are further than `thresh` from the center node.
-
-    NOTE: center node here is `nhood[0]`.
-    This function should be used with `gdf_apply`.
-
-    Parameters
-    ----------
-        nhood : Sequence[int]
-            A list or array of neighboring node uids.
-        nhood_dists : Sequence[float]
-            A list or array of distances to neighboring nodes.
-
-    Returns
-    -------
-        np.ndarray:
-            A new set of neighbor where some of the neighbors are dropped.
-    """
-    if len(nhood) != len(nhood_dists):
+    """Drop neighbors based on distance to center node."""
+    if len(nhood) != len(nhood_dist):
         raise ValueError(
             f"Both inputs should be the same length. Got: `len(nhood) = {len(nhood)}`"
-            f"and `len(nhood_dists) = {len(nhood_dists)}`."
+            f"and `len(nhood_dist) = {len(nhood_dist)}`."
         )
 
     nhood = np.array(nhood)
-    nhood_dists = np.array(nhood_dists)
+    nhood_dist = np.array(nhood_dist)
 
     # drop below thresh
-    nhood = nhood[nhood_dists < thresh]
+    nhood = nhood[nhood_dist < thresh]
+
     # drop self loop
-    center = nhood[0]
-    nhood = nhood[nhood != center]
+    if include_self:
+        center = nhood[0]
+        nhood = nhood[nhood != center]
+
     return nhood
 
 
-def graph_pos(gdf: gpd.GeoDataFrame) -> Dict[int, Tuple[int, int]]:
-    """Create pos object from gdf for graph computations.
+def _graph_to_global_ids(w: W, in_gdf: gpd.GeoDataFrame, id_col: str) -> W:
+    """Convert the graph ids to global ids i.e. to the ids of the id_col``."""
+    new_neighbors = {}
+    new_weights = {}
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
-            Input geodataframe.
+    # gdf = set_uid(in_gdf.copy(), 0)
+    for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
+        new_id = in_gdf.loc[i, id_col]
+        nghs = [in_gdf.loc[ngh, id_col] for ngh in neighbors]
+        new_neighbors[new_id] = nghs
+        new_weights[new_id] = w.weights[node]
 
-    Returns
-    -------
-        Dict[int, Tuple[int, int]]:
-            Dict with cell coordinates.
-    """
-    coords = [(c.x, c.y) for c in gdf["geometry"]]
-    pos = [i for i in zip(gdf.index, coords)]
-    return dict(pos)
+    return W(new_neighbors, new_weights)
 
 
-def neighborhood_density(gdf: gpd.GeoDataFrame, k: int = 4) -> gpd.GeoDataFrame:
-    """Calculate neighborhood density for points with sum of distances to KNN.
+def _graph_to_index(w: W, in_gdf: gpd.GeoDataFrame) -> W:
+    new_neighbors = {}
+    new_weights = {}
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
-            Input geodataframe.
-        k : int, default=4
-            Number of neirest neighbours in KNN.
+    for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
+        new_id = i
+        nghs = [in_gdf.iloc[ngh].name for ngh in neighbors]
+        new_neighbors[new_id] = nghs
+        new_weights[new_id] = w.weights[node]
 
-    Returns
-    -------
-        gpd.GeoDataFrame:
-            Input gdf with a weights column added.
-    """
-    G = KNN.from_dataframe(gdf, k=k)
+    return W(new_neighbors, new_weights)
 
-    weights = []
-    pos = graph_pos(gdf)
 
-    for i in gdf.index:
-        weight = 0
-
-        for edge in G.neighbors[i]:
-            cell = shapely.ops.Point(pos[i])
-            neighbor = shapely.ops.Point(pos[edge])
-            weight += cell.distance(neighbor)
-
-        weights.append(weight)
-
-    gdf["weights"] = weights
-
-    return gdf
+def _graph_warn(type: str, id_col: str):
+    if type in ("delaunay", "relative_nhood"):
+        if id_col is None:
+            warnings.warn(
+                f"For graphs of type: {type}, if `id_col` is not provided "
+                "The neighbors object will have keys starting from 0. "
+                "These keys are likely not the same as the ids in the gdf."
+            )
+    elif type in ("knn", "distband"):
+        if id_col is None:
+            warnings.warn(
+                f"For graphs of type: {type}, if `id_col` is not provided "
+                "The neighbors object will have keys equalling the gdf.index. "
+            )
