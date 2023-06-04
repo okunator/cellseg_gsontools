@@ -50,6 +50,18 @@ def cluster_points(
     -------
         gpd.GeoDataFrame:
             The input gdf with a new "labels" columns of the clusters.
+
+    Examples
+    --------
+    Cluster immune cell centroids in a gdf using dbscan.
+    >>> from cellseg_gsontools.clustering import cluster_points
+    >>> gdf = read_gdf("cells.json")
+    >>> gdf = cluster_points(
+    ...     gdf[gdf["class_name"] == "immune"],
+    ...     method="dbscan",
+    ...     eps=350.0,
+    ...     min_samples=30
+    ... )
     """
     allowed = ("dbscan", "adbscan", "optics")
     if method not in allowed:

@@ -112,11 +112,11 @@ class Pipeline(ABC):
             index = []
             if self.in_path_cells is None and self.in_path_areas is not None:
                 for fn in self.in_files_areas:
-                    res.append(self.pipeline(fn_aree_gdf=fn))
+                    res.append(self.pipeline(fn_area_gdf=fn))
                     index.append(fn.with_suffix("").name)
             elif self.in_path_cells is not None and self.in_path_areas is None:
                 for fn in self.in_files_cells:
-                    res.append(self.pipeline(fn_cells_gdf=fn))
+                    res.append(self.pipeline(fn_cell_gdf=fn))
                     index.append(fn.with_suffix("").name)
             elif self.in_path_cells is not None and self.in_path_areas is not None:
                 for fn1, fn2 in zip(self.in_files_cells, self.in_files_areas):

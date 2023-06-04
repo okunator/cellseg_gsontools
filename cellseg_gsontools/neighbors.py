@@ -328,7 +328,9 @@ def nhood_type_count(
     return ret
 
 
-def nhood_dists(nhood: Sequence[int], centroids: pd.Series) -> np.ndarray:
+def nhood_dists(
+    nhood: Sequence[int], centroids: pd.Series, ids: pd.Series = None
+) -> np.ndarray:
     """Compute the neihborhood distances between the center node.
 
     NOTE: It is assumed that the center node is the first index in the `nhood`
@@ -342,6 +344,8 @@ def nhood_dists(nhood: Sequence[int], centroids: pd.Series) -> np.ndarray:
             the center node.
         centroids : pd.Series
             A pd.Series array containing the centroid Points of the full gdf.
+        ids : pd.Series, optional
+            A pd.Series array containing the ids of the full gdf.
 
     Returns
     -------
@@ -357,8 +361,7 @@ def nhood_dists(nhood: Sequence[int], centroids: pd.Series) -> np.ndarray:
     >>> id_col = "iid"
     >>> gdf[id_col] = range(len(gdf))
     >>> gdf = gdf.set_index(id_col, drop=False)
-    >>> ids = list(gdf.index.values)
-    >>> w = Delaunay.from_dataframe(gdf.centroid, id_order=ids, ids=ids)
+    >>> w = Delaunay.from_dataframe(gdf.centroid)
 
     >>> gdf["nhood"] = gdf_apply(gdf, neighborhood, col="iid", spatial_weights=w)
 
@@ -369,9 +372,12 @@ def nhood_dists(nhood: Sequence[int], centroids: pd.Series) -> np.ndarray:
             centroids=gdf.centroid,
         )
     """
-    node = nhood[0]
     nhood_dists = np.array([0])
     if nhood not in (None, np.nan):
+        if ids is not None:
+            nhood = ids[ids.isin(nhood)].index
+
+        node = nhood[0]
         center_node = centroids.loc[node]
         nhood_nodes = centroids.loc[nhood].to_numpy()
         nhood_dists = np.array(
