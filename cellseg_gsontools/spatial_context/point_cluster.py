@@ -1,7 +1,6 @@
-from typing import Tuple, Union
+from typing import Union
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import numpy as np
 from libpysal.cg import alpha_shape_auto
 
@@ -19,49 +18,68 @@ class PointClusterContext(WithinContext):
         cluster_method: str = "dbscan",
         min_area_size: Union[float, str] = None,
         q: float = 25.0,
-        verbose: bool = False,
+        graph_type: str = "delaunay",
+        dist_thresh: float = 100.0,
         silence_warnings: bool = True,
         n_jobs: int = -1,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Handle & extract dense point clusters from `cell_gdf`.
 
-        I.e. Cluster points/centroids of type `label` and enclose those points with
-        alpha shape.
+        Point-clusters are dense regions of points. This context is useful when you
+        want to extract dense regions of points of type `label` from `cell_gdf` such as
+        immune-cell clusters. The clusters are extracted using one of the clustering
+        methods: "dbscan", "adbscan", "optics" after which the clusters are converted
+        to polygons/areas using alpha-shapes.
 
         Parameters
         ----------
-            cell_gdf : gpd.GeoDataFrame
-                A geo dataframe that contains smaller cell objs.
-            label : str
-                The class name of the objects of interest. E.g. "cancer", "immune".
-            cluster_method : str, default="dbscan"
-                The clustering method. One of "dbscan", "adbscan", "optics"
-            min_area_size : float or str, optional
-                The minimum area of the cluster areas that are kept.
-            q : float, default=25.0
-                The quantile. This is only used if `min_area_size = "quantile"`.
-            verbose : bool, default=False
-                Flag, whether to use tqdm pbar.
-            silence_warnings : bool, default=True
-                Flag, whether to silence all the warnings.
-            n_jobs : int,default=-1
-                Number of jobs used when clustering. None=1, and -1 means all available.
-            **kwargs:
-                Arbitrary key-word arguments passed to the clustering methods.
+        cell_gdf : gpd.GeoDataFrame
+            A geo dataframe that contains cell objects.
+        label : str
+            The class name of the objects of interest. E.g. "cancer", "immune".
+        cluster_method : str, default="dbscan"
+            The clustering method used to extract the point-clusters. One of:
+            "dbscan", "adbscan", "optics"
+        min_area_size : float or str, optional
+            The minimum area of the cluster areas that are kept.
+        min_area_size : float or str, optional
+            The minimum area of the objects that are kept. All the objects in the
+            `area_gdf` that are larger are kept than `min_area_size`. Can be either
+            a float or one of: "mean", "median", "quantile" None. If None, all the
+            areas are kept.
+        q : float, default=25.0
+            The quantile. I.e. areas smaller than `q` in the `area_gdf` are dropped.
+            This is only used if `min_area_size = "quantile"`, ignored otherwise.
+        graph_type : str, default="delaunay"
+            The type of the graph to be fitted to the cells inside interfaces. One of:
+            "delaunay", "distband", "relative_nhood", "knn"
+        dist_thresh : float, default=100.0
+            Distance threshold for the length of the network links.
+        silence_warnings : bool, default=True
+            Flag, whether to silence all the warnings.
+        n_jobs : int,default=-1
+            Number of jobs used when clustering. None=1, and -1 means all available.
+        **kwargs:
+            Arbitrary key-word arguments passed to the clustering methods.
 
         Attributes
         ----------
-            context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, DistanceBand]]]
-                A nested dict that contains dicts for each index of the distinct areas
-                of type `label`. Each of the inner dicts contain the keys: 'roi_area',
-                'roi_cells', 'roi_network'. The 'area' and 'cells' keys contain
-                gpd.GeoDataFrame of the roi area and cells. The 'network' key contains
-                a DistanceBand fitted to the cells inside the roi.
+        context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, DistanceBand]]]
+            A nested dict that contains dicts for each of the distinct point-cluster
+            areas. The keys of the outer dict are the indices of these areas.
+
+            The inner dicts contain the unique point-clusters and have the keys:
+            - 'roi_area' - gpd.GeoDataFrame of the cluster areas.
+            - 'roi_cells' - gpd.GeoDataFrame of the cells that are contained inside
+                the clusters.
+            - 'roi_network' - libpysal.weights.W spatial weights network of the
+                cells inside the cluster areas. This can be used to extract graph
+                features inside the clusters.
 
         Raises
         ------
-            ValueError if `area_gdf` or `cell_gdf` don't contain 'class_name' column.
+            ValueError if `cell_gdf` doesn't contain 'class_name' column.
 
         Examples
         --------
@@ -75,8 +93,8 @@ class PointClusterContext(WithinContext):
                 label="inflammatory",
                 cluster_method="adbscan",
                 silence_warnings=True,
-                verbose=True,
             )
+        >>> cluster_context.fit()
 
         >>> ix = 1
         >>> ax = cluster_context.context[ix]["roi_area"].plot(
@@ -85,11 +103,51 @@ class PointClusterContext(WithinContext):
         >>> cluster_context.context[ix]["roi_cells"].plot(
                 ax=ax, column="class_name", categorical=True, legend=True
             )
-
+        <AxesSubplot: >
         """
+        area_gdf = self.run_clustering(
+            cell_gdf, label, cluster_method, n_jobs, **kwargs
+        )
+
+        super().__init__(
+            area_gdf=area_gdf,
+            cell_gdf=cell_gdf,
+            label=label,
+            min_area_size=min_area_size,
+            q=q,
+            dist_thresh=dist_thresh,
+            graph_type=graph_type,
+            silence_warnings=silence_warnings,
+        )
+
+    def run_clustering(
+        self,
+        cell_gdf: gpd.GeoDataFrame,
+        label: str,
+        cluster_method: str,
+        n_jobs: int,
+        **kwargs,
+    ) -> gpd.GeoDataFrame:
+        """Run clustering on the cells and convert the clusters to areas.
+
+        Parameters
+        ----------
+        label : str
+            The class name of the objects of interest. E.g. "cancer", "immune".
+        cluster_method : str, default="dbscan"
+            The clustering method used to extract the point-clusters. One of:
+            "dbscan", "adbscan", "optics"
+
+        Returns
+        -------
+        gpd.GeoDataFrame:
+            A gdf containing the areas of the clusters.
+        """
+        # cluster the cells
         cells = cell_gdf[cell_gdf["class_name"] == label].copy()
         cells = cluster_points(cells, method=cluster_method, n_jobs=n_jobs, **kwargs)
 
+        # convert the clusters to areas with alpha-shapes
         labs = cells["labels"].unique()
         area_data = {"geometry": []}
         for lab in labs:
@@ -107,84 +165,4 @@ class PointClusterContext(WithinContext):
         area_gdf = gpd.GeoDataFrame(area_data)
         area_gdf["class_name"] = [label] * len(area_gdf)
 
-        super().__init__(
-            area_gdf=area_gdf,
-            cell_gdf=cell_gdf,
-            label=label,
-            min_area_size=min_area_size,
-            q=q,
-            verbose=verbose,
-            silence_warnings=silence_warnings,
-        )
-
-    def plot(
-        self,
-        show_area: bool = True,
-        show_cells: bool = True,
-        show_legends: bool = True,
-        color: str = None,
-        figsize: Tuple[int, int] = (12, 12),
-    ) -> None:
-        """Plot the slide with areas, cells, and clustered areas highlighted.
-
-        Parameters
-        ----------
-            show_area : bool, default=True
-                Flag, whether to include the tissue areas in the plot.
-            show_cells : bool, default=True
-                Flag, whether to include the cells in the plot.
-            show_legends : bool, default=True
-                Flag, whether to include legends for each category in the plot.
-            color : str, optional
-                A color for the cluster areas, Ignored if `show_legends=True`.
-            figsize : Tuple[int, int], default=(12, 12)
-                Size of the figure.
-
-        Returns
-        -------
-            AxesSubplot
-        """
-        _, ax = plt.subplots(figsize=figsize)
-
-        if show_area:
-            ax = self.area_gdf.plot(
-                ax=ax,
-                column="class_name",
-                categorical=True,
-                legend=show_legends,
-                alpha=0.1,
-                legend_kwds={
-                    "loc": "upper center",
-                },
-            )
-            leg1 = ax.legend_
-
-        if show_cells:
-            ax = self.cell_gdf.plot(
-                ax=ax,
-                column="class_name",
-                categorical=True,
-                legend=show_legends,
-                legend_kwds={
-                    "loc": "upper right",
-                },
-            )
-            leg2 = ax.legend_
-
-        roi = self.context2gdf("roi_area")
-        ax = roi.plot(
-            ax=ax,
-            color=color,
-            column="label",
-            alpha=0.7,
-            legend=show_legends,
-            categorical=True,
-            legend_kwds={"loc": "upper left"},
-        )
-        if show_legends:
-            if show_area:
-                ax.add_artist(leg1)
-            if show_cells:
-                ax.add_artist(leg2)
-
-        return ax
+        return area_gdf

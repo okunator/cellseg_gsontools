@@ -1,12 +1,13 @@
-import warnings
-from typing import Union
+from typing import Dict, Tuple, Union
 
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from libpysal.weights import DistanceBand, W, w_subset, w_union
+from libpysal.weights import W, w_subset, w_union
 
-from cellseg_gsontools.utils import set_uid
+from ..utils import set_uid
+from .ops import get_objs
 
 __all__ = ["_SpatialContext"]
 
@@ -19,7 +20,8 @@ class _SpatialContext:
         label: str,
         min_area_size: Union[float, str] = None,
         q: float = 25.0,
-        verbose: bool = False,
+        graph_type: str = "delaunay",
+        dist_thresh: float = 100.0,
         silence_warnings: bool = True,
     ) -> None:
         """Create a base class for spatial context."""
@@ -35,15 +37,19 @@ class _SpatialContext:
                 f"column. Got: {list(cell_gdf.columns)}"
             )
 
-        self.verbose = verbose
+        self.dist_thresh = dist_thresh
+        self.graph_type = graph_type
         self.silence_warnings = silence_warnings
         self.label = label
-        self.cell_gdf = set_uid(cell_gdf)
+        self.cell_gdf = set_uid(cell_gdf, id_col="global_id")
         self.area_gdf = area_gdf
         thresh = self._get_thresh(
             area_gdf[area_gdf["class_name"] == label], min_area_size, q
         )
         self.context_area = self.filter_above_thresh(area_gdf, label, thresh)
+        self.context_area = set_uid(
+            self.context_area, id_col="global_id"
+        )  # set global uid (parent gdf), starts from 1
 
     @staticmethod
     def filter_above_thresh(
@@ -61,41 +67,45 @@ class _SpatialContext:
         if thresh is not None:
             gdf = gdf.loc[gdf.area >= thresh]
 
-        return set_uid(gdf)
+        # drop the area column to avoid confusion
+        gdf = gdf.drop(columns=["area"])
 
-    def roi(self, ix: int) -> gpd.GeoDataFrame:
-        """Get the roi/area of interest.
+        return gdf
+
+    def roi(self, ix) -> gpd.GeoDataFrame:
+        """Get a roi area of index `ix`.
 
         Parameters
         ----------
             ix : int
-                The index of the ROI geo-object. Starts from one.
-        """
-        try:
-            roi = self.context[ix]["roi_area"]
-        except KeyError:
-            roi = gpd.GeoDataFrame([self.context_area.loc[ix]])
+                The index of the roi area. I.e., the ith roi area.
 
-        return roi
+        Returns
+        -------
+            gpd.GeoDataFrame:
+                The ith roi area.
+        """
+        row: gpd.GeoSeries = self.context_area.loc[ix]
+        return gpd.GeoDataFrame([row])
 
     def roi_cells(self, ix: int) -> gpd.GeoDataFrame:
-        """Get the cells inside the roi."""
-        try:
-            roi_c = self.context[ix]["roi_cells"]
-        except KeyError:
-            roi = self.roi(ix)
-            if roi.empty:
-                if not self.silence_warnings:
-                    warnings.warn(
-                        "`self.roi` resulted in an empty GeoDataFrame. Make sure to set"
-                        " a valid `label` and `ix`. Returning None from `roi_cells`",
-                        RuntimeWarning,
-                    )
-                return None
+        """Get the cells within the roi area.
 
-            roi_c = self.cell_gdf[self.cell_gdf.within(roi.geometry[ix])]
+        Parameters
+        ----------
+            ix : int
+                The index of the roi area. I.e., the ith roi area.
 
-        return roi_c
+        Returns
+        -------
+            gpd.GeoDataFrame:
+                The cells within the roi area.
+        """
+        roi_area: gpd.GeoDataFrame = self.roi(ix)
+        if roi_area is None or roi_area.empty:
+            return
+
+        return self.get_objs_within(roi_area, self.cell_gdf)
 
     def merge_weights(self, key: str) -> W:
         """Merge libpysal spatial weights of the context.
@@ -153,30 +163,42 @@ class _SpatialContext:
             con,
             keys=[i for i in self.context.keys() if self.context[i][key] is not None],
         )
-        # return set_uid(gdf.reset_index(level=0, names="label"))
         return gdf.reset_index(level=0, names="label")
 
-    def context2weights(self, key: str, **kwargs) -> W:
-        """Fit a network on the cells inside the context.
+    def get_objs_within(
+        self, area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame
+    ) -> gpd.GeoDataFrame:
+        """Get the objects within the area.
 
         Parameters
         ----------
-            key : str
-                The key of the context dictionary that contains the data to be converted
-                to gdf. One of "roi_area", "roi_cells", "interface_area",
-                "interface_cells", "roi_interface_cells"
+            area : gpd.GeoDataFrame
+                The area of interest in GeoDataFrame.
+            objects : gpd.GeoDataFrame
+                The objects (cells) of interest.
+
+        Returns
+        -------
+            gpd.GeoDataFrame:
+                The objects (cells) within the area gdf.
         """
-        allowed = ("roi_cells", "interface_cells", "roi_interface_cells")
-        if key not in allowed:
-            raise ValueError(
-                "Illegal key. Note that network can be only fitted to cell gdfs. "
-                f"Got: {key}. Allowed: {allowed}"
-            )
+        objs_within = get_objs(area, objects)
 
-        cells = self.context2gdf(key)
-        w = DistanceBand.from_dataframe(cells, silence_warnings=True, **kwargs)
+        # rename spatial join columns
+        objs_within = objs_within.rename(
+            columns={
+                "index_right": "spatial_context_id",
+                "global_id_left": "global_id",
+                "class_name_left": "class_name",
+                "class_name_right": "spatial_context",
+            },
+            inplace=False,
+        )
 
-        return w
+        # drop unnecessary columns and return
+        objs_within.drop(columns=["global_id_right"], inplace=True)
+
+        return objs_within
 
     def _get_thresh(self, area_gdf, min_area_size, q=None) -> float:
         """Get the threshold value for filtering by area."""
@@ -204,3 +226,235 @@ class _SpatialContext:
             )
 
         return thresh
+
+    def plot(
+        self,
+        key: str,
+        show_area: bool = True,
+        show_cells: bool = True,
+        show_legends: bool = True,
+        color: str = None,
+        figsize: Tuple[int, int] = (12, 12),
+        **kwargs,
+    ) -> plt.Axes:
+        """Plot the slide with areas, cells, and interface areas highlighted.
+
+        Parameters
+        ----------
+            key : str
+                The key of the context dictionary that contains the data to be plotted.
+            show_area : bool, default=True
+                Flag, whether to include the tissue areas in the plot.
+            show_cells : bool, default=True
+                Flag, whether to include the cells in the plot.
+            show_legends : bool, default=True
+                Flag, whether to include legends for each in the plot.
+            color : str, optional
+                A color for the interfaces, Ignored if `show_legends=True`.
+            figsize : Tuple[int, int], default=(12, 12)
+                Size of the figure.
+            **kwargs
+                Extra keyword arguments passed to the `plot` method of the
+                geodataframes.
+
+        Returns
+        -------
+            AxesSubplot
+
+        Examples
+        --------
+        Plot the slide with cluster areas and cells highlighted
+        >>> from cellseg_gsontools.spatial_context import PointClusterContext
+
+        >>> cells = read_gdf("cells.feather")
+        >>> clusters = PointClusterContext(
+        ...     cell_gdf=cells,
+        ...     label="inflammatory",
+        ...     cluster_method="optics",
+        ... )
+
+        >>> clusters.fit(verbose=False)
+        >>> clusters.plot("roi_area", show_legends=True, aspect=1)
+        <AxesSubplot: >
+
+        Plot the slide with interfaces highlighted
+        """
+        allowed = ("roi_area", "interface_area")
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
+
+        _, ax = plt.subplots(figsize=figsize)
+
+        if show_area:
+            ax = self.area_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                alpha=0.1,
+                legend_kwds={
+                    "loc": "upper center",
+                },
+                **kwargs,
+            )
+            leg1 = ax.legend_
+
+        if show_cells:
+            ax = self.cell_gdf.plot(
+                ax=ax,
+                column="class_name",
+                categorical=True,
+                legend=show_legends,
+                legend_kwds={
+                    "loc": "upper right",
+                },
+                **kwargs,
+            )
+            leg2 = ax.legend_
+
+        ifaces = self.context2gdf(key)
+        ax = ifaces.plot(
+            ax=ax,
+            color=color,
+            column="label",
+            alpha=0.7,
+            legend=show_legends,
+            categorical=True,
+            legend_kwds={"loc": "upper left"},
+            **kwargs,
+        )
+        if show_legends:
+            if show_area:
+                ax.add_artist(leg1)
+            if show_cells:
+                ax.add_artist(leg2)
+
+        return ax
+
+    def plot_weights(
+        self,
+        key: str,
+        ix: int,
+        ax=plt.Axes,
+        id_col: str = "global_id",
+        node_kws: Dict = None,
+        edge_kws: Dict = None,
+    ) -> Tuple[plt.Figure, plt.Axes]:
+        """Plot the spatial weights graph.
+
+        Parameters
+        ----------
+            key : str
+                The key of the context dictionary that contains the spatial weights
+                to be plotted. One of "roi_network", "ful_network",
+                "interface_network", "border_network"
+            ix : int
+                The index of the context network. I.e., the ith context network of
+                type `key`.
+            gdf : gpd.GeoDataFrame
+                The geodataframe containing the nodes.
+            ax : plt.Axes, optional
+                The axes to plot on. If None, a new figure is created.
+            id_col : str, default="global_id"
+                The unique id column in the gdf.
+            node_kws : dict, optional
+                Keyword arguments passed to the `ax.scatter` method.
+            edge_kws : dict, optional
+                Keyword arguments passed to the `ax.plot` method.
+
+        Returns
+        -------
+            plt.Figure, plt.Axes
+
+        Examples
+        --------
+        Plot the spatial weights graph of the cells inside immune clusters.
+        >>> import matplotlib.pyplot as plt
+        >>> from cellseg_gsontools.spatial_context import PointClusterContext
+
+        >>> clusters = PointClusterContext(
+        ...     cell_gdf=cells,
+        ...     label="inflammatory",
+        ...     cluster_method="optics",
+        ... )
+
+        >>> clusters.fit(verbose=False)
+
+        >>> f, ax = plt.subplots(figsize=(10, 10))
+
+        >>> ix = 2
+        >>> clusters.context[ix]["roi_area"].plot(ax=ax)
+        >>> cells.plot(
+        ...     ax=ax,
+        ...     column="class_name",
+        ...     categorical=True,
+        ...     aspect=1
+        ... )
+
+        >>> clusters.plot_weights(
+        ...     "roi_network",
+        ...     ix,
+        ...     ax=ax,
+        ...     edge_kws=dict(color='r', linestyle=':', linewidth=1),
+        ...     node_kws=dict(marker='')
+        ... )
+
+        <AxesSubplot: >
+        """
+        allowed = ("roi_network", "full_network", "interface_network", "border_network")
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
+
+        gdf = self.cell_gdf
+        w = self.context[ix][key]
+
+        if w is None:
+            raise ValueError(
+                f"Got None for the spatial weights of type `{key}`. "
+                "Make sure you have run `fit` before calling `plot_weights`. "
+                f"If you have run `fit`, then the spatial weights obj of type `{key}` "
+                "is None."
+            )
+
+        if ax is None:
+            f = plt.figure()
+            ax = plt.gca()
+        else:
+            f = plt.gcf()
+
+        gdf = gdf.copy()
+        color = "k"
+        if node_kws is None:
+            node_kws = dict(color=color)
+        if edge_kws is None:
+            edge_kws = dict(color=color)
+        indexed_on = id_col
+
+        for idx, neighbors in w.neighbors.items():
+            # skip islands
+            if idx in w.islands:
+                continue
+
+            if indexed_on is not None:
+                neighbors = gdf[gdf[indexed_on].isin(neighbors)].index.tolist()
+                idx = gdf[gdf[indexed_on] == idx].index.tolist()[0]
+
+            centroids = gdf.loc[neighbors].centroid.apply(lambda p: (p.x, p.y))
+            centroids = np.vstack(centroids.values)
+            focal = np.hstack(gdf.loc[idx].geometry.centroid.xy)
+
+            seen = set()
+            for nidx, neighbor in zip(neighbors, centroids):
+                if (idx, nidx) in seen:
+                    continue
+                ax.plot(*list(zip(focal, neighbor)), marker=None, **edge_kws)
+                seen.update((idx, nidx))
+                seen.update((nidx, idx))
+
+        ax.scatter(
+            gdf.centroid.apply(lambda p: p.x),
+            gdf.centroid.apply(lambda p: p.y),
+            **node_kws,
+        )
+
+        return f, ax
