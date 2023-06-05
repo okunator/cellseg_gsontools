@@ -24,6 +24,7 @@ def test_instance_summary(cells_and_areas, groups):
         min_area_size=50000.0,
         min_samples=10,
     )
+    cluster_context.fit(verbose=False)
 
     metrics = ["area"]
     if groups is not None:
@@ -46,6 +47,7 @@ def test_semantic_summary(cells_and_areas):
     cells = cells_and_areas[0]
     areas = cells_and_areas[1]
     within_context = WithinContext(area_gdf=areas, cell_gdf=cells, label="area_cin")
+    within_context.fit()
 
     cin_area = within_context.context2gdf("roi_area")
     cin_area_summary = SemanticSummary(
@@ -67,6 +69,7 @@ def test_distance_summary(cells_and_areas):
     within_context = WithinContext(
         area_gdf=areas, cell_gdf=cells, label="area_cin", min_area_size=100000.0
     )
+    within_context.fit()
     lesion_areas = within_context.context2gdf("roi_area")
 
     cluster_context = PointClusterContext(
@@ -76,6 +79,7 @@ def test_distance_summary(cells_and_areas):
         min_area_size=50000.0,
         min_samples=10,
     )
+    cluster_context.fit()
 
     immune_cluster_areas = cluster_context.context2gdf("roi_area")
     immune_proximities = DistanceSummary(
@@ -98,9 +102,24 @@ def test_sweight_summary(cells_and_areas):
         cell_gdf=cells,
         label1="area_cin",
         label2="areastroma",
+        silence_warnings=True,
         min_area_size=100000.0,
     )
+    iface_context.fit(verbose=False)
 
-    s = SpatialWeightSummary(iface_context, prefix="n-")
-    summary = s.summarize("border_network")
+    classes = [
+        "inflammatory",
+        "connective",
+        "glandular_epithel",
+        "squamous_epithel",
+        "neoplastic",
+    ]
+
+    s = SpatialWeightSummary(
+        iface_context.merge_weights("border_network"),
+        iface_context.cell_gdf,
+        classes=classes,
+        prefix="n-",
+    )
+    summary = s.summarize()
     assert "n-inflammatory-inflammatory" in summary.index

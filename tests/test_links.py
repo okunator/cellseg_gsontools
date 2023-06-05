@@ -11,9 +11,9 @@ def test_link_counts(cells_and_areas):
         label1="area_cin",
         label2="areastroma",
         silence_warnings=True,
-        verbose=True,
         min_area_size=100000.0,
     )
+    iface_context.fit()
 
     classes = [
         "inflammatory",

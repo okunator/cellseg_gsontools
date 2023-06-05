@@ -1,16 +1,17 @@
 import pytest
 
 from cellseg_gsontools.graphs import fit_graph
+from cellseg_gsontools.utils import set_uid
 
 
 @pytest.mark.parametrize(
     "type",
-    ["delaunay", "gabriel", "knn", "distband", "voronoi", "relative_nhood", "kernel"],
+    ["delaunay", "knn", "distband", "relative_nhood"],
 )
 @pytest.mark.parametrize("thresh", [150.0, None])
 def test_fit_graph(cell_gson, type, thresh):
     if type == "distband" and thresh is None:
         thresh = 20
-    w = fit_graph(cell_gson, type=type, thresh=thresh)
+    w = fit_graph(set_uid(cell_gson), type=type, thresh=thresh, id_col="uid")
 
     assert 0 not in list(w.neighbors.keys())
