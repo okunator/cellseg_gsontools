@@ -123,7 +123,7 @@ class _SpatialContext:
                 A spatial weights object containing all the distinct networks
                 in the context.
         """
-        allowed = ("roi_network", "ful_network", "interface_network", "border_network")
+        allowed = ("roi_network", "full_network", "interface_network", "border_network")
         if key not in allowed:
             raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
@@ -131,7 +131,10 @@ class _SpatialContext:
         wout = W({0: [0]})
         for _, c in cxs:
             w = c[key]
-            wout = w_union(wout, w, silence_warnings=True)
+            if isinstance(w, W):
+                wout = w_union(wout, w, silence_warnings=True)
+
+        # remove self loops
         wout = w_subset(wout, list(wout.neighbors.keys())[1:], silence_warnings=True)
 
         return wout
@@ -334,8 +337,8 @@ class _SpatialContext:
     def plot_weights(
         self,
         key: str,
-        ix: int,
         ax=plt.Axes,
+        ix: int = -1,
         id_col: str = "global_id",
         node_kws: Dict = None,
         edge_kws: Dict = None,
@@ -348,13 +351,11 @@ class _SpatialContext:
                 The key of the context dictionary that contains the spatial weights
                 to be plotted. One of "roi_network", "ful_network",
                 "interface_network", "border_network"
-            ix : int
-                The index of the context network. I.e., the ith context network of
-                type `key`.
-            gdf : gpd.GeoDataFrame
-                The geodataframe containing the nodes.
             ax : plt.Axes, optional
                 The axes to plot on. If None, a new figure is created.
+            ix : int, default=-1
+                The index of the context network. I.e., the ith context network of
+                type `key`. If -1 or None, the merged context network is plotted.
             id_col : str, default="global_id"
                 The unique id column in the gdf.
             node_kws : dict, optional
@@ -398,15 +399,61 @@ class _SpatialContext:
         ...     edge_kws=dict(color='r', linestyle=':', linewidth=1),
         ...     node_kws=dict(marker='')
         ... )
+        <AxesSubplot: >
 
+        Plot tumor-stroma interface border netwroks of the cells inside the interfaces
+        >>> from cellseg_gsontools.spatial_context import InterfaceContext
+        >>> import geopandas as gpd
+        >>> import matplotlib.pyplot as plt
+
+        >>> cells = gpd.read_feather(cells.feather)
+        >>> areas = gpd.read_feather(areas.feather)
+
+        >>> iface_context = InterfaceContext(
+        ...     area_gdf=areas,
+        ...     cell_gdf=cells,
+        ...     label1="area_cin",
+        ...     label2="areastroma",
+        ...     silence_warnings=True,
+        ...     min_area_size=100000.0,
+        ... )
+        >>> iface_context.fit()
+
+        >>> f, ax = plt.subplots(figsize=(20, 20))
+
+        >>> iface_context.context2gdf("interface_area").plot(ax=ax, alpha=0.5)
+        >>> cells.plot(
+        ...     ax=ax,
+        ...     column="class_name",
+        ...     categorical=True,
+        ...     aspect=1
+        ... )
+
+        >>> iface_context.plot_weights(
+        ...     "border_network",
+        ...     ix=-1,
+        ...     ax=ax,
+        ...     edge_kws=dict(color='r', linestyle=':', linewidth=1),
+        ...     node_kws=dict(marker='')
+        ... )
         <AxesSubplot: >
         """
-        allowed = ("roi_network", "full_network", "interface_network", "border_network")
+        allowed = (
+            "roi_network",
+            "full_network",
+            "interface_network",
+            "border_network",
+        )
         if key not in allowed:
             raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
         gdf = self.cell_gdf
-        w = self.context[ix][key]
+
+        # merge weights if ix not given
+        if ix == -1 or ix is None:
+            w = self.merge_weights(key)
+        else:
+            w = self.context[ix][key]
 
         if w is None:
             raise ValueError(

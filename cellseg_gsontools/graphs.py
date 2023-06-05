@@ -67,6 +67,11 @@ def fit_graph(
     # warn if id_col is not provided
     _graph_warn(type, id_col)
 
+    # can't fit delaunay or relative nhood graphs with less than 4 points
+    if type in ("delaunay", "relative_nhood"):
+        if len(gdf) < 4:
+            return
+
     if type == "delaunay":
         # NOTE: neighbor keys start from 0
         w = Delaunay.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
