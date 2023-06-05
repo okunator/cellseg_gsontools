@@ -1,7 +1,7 @@
 from typing import Union
 
 import geopandas as gpd
-from libpysal.weights import DistanceBand
+from libpysal.weights import W
 from tqdm import tqdm
 
 from ..graphs import fit_graph
@@ -156,7 +156,7 @@ class WithinContext(_SpatialContext):
         ix: int,
         thresh: float = 75.0,
         graph_type: str = "delaunay",
-    ) -> DistanceBand:
+    ) -> W:
         """Create a distance network of the cells.
 
         Parameters
