@@ -47,3 +47,19 @@ def merge_data_area() -> Path:
     path = path / "tests/data/merge_data/area"
 
     return path
+
+
+@pytest.fixture(scope="package")
+def pipeline_areas() -> Path:
+    path = Path().resolve()
+    path = path / "tests/data/pipeline/areas"
+
+    return path
+
+
+@pytest.fixture(scope="package")
+def pipeline_cells() -> Path:
+    path = Path().resolve()
+    path = path / "tests/data/pipeline/cells"
+
+    return path
