@@ -1,12 +1,13 @@
 import warnings
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import geopandas as gpd
 import pandas as pd
 import shapely
+from shapely.geometry import Polygon
 
-__all__ = ["set_uid", "read_gdf", "pre_proc_gdf"]
+__all__ = ["set_uid", "read_gdf", "pre_proc_gdf", "clip_gdf"]
 
 
 def set_uid(
@@ -167,3 +168,32 @@ def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> Union[gpd.GeoDataFrame, None]:
         warnings.warn("Could not create bounds cols to gdf.", RuntimeWarning)
 
     return gdf
+
+
+def clip_gdf(
+    gdf: gpd.GeoDataFrame, bbox: Tuple[int, int, int, int]
+) -> gpd.GeoDataFrame:
+    """Clip a gdf to a bounding box.
+
+    Parameters
+    ----------
+        gdf : gpd.GeoDataFrame
+            Input geodataframe.
+        bbox : Tuple[int, int, int, int]
+            Bounding box to clip to. Format: (xmin, ymin, xmax, ymax).
+
+    Returns
+    -------
+        gpd.GeoDataFrame:
+            Clipped gdf.
+    """
+    xmin = bbox[0]
+    ymin = bbox[1]
+    xmax = bbox[2]
+    ymax = bbox[3]
+
+    crop = Polygon(
+        [(xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymin)]
+    )
+
+    return gdf.clip(crop)
