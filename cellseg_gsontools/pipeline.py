@@ -64,9 +64,9 @@ class Pipeline(ABC):
         self.parallel_sample = parallel_sample
 
     @staticmethod
-    def read_input(fname: str, preproc: bool = False) -> gpd.GeoDataFrame:
+    def read_input(fname: str, preproc: bool = False, **kwargs) -> gpd.GeoDataFrame:
         """Read input geodataframe and filter out ."""
-        gdf = read_gdf(fname)
+        gdf = read_gdf(fname, **kwargs)
         if preproc:
             gdf = pre_proc_gdf(gdf)
 
@@ -99,8 +99,27 @@ class Pipeline(ABC):
 
         return res_df
 
-    def __call__(self) -> pd.DataFrame:
+    def __call__(
+        self,
+        pbar: bool = True,
+        n_jobs: int = -1,
+        pooltype: str = "thread",
+        maptype: str = "imap",
+    ) -> pd.DataFrame:
         """Run the pipeline.
+
+        Parameters
+        ----------
+            verbose : bool, default=True
+                Flag, whether to print progress bar.
+            n_jobs : int, default=-1
+                Number of jobs to run in parallel.
+            pooltype : str, default='thread'
+                The type of pool to use for multiprocessing.
+                Allowed values: 'thread', 'process', 'serial'
+            maptype : str, default='imap'
+                The type of map to use for multiprocessing.
+                Allowed values: 'imap', 'map', 'uimap', 'amap'
 
         Returns
         -------
@@ -146,7 +165,14 @@ class Pipeline(ABC):
             else:
                 index = [fn.with_suffix("").name for fn in args]
 
-            res = run_pool(self._pipe_unpack, args=args)
+            res = run_pool(
+                self._pipe_unpack,
+                args=args,
+                pooltype=pooltype,
+                maptype=maptype,
+                n_jobs=n_jobs,
+                pbar=pbar,
+            )
 
         res = self.collect(res)
         res.index = index
