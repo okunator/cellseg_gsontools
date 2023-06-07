@@ -88,6 +88,7 @@ class WithinContext(_SpatialContext):
                 silence_warnings=True,
                 min_area_size=100000.0
             )
+        >>> within_context.fit()
 
         >>> ix = 1
         >>> ax = within_context.context_area.plot(figsize=(10, 10), alpha=0.5)

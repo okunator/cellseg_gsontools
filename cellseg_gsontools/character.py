@@ -99,18 +99,17 @@ def local_character(
     Examples
     --------
     Compute the mean of eccentricity values for each neighborhood
+    >>> from libpysal.weights import DistanceBand
+    >>> from cellseg_gsontools.character import local_character
 
-        >>> from libpysal.weights import DistanceBand
-        >>> from cellseg_gsontools.character import local_character
-
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-        >>> local_character(
-                gdf,
-                spatial_weights=w_dist,
-                val_col="eccentricity",
-                reduction="mean",
-                weight_by_area=True
-            )
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> local_character(
+    ...     gdf,
+    ...     spatial_weights=w_dist,
+    ...     val_col="eccentricity",
+    ...     reduction="mean",
+    ...     weight_by_area=True
+    ... )
     """
     data = set_uid(gdf)
 

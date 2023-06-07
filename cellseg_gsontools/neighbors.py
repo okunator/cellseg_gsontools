@@ -47,30 +47,30 @@ def neighborhood(
     Examples
     --------
     Use `gdf_apply` to extract the neighboring nodes for each node/cell
-        >>> from cellseg_gsontools.apply import gdf_apply
-        >>> from cellseg_gsontools.neighbors import neighborhood
-        >>> from cellseg_gsontools.utils import set_uid
+    >>> from cellseg_gsontools.apply import gdf_apply
+    >>> from cellseg_gsontools.neighbors import neighborhood
+    >>> from cellseg_gsontools.utils import set_uid
 
-        >>> # Set uid to the gdf
-        >>> data = set_uid(gdf)
+    >>> # Set uid to the gdf
+    >>> data = set_uid(gdf)
 
-        >>> # Get spatial weights
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> # Get spatial weights
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
-        >>> # Get the neihgboring nodes of the graph
-        >>> gdf_apply(data, neighborhood, col="uid", spatial_weights=w_dist)
-        0                            [0]
-        1                     [1, 9, 19]
-        2                            [2]
-        3                      [3, 4, 6]
-        4            [4, 3, 5, 6, 8, 14]
-                        ...
-        361              [360, 336, 338]
-        362    [361, 331, 348, 350, 363]
-        363         [362, 339, 345, 365]
-        364    [363, 331, 348, 350, 361]
-        365    [364, 340, 341, 349, 352]
-        Name: uid, Length: 365, dtype: object
+    >>> # Get the neihgboring nodes of the graph
+    >>> gdf_apply(data, neighborhood, col="uid", spatial_weights=w_dist)
+    0                            [0]
+    1                     [1, 9, 19]
+    2                            [2]
+    3                      [3, 4, 6]
+    4            [4, 3, 5, 6, 8, 14]
+                    ...
+    361              [360, 336, 338]
+    362    [361, 331, 348, 350, 363]
+    363         [362, 339, 345, 365]
+    364    [363, 331, 348, 350, 361]
+    365    [364, 340, 341, 349, 352]
+    Name: uid, Length: 365, dtype: object
 
     """
     nhood = np.nan
@@ -80,7 +80,7 @@ def neighborhood(
         # get spatial neighborhood
         nhood = spatial_weights.neighbors[node]
         if include_self:
-            nhood = [node] + nhood
+            nhood = [node] + list(nhood)
 
     return nhood
 
@@ -103,45 +103,45 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
     Examples
     --------
     Use `gdf_apply` to get the neihgborhood values for each node/cell given a metric
-        >>> from libpysal.weights import DistanceBand
-        >>> from cellseg_gsontools.apply import gdf_apply
-        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
-        >>> from cellseg_gsontools.utils import set_uid
+    >>> from libpysal.weights import DistanceBand
+    >>> from cellseg_gsontools.apply import gdf_apply
+    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
+    >>> from cellseg_gsontools.utils import set_uid
 
-        >>> # Set uid to the gdf
-        >>> data = set_uid(gdf)
+    >>> # Set uid to the gdf
+    >>> data = set_uid(gdf)
 
-        >>> # Get spatial weights
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> # Get spatial weights
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
-        >>> # Get the neihgboring nodes of the graph
-        >>> data["nhood"] = gdf_apply(
-                data, neighborhood, col="uid", spatial_weights=w_dist
-            )
+    >>> # Get the neihgboring nodes of the graph
+    >>> data["nhood"] = gdf_apply(
+            data, neighborhood, col="uid", spatial_weights=w_dist
+        )
 
-        >>> # Define the gdf column of interest
-        >>> val_col = "eccentricity"
-        >>> values = data.set_index("uid")[val_col]
+    >>> # Define the gdf column of interest
+    >>> val_col = "eccentricity"
+    >>> values = data.set_index("uid")[val_col]
 
-        >>> # get the neighborhood metric values
-        >>> gdf_apply(
-                data,
-                nhood_vals,
-                col="nhood",
-                values=values,
-            )
+    >>> # get the neighborhood metric values
+    >>> gdf_apply(
+            data,
+            nhood_vals,
+            col="nhood",
+            values=values,
+        )
 
-        0                                   [0.42]
-        1                       [0.92, 0.83, 0.68]
-        2                                    [0.8]
-        3                        [0.81, 0.4, 0.74]
-        4      [0.4, 0.81, 0.59, 0.74, 0.46, 0.44]
-                            ...
-        361                      [0.53, 0.82, 0.5]
-        362         [0.26, 0.31, 0.93, 0.58, 0.29]
-        363                 [0.7, 0.69, 0.5, 0.36]
-        364         [0.29, 0.31, 0.93, 0.58, 0.26]
-        365         [0.25, 0.28, 0.44, 0.59, 0.42]
+    0                                   [0.42]
+    1                       [0.92, 0.83, 0.68]
+    2                                    [0.8]
+    3                        [0.81, 0.4, 0.74]
+    4      [0.4, 0.81, 0.59, 0.74, 0.46, 0.44]
+                        ...
+    361                      [0.53, 0.82, 0.5]
+    362         [0.26, 0.31, 0.93, 0.58, 0.29]
+    363                 [0.7, 0.69, 0.5, 0.36]
+    364         [0.29, 0.31, 0.93, 0.58, 0.26]
+    365         [0.25, 0.28, 0.44, 0.59, 0.42]
     """
     nhood_vals = np.array([0])
     if nhood not in (None, np.nan):
@@ -180,47 +180,47 @@ def nhood_counts(
     Examples
     --------
     Use `gdf_apply` to compute the neihgborhood counts for each node/cell given a metric
-        >>> from cellseg_gsontools.apply import gdf_apply
-        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_counts
-        >>> from cellseg_gsontools.utils import set_uid
+    >>> from cellseg_gsontools.apply import gdf_apply
+    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_counts
+    >>> from cellseg_gsontools.utils import set_uid
 
-        >>> # Set uid to the gdf
-        >>> data = set_uid(gdf)
+    >>> # Set uid to the gdf
+    >>> data = set_uid(gdf)
 
-        >>> # Get spatial weights
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> # Get spatial weights
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
-        >>> # Get the neihgboring nodes of the graph
-        >>> data["nhood"] = gdf_apply(
-                data, neighborhood, col="uid", spatial_weights=w_dist
-            )
+    >>> # Get the neihgboring nodes of the graph
+    >>> data["nhood"] = gdf_apply(
+            data, neighborhood, col="uid", spatial_weights=w_dist
+        )
 
-        >>> # Define the gdf column that will be binned
-        >>> val_col = "eccentricity"
-        >>> categorical = False # the column-values are not categorical
-        >>> values = data.set_index("uid")[val_col]
+    >>> # Define the gdf column that will be binned
+    >>> val_col = "eccentricity"
+    >>> categorical = False # the column-values are not categorical
+    >>> values = data.set_index("uid")[val_col]
 
-        >>> # compute the counts of the bins inside the neighborhood
-        >>> gdf_apply(
-                data,
-                nhood_counts,
-                col="nhood",
-                values=values,
-                bins=bins,
-            )
+    >>> # compute the counts of the bins inside the neighborhood
+    >>> gdf_apply(
+            data,
+            nhood_counts,
+            col="nhood",
+            values=values,
+            bins=bins,
+        )
 
-        0      [1, 0, 0, 0, 0, 0, 0]
-        1      [0, 1, 1, 1, 0, 0, 0]
-        2      [0, 0, 1, 0, 0, 0, 0]
-        3      [1, 1, 1, 0, 0, 0, 0]
-        4      [4, 1, 1, 0, 0, 0, 0]
-                    ...
-        361    [2, 0, 1, 0, 0, 0, 0]
-        362    [4, 0, 0, 1, 0, 0, 0]
-        363    [2, 2, 0, 0, 0, 0, 0]
-        364    [4, 0, 0, 1, 0, 0, 0]
-        365    [5, 0, 0, 0, 0, 0, 0]
-        Name: nhood, Length: 365, dtype: object
+    0      [1, 0, 0, 0, 0, 0, 0]
+    1      [0, 1, 1, 1, 0, 0, 0]
+    2      [0, 0, 1, 0, 0, 0, 0]
+    3      [1, 1, 1, 0, 0, 0, 0]
+    4      [4, 1, 1, 0, 0, 0, 0]
+                ...
+    361    [2, 0, 1, 0, 0, 0, 0]
+    362    [4, 0, 0, 1, 0, 0, 0]
+    363    [2, 2, 0, 0, 0, 0, 0]
+    364    [4, 0, 0, 1, 0, 0, 0]
+    365    [5, 0, 0, 0, 0, 0, 0]
+    Name: nhood, Length: 365, dtype: object
     """
     counts = np.array([0])
     if nhood not in (None, np.nan):

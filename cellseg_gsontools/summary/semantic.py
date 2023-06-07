@@ -59,6 +59,7 @@ class SemanticSummary(Summary):
                 min_area_size=50000.0,
                 n_jobs=1
             )
+        >>> cluster_context.fit(verbose=True)
 
         >>> immune_cluster_areas = cluster_context.context2gdf("roi_area")
         >>> immune_areas = SemanticSummary(

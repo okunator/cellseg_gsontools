@@ -64,6 +64,7 @@ class InstanceSummary(Summary):
                 min_area_size="mean",
                 n_jobs=1
             )
+        >>> cluster_context.fit(verbose=True)
 
         >>> immune_cluster_cells = cluster_context.context2gdf("roi_cells")
         >>> immune_clust_summary = InstanceSummary(
@@ -94,6 +95,7 @@ class InstanceSummary(Summary):
         return_std: bool = False,
         parallel: bool = True,
         filter_pattern: Optional[str] = None,
+        id_col: str = None,
     ) -> pd.Series:
         """Summarize the instance segmentation objects.
 
@@ -111,6 +113,8 @@ class InstanceSummary(Summary):
             filter_pattern : str, optional
                 A string pattern. All off the values containing this pattern
                 in the result pd.Series are filtered out.
+            id_col : str, optional
+                A column name of the `self.cell_gdf` that contains unique identifiers
 
         Returns
         -------
@@ -118,6 +122,7 @@ class InstanceSummary(Summary):
                 A summary vector containing summary features of the instance
                 segmentation objects found in the `area_gdf`.
         """
+        # TODO: clean up the code
         # compute metrics
         shape_mets = [m for m in self.metrics if m in SHAPE_LOOKUP.keys()]
         if shape_mets:
@@ -135,6 +140,7 @@ class InstanceSummary(Summary):
                 categorical=True,
                 parallel=parallel,
                 scheme="FisherJenks",
+                id_col=id_col,
             )
             # modify the metrics to match the new column names
             for i, m in enumerate(self.metrics):
@@ -146,11 +152,15 @@ class InstanceSummary(Summary):
             )
 
         # get the summary vec
-        group_div_mets = [m for m in self.metrics if m in GROUP_DIVERSITY_LOOKUP.keys()]
         self.summary = self.gen_metric_summary(
-            self.cell_gdf, div_mets + shape_mets, self.groups, self.prefix
+            self.cell_gdf,
+            [m for m in self.metrics if m not in GROUP_DIVERSITY_LOOKUP.keys()],
+            self.groups,
+            self.prefix,
         )
+        group_div_mets = [m for m in self.metrics if m in GROUP_DIVERSITY_LOOKUP.keys()]
 
+        # TODO: fix this
         if group_div_mets is not None:
             for m in group_div_mets:
                 if self.groups is None:
@@ -158,13 +168,14 @@ class InstanceSummary(Summary):
                         f"Group diversity metric: {m} require a group, but "
                         "`self.groups` was set to None."
                     )
-                for met in shape_mets + div_mets:
-                    for group in self.groups:
-                        self.summary[
-                            f"{self.prefix}{m}-{group}-{met}"
-                        ] = GROUP_DIVERSITY_LOOKUP[m](
-                            self.cell_gdf[met], self.cell_gdf[group]
-                        )
+                for met in self.metrics:
+                    if met not in GROUP_DIVERSITY_LOOKUP.keys():
+                        for group in self.groups:
+                            self.summary[
+                                f"{self.prefix}{m}-{group}-{met}"
+                            ] = GROUP_DIVERSITY_LOOKUP[m](
+                                self.cell_gdf[met], self.cell_gdf[group]
+                            )
 
         # filter
         if not return_counts:

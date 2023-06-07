@@ -224,8 +224,9 @@ def local_diversity(
     gdf: gpd.GeoDataFrame,
     spatial_weights: W,
     val_col: str,
+    id_col: str = None,
     metrics: Tuple[str, ...] = ("simpson_index",),
-    scheme: str = "HeadTailBreaks",
+    scheme: str = "FisherJenks",
     categorical: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
@@ -270,22 +271,38 @@ def local_diversity(
     Examples
     --------
     Compute the simpson diversity of eccentricity values for each neighborhood
+    >>> from libpysal.weights import DistanceBand
+    >>> from cellseg_gsontools.diversity import local_diversity
 
-        >>> from libpysal.weights import DistanceBand
-        >>> from cellseg_gsontools.diversity import local_diversity
-
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-        >>> local_diversity(
-                gdf,
-                spatial_weights=w_dist,
-                val_col="eccentricity",
-                metrics=["simpson_index"]
-            )
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> local_diversity(
+    ...     gdf,
+    ...     spatial_weights=w_dist,
+    ...     val_col="eccentricity",
+    ...     metrics=["simpson_index"]
+    ... )
     """
     allowed = list(DIVERSITY_LOOKUP.keys())
     if not all(m in allowed for m in metrics):
         raise ValueError(
             f"Illegal metric in `metrics`. Got: {metrics}. Allowed metrics: {allowed}."
+        )
+
+    data = gdf.copy()
+
+    # set uid
+    if id_col is None:
+        id_col = "uid"
+        data = set_uid(data)
+
+    # drop duplicate indices
+    data = data.drop_duplicates(subset=[id_col], keep="first")
+    if not sorted(spatial_weights.neighbors.keys()) == sorted(data[id_col]):
+        raise ValueError(
+            "The spatial weights neighbors must have the same keys as the indices "
+            f"in the `id_col={id_col}` column. If `id_col` is not set, the default "
+            "column name is set to `uid` and the `w.neighbors.keys()` might not. "
+            "match the `gdf.uid` column values."
         )
 
     # If shannon or simpson index in metrics, counts are needed
@@ -299,14 +316,11 @@ def local_diversity(
     if any([m in metrics for m in gt]):
         ret_vals = True
 
-    # set uid
-    data = set_uid(gdf)
-
     # Get the immediate node neighborhood
     data["nhood"] = gdf_apply(
         data,
         neighborhood,
-        col="uid",
+        col=id_col,
         spatial_weights=spatial_weights,
         parallel=False,
     )

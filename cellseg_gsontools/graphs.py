@@ -144,6 +144,9 @@ def dist_thresh_weights_sequential(
             A libpysal spatial weights object, containing the neighbor graph data.
     """
     gdf = gdf.copy()
+
+    # drop duplicate rows
+    gdf = gdf.drop_duplicates(subset=[id_col], keep="first")
     gdf["nhood"] = pd.Series(list(w.neighbors.values()), index=gdf.index)
 
     new_neighbors = []
@@ -192,29 +195,35 @@ def _drop_neighbors(
 def _graph_to_global_ids(w: W, in_gdf: gpd.GeoDataFrame, id_col: str) -> W:
     """Convert the graph ids to global ids i.e. to the ids of the id_col``."""
     new_neighbors = {}
-    new_weights = {}
 
     # gdf = set_uid(in_gdf.copy(), 0)
-    for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
-        new_id = in_gdf.loc[i, id_col]
+    # for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
+    #     new_id = in_gdf.loc[i, id_col]
+    #     nghs = [in_gdf.loc[ngh, id_col] for ngh in neighbors]
+    #     new_neighbors[new_id] = nghs
+    #     new_weights[new_id] = w.weights[node]
+    for node, neighbors in w.neighbors.items():
+        new_id = in_gdf.loc[node, id_col]
         nghs = [in_gdf.loc[ngh, id_col] for ngh in neighbors]
         new_neighbors[new_id] = nghs
-        new_weights[new_id] = w.weights[node]
 
-    return W(new_neighbors, new_weights)
+    return W(new_neighbors, id_order=sorted(new_neighbors.keys()))
 
 
 def _graph_to_index(w: W, in_gdf: gpd.GeoDataFrame) -> W:
     new_neighbors = {}
-    new_weights = {}
 
-    for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
-        new_id = i
+    # for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
+    # new_id = i
+    # # print(i, node)
+    # nghs = [in_gdf.iloc[ngh].name for ngh in neighbors]
+    # new_neighbors[new_id] = nghs
+    for node, neighbors in w.neighbors.items():
+        new_id = in_gdf.iloc[node].name
         nghs = [in_gdf.iloc[ngh].name for ngh in neighbors]
         new_neighbors[new_id] = nghs
-        new_weights[new_id] = w.weights[node]
 
-    return W(new_neighbors, new_weights)
+    return W(new_neighbors, id_order=sorted(new_neighbors.keys()))
 
 
 def _graph_warn(type: str, id_col: str):

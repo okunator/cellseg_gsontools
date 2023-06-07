@@ -322,6 +322,7 @@ class InterfaceContext(_SpatialContext):
         roi_iface_cells = set_uid(
             pd.concat([region_cells, iface_cells]), id_col="roi_iface_id"
         )
+
         return roi_iface_cells, len(region_cells), len(iface_cells)
 
     def cell_neighbors(
@@ -365,7 +366,6 @@ class InterfaceContext(_SpatialContext):
         cells, len_roi, len_iface = self.roi_interface_cells(
             ix, roi_cell_type=roi_cell_type, iface_cell_type=iface_cell_type
         )
-
         if cells is None:
             return None, None, None, None
 

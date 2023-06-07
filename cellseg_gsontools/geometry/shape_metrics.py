@@ -441,7 +441,10 @@ def shape_metric(
                 parallel=True
             )
     """
-    allowed = list(SHAPE_LOOKUP.keys()) + ["area"]
+    if not isinstance(metrics, (list, tuple)):
+        raise ValueError(f"`metrics` must be a list or tuple. Got: {type(metrics)}.")
+
+    allowed = list(SHAPE_LOOKUP.keys())
     if not all(m in allowed for m in metrics):
         raise ValueError(
             f"Illegal metric in `metrics`. Got: {metrics}. Allowed metrics: {allowed}."

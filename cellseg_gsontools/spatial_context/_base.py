@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from libpysal.weights import W, w_subset, w_union
 
+from ..graphs import fit_graph
 from ..utils import set_uid
 from .ops import get_objs
 
@@ -114,7 +115,7 @@ class _SpatialContext:
         ----------
             key : str
                 The key of the context dictionary that contains the spatial
-                weights to be merged. One of "roi_network", "ful_network",
+                weights to be merged. One of "roi_network", "full_network",
                 "interface_network", "border_network"
 
         Returns
@@ -166,7 +167,36 @@ class _SpatialContext:
             con,
             keys=[i for i in self.context.keys() if self.context[i][key] is not None],
         )
+        gdf = gdf.drop_duplicates(subset=["global_id"], keep="first")
+
         return gdf.reset_index(level=0, names="label")
+
+    def context2weights(self, key: str, **kwargs) -> W:
+        """Fit a network on the cells inside the context `key`.
+
+        Parameters
+        ----------
+            key : str
+                The key of the context dictionary that contains the data to be converted
+                to gdf. One of "roi_cells", "interface_cells"
+        """
+        allowed = ("roi_cells", "interface_cells")
+        if key not in allowed:
+            raise ValueError(
+                "Illegal key. Note that network can be only fitted to cell gdfs. "
+                f"Got: {key}. Allowed: {allowed}"
+            )
+
+        cells = self.context2gdf(key)
+        cells = cells.drop_duplicates(subset=["global_id"], keep="first")
+        w = fit_graph(
+            cells,
+            type=self.graph_type,
+            id_col="global_id",
+            thresh=self.dist_thresh,
+        )
+
+        return w
 
     def get_objs_within(
         self, area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame

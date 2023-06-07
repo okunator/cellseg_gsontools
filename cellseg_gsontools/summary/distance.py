@@ -60,6 +60,7 @@ class DistanceSummary(Summary):
                 verbose=True,
                 min_area_size=100000.0
             )
+        >>> within_context.fit()
 
         >>> # Get the immune clusters from the gdf
         >>> cluster_context = PointClusterContext(
@@ -71,6 +72,7 @@ class DistanceSummary(Summary):
                 min_area_size=50000.0,
                 n_jobs=1
             )
+        >>> cluster_context.fit()
 
         >>> # compute the summary counts
         >>> neoplastic_areas = within_context.context2gdf("roi_area")
@@ -135,7 +137,7 @@ class DistanceSummary(Summary):
 
     def summarize(
         self,
-        thresh_dist: int = 340,
+        thresh_dist: int = 350,
         step: int = 5,
         filter_pattern: Optional[str] = None,
         **kwargs,

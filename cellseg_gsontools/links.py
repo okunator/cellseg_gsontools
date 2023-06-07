@@ -35,44 +35,44 @@ def link_counts(
     Example
     -------
     Get the link types of the tumor-stroma interfaces in a slide.
-        >>> from cellseg_gsontools.spatial_context import InterfaceContext
-        >>> from cellseg_gsontools.links import link_counts
+    >>> from cellseg_gsontools.spatial_context import InterfaceContext
+    >>> from cellseg_gsontools.links import link_counts
 
-        >>> iface_context = InterfaceContext(
-                area_gdf=areas,
-                cell_gdf=cells,
-                label1="area_cin",
-                label2="areastroma",
-                silence_warnings=True,
-                verbose=True,
-                min_area_size=100000.0
-            )
-        >>> classes = [
-                "inflammatory",
-                "connective",
-                "glandular_epithel",
-                "squamous_epithel",
-                "neoplastic"
-            ]
+    >>> iface_context = InterfaceContext(
+            area_gdf=areas,
+            cell_gdf=cells,
+            label1="area_cin",
+            label2="areastroma",
+            silence_warnings=True,
+            verbose=True,
+            min_area_size=100000.0
+        )
+    >>> classes = [
+            "inflammatory",
+            "connective",
+            "glandular_epithel",
+            "squamous_epithel",
+            "neoplastic"
+        ]
 
-        >>> w = iface_context.merge_weights("border_network")
-        >>> link_counts(cells, w, t)
-        Processing interface area: 4: 100%|██████████| 4/4 [00:01<00:00,  2.58it/s]
-        {'inflammatory-inflammatory': 31,
-        'inflammatory-connective': 89,
-        'inflammatory-glandular_epithel': 0,
-        'inflammatory-squamous_epithel': 0,
-        'inflammatory-neoplastic': 86,
-        'connective-connective': 131,
-        'connective-glandular_epithel': 0,
-        'connective-squamous_epithel': 0,
-        'connective-neoplastic': 284,
-        'glandular_epithel-glandular_epithel': 0,
-        'glandular_epithel-squamous_epithel': 0,
-        'glandular_epithel-neoplastic': 0,
-        'squamous_epithel-squamous_epithel': 0,
-        'squamous_epithel-neoplastic': 0,
-        'neoplastic-neoplastic': 236}
+    >>> w = iface_context.merge_weights("border_network")
+    >>> link_counts(cells, w, t)
+    Processing interface area: 4: 100%|██████████| 4/4 [00:01<00:00,  2.58it/s]
+    {'inflammatory-inflammatory': 31,
+    'inflammatory-connective': 89,
+    'inflammatory-glandular_epithel': 0,
+    'inflammatory-squamous_epithel': 0,
+    'inflammatory-neoplastic': 86,
+    'connective-connective': 131,
+    'connective-glandular_epithel': 0,
+    'connective-squamous_epithel': 0,
+    'connective-neoplastic': 284,
+    'glandular_epithel-glandular_epithel': 0,
+    'glandular_epithel-squamous_epithel': 0,
+    'glandular_epithel-neoplastic': 0,
+    'squamous_epithel-squamous_epithel': 0,
+    'squamous_epithel-neoplastic': 0,
+    'neoplastic-neoplastic': 236}
     """
     combos = get_link_combinations(classes)
     link_cnt = {combo: 0 for combo in combos}
