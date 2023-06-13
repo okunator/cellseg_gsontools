@@ -27,8 +27,9 @@ def get_objs(area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame) -> gpd.GeoDataFr
 
     if objs_within.empty:
         warnings.warn(
-            "`get_objs_within` resulted in an empty GeoDataFrame. No objects were ",
-            "found within the area. Returning None from `get_objs_within`",
+            """`get_objs_within` resulted in an empty GeoDataFrame. No objects were
+            found within the area. Returning None from `get_objs_within`.,
+            """,
             RuntimeWarning,
         )
         return

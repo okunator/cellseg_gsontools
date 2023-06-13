@@ -37,7 +37,8 @@ class WithinContext(_SpatialContext):
             A geo dataframe that contains small cellular objectss that are enclosed
             by larger tissue areas in `area_gdf`.
         label : str
-            The class name of the areas of interest. E.g. "cancer".
+            The class name of the areas of interest. The objects within these areas are
+            extracted. E.g. "cancer" or "stroma".
         min_area_size : float or str, optional
             The minimum area of the objects that are kept. All the objects in the
             `area_gdf` that are larger are kept than `min_area_size`. Can be either

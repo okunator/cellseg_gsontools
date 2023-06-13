@@ -196,12 +196,6 @@ def _graph_to_global_ids(w: W, in_gdf: gpd.GeoDataFrame, id_col: str) -> W:
     """Convert the graph ids to global ids i.e. to the ids of the id_col``."""
     new_neighbors = {}
 
-    # gdf = set_uid(in_gdf.copy(), 0)
-    # for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
-    #     new_id = in_gdf.loc[i, id_col]
-    #     nghs = [in_gdf.loc[ngh, id_col] for ngh in neighbors]
-    #     new_neighbors[new_id] = nghs
-    #     new_weights[new_id] = w.weights[node]
     for node, neighbors in w.neighbors.items():
         new_id = in_gdf.loc[node, id_col]
         nghs = [in_gdf.loc[ngh, id_col] for ngh in neighbors]
@@ -213,11 +207,6 @@ def _graph_to_global_ids(w: W, in_gdf: gpd.GeoDataFrame, id_col: str) -> W:
 def _graph_to_index(w: W, in_gdf: gpd.GeoDataFrame) -> W:
     new_neighbors = {}
 
-    # for i, (node, neighbors) in zip(in_gdf.index, w.neighbors.items()):
-    # new_id = i
-    # # print(i, node)
-    # nghs = [in_gdf.iloc[ngh].name for ngh in neighbors]
-    # new_neighbors[new_id] = nghs
     for node, neighbors in w.neighbors.items():
         new_id = in_gdf.iloc[node].name
         nghs = [in_gdf.iloc[ngh].name for ngh in neighbors]
