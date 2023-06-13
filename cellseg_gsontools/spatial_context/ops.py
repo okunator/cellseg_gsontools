@@ -1,4 +1,5 @@
 import warnings
+from typing import Union
 
 import geopandas as gpd
 from geopandas.tools import sjoin
@@ -6,7 +7,9 @@ from geopandas.tools import sjoin
 __all__ = ["get_interface_zones", "get_objs"]
 
 
-def get_objs(area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_objs(
+    area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame, silence_warnings: bool = True
+) -> Union[gpd.GeoDataFrame, None]:
     """Get the objects within the area.
 
     Parameters
@@ -15,6 +18,8 @@ def get_objs(area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame) -> gpd.GeoDataFr
             The area of interest in GeoDataFrame.
         objects : gpd.GeoDataFrame
             The objects (cells) of interest.
+        silence_warnings : bool, default=True
+            Flag, whether to suppress warnings.
 
     Returns
     -------
@@ -25,7 +30,7 @@ def get_objs(area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame) -> gpd.GeoDataFr
         right_df=area, left_df=objects, how="inner", predicate="within"
     )
 
-    if objs_within.empty:
+    if objs_within.empty and not silence_warnings:
         warnings.warn(
             """`get_objs_within` resulted in an empty GeoDataFrame. No objects were
             found within the area. Returning None from `get_objs_within`.,

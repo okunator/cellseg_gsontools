@@ -199,7 +199,9 @@ class _SpatialContext:
         return w
 
     def get_objs_within(
-        self, area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame
+        self,
+        area: gpd.GeoDataFrame,
+        objects: gpd.GeoDataFrame,
     ) -> gpd.GeoDataFrame:
         """Get the objects within the area.
 
@@ -215,7 +217,10 @@ class _SpatialContext:
             gpd.GeoDataFrame:
                 The objects (cells) within the area gdf.
         """
-        objs_within = get_objs(area, objects)
+        objs_within = get_objs(area, objects, silence_warnings=self.silence_warnings)
+
+        if objs_within is None or objs_within.empty:
+            return
 
         # rename spatial join columns
         objs_within = objs_within.rename(
