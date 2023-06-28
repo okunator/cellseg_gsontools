@@ -129,7 +129,9 @@ class AreaMerger(BaseGSONMerger):
         cols = None
         rows = []
         for file in self.files:
-            gdf = pre_proc_gdf(read_gdf(file, qupath_format=qupath_format))
+            gdf = pre_proc_gdf(
+                read_gdf(file, qupath_format=qupath_format), min_size=1000
+            )
             if gdf is not None and not gdf.empty:
                 cols = gdf.columns
                 for _, row in gdf.iterrows():

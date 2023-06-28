@@ -15,6 +15,7 @@ class GSONTile:
         filename: Union[Path, str],
         tile_size: Tuple[int, int] = (1000, 1000),
         qupath_format: str = "latest",
+        min_size: int = 40,
     ) -> None:
         """Handle geojson annotations of a tile.
 
@@ -26,6 +27,10 @@ class GSONTile:
                 Name of the input geojson file.
             tile_size : Tuple[int, int], default=(1000, 1000)
                 Height and width of the tile in pixels.
+            qupath_format : str, default="latest"
+                The geojson format of the input geojson file.
+            min_size : int, default=30
+                Minimum size of the annotations in pixels.
 
         Examples
         --------
@@ -35,11 +40,14 @@ class GSONTile:
         >>> tile.non_border_annots
         """
         self.filename = Path(filename)
+        self.min_size = min_size
         self.xmin, self.ymin = get_xy_coords(filename)
         self.xmax = self.xmin + tile_size[0]
         self.ymax = self.ymin + tile_size[1]
 
-        self.gdf = pre_proc_gdf(read_gdf(self.filename, qupath_format))
+        self.gdf = pre_proc_gdf(
+            read_gdf(self.filename, qupath_format), min_size=min_size
+        )
 
     def __len__(self):
         """Return the length of the gson obj."""

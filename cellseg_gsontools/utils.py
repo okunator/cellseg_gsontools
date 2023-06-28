@@ -129,7 +129,9 @@ def read_gdf(
     return gdf
 
 
-def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> Union[gpd.GeoDataFrame, None]:
+def pre_proc_gdf(
+    gdf: gpd.GeoDataFrame, min_size: int = None
+) -> Union[gpd.GeoDataFrame, None]:
     """Apply some light pre-processing of a geodataframe.
 
     Namely, remove invalid polygons, empty geometries and add bounds to the gdf.
@@ -138,6 +140,8 @@ def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> Union[gpd.GeoDataFrame, None]:
     ----------
         gdf : gpd.GeoDataFrame
             Input geodataframe.
+        min_size : int, optional
+            The minimum size of the polygons in pixels.
 
     Returns
     -------
@@ -153,6 +157,14 @@ def pre_proc_gdf(gdf: gpd.GeoDataFrame) -> Union[gpd.GeoDataFrame, None]:
 
     # drop empty geometries
     gdf = gdf[~gdf.is_empty]
+
+    # if there are multipolygon geometries, explode them
+    if "MultiPolygon" in list(gdf["geometry"].geom_type):
+        gdf = gdf.explode(index_parts=False).reset_index(drop=True)
+
+    # drop geometries that are less than min_size pixels
+    if min_size is not None:
+        gdf = gdf[gdf.area > min_size]
 
     # drop geometries that are not polygons
     gdf = gdf[gdf.geom_type == "Polygon"]
