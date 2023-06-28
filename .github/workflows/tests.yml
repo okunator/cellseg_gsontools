@@ -6,7 +6,7 @@ name: Tests
 on:
   push:
     branches:
-      - main
+      - master
     paths-ignore:
       - README.md
       - CHANGELOG.md
@@ -16,7 +16,7 @@ on:
       - images/**
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   tests:
