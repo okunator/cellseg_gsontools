@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "cellseg-gsontools"
-version = "0.1.0"
-description = "Toobelt for merging and extracting features from geojson masks."
+version = "0.1.0.1"
+description = "Toolbelt for merging and extracting features from geojson masks."
 authors = ["Okunator <oskari.lehtonen@helsinki.fi>"]
 readme = "README.md"
 homepage = "https://github.com/okunator/cellseg_gsontools"
@@ -16,18 +16,18 @@ numpy = "^1.23.4"
 scipy = "^1.9.2"
 pathos = "^0.2.9"
 scikit-image = "^0.19.3"
-geojson = "^2.5.0"
 tqdm = "^4.64.1"
 matplotlib = "^3.6.1"
 opencv-python = "^4.2.0.32"
 pandarallel = "^1.6.4"
 libpysal = "^4.7.0"
 mapclassify = "^2.5.0"
+geojson = {version = "^2.5.0", optional = true}
 esda = {version = "^2.4.3", optional = true}
 geomstats = {version = "^2.5.0", optional = true}
 
 [tool.poetry.extras]
-all = ["esda", "geomstats"]
+all = ["geojson", "esda", "geomstats"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -89,5 +89,5 @@ exclude_lines = [
 
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

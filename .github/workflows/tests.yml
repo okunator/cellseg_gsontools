@@ -24,7 +24,7 @@ jobs:
       fail-fast: true
       matrix:
         # python-version: ["3.7", "3.8", "3.9"]
-        python-version: ["3.7"]
+        python-version: ["3.9"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -58,12 +58,13 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          poetry run pytest --cov cellseg_models_pytorch/ --cov-report xml
+          poetry run pytest --cov cellseg_gsontools/ --cov-report xml
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+          flags: unittests
+          files: ./coverage.xml
           fail_ci_if_error: true
           verbose: true

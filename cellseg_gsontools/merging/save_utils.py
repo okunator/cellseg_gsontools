@@ -2,7 +2,6 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import geojson
 import geopandas as gpd
 
 from ..apply import gdf_apply
@@ -29,6 +28,14 @@ def save_geojson(annotations: List[Dict[str, Any]], fname: Union[Path, str]) -> 
         fname : Union[Path, str]
             The filename.
     """
+    try:
+        import geojson
+    except ImportError:
+        raise ImportError(
+            "You need to install `geojson` to use `save_geojson` function. "
+            "Try `pip install geojson`."
+        )
+
     fname = Path(fname).with_suffix(".json")
     with fname.open("w") as out:
         geojson.dump(annotations, out)
