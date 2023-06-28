@@ -1,7 +1,6 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from esda.adbscan import ADBSCAN
 from sklearn.cluster import DBSCAN, OPTICS
 
 __all__ = ["cluster_points"]
@@ -78,6 +77,13 @@ def cluster_points(
         )
 
     if method == "adbscan":
+        try:
+            from esda.adbscan import ADBSCAN
+        except ImportError:
+            raise ImportError(
+                "The adbscan method requires the esda package to be installed."
+                "Install it with: pip install esda"
+            )
         xy = pd.DataFrame({"X": xy[:, 0], "Y": xy[:, 1]})
         clusterer = ADBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs)
     elif method == "dbscan":

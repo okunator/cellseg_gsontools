@@ -108,9 +108,9 @@ def check_format(fname: Union[Path, str]) -> None:
         ValueError: If both x and y coordinates are not present in filename.
     """
     fn = Path(fname)
-    if fn.suffix not in (".json", ".geojson"):
+    if fn.suffix not in (".json", ".geojson", ".png"):
         raise ValueError(
-            f"Input file {fn} has wrong format. Expected '.json' or '.geojson'."
+            f"Input file {fn} has wrong format. Expected '.png', '.json' or '.geojson'."
         )
 
     has_x = False
@@ -119,7 +119,7 @@ def check_format(fname: Union[Path, str]) -> None:
     # get the x and y coordinates from the filename
     # NOTE: fname needs to contain x & y-coordinates in x_[coord1]_y_[coord2]-format
     # or x-[coord1]_y-[coord2]-format. The order of x and y can be any.
-    xy_str: List[str] = re.findall(r"x_\d+|y_\d+|x-\d+|y-\d+", fn.as_posix())
+    xy_str: List[str] = re.findall(r"x\d+|y\d+|x_\d+|y_\d+|x-\d+|y-\d+", fn.as_posix())
 
     try:
         for s in xy_str:
@@ -166,7 +166,7 @@ def get_xy_coords(fname: Union[Path, str]) -> Tuple[int, int]:
     if isinstance(fname, Path):
         fname = fname.as_posix()
 
-    xy_str: List[str] = re.findall(r"x_\d+|y_\d+|x-\d+|y-\d+", fname)
+    xy_str: List[str] = re.findall(r"x\d+|y\d+|x_\d+|y_\d+|x-\d+|y-\d+", fname)
     xy: List[int] = [0, 0]
     for s in xy_str:
         if "x" in s:
@@ -174,6 +174,8 @@ def get_xy_coords(fname: Union[Path, str]) -> Tuple[int, int]:
                 xy[0] = int(s.split("_")[1])
             elif "-" in s:
                 xy[0] = int(s.split("-")[1])
+            elif "x" in s and "-" not in s and "_" not in s:
+                xy[0] = int(s.split("x")[1])
             else:
                 raise ValueError(
                     "The fname needs to contain x & y-coordinates in "
@@ -184,6 +186,8 @@ def get_xy_coords(fname: Union[Path, str]) -> Tuple[int, int]:
                 xy[1] = int(s.split("_")[1])
             elif "-" in s:
                 xy[1] = int(s.split("-")[1])
+            elif "y" in s and "-" not in s and "_" not in s:
+                xy[1] = int(s.split("y")[1])
             else:
                 raise ValueError(
                     "The fname needs to contain x & y-coordinates in "
