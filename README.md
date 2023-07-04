@@ -35,7 +35,7 @@ pip install cellseg-gsontools
 
 ### Geometry
 
-Geometrical features of nuclei can be calculated for a whole gdf. They can be also computed using the summary-object showcased later.
+Geometrical features of nuclei can be calculated over all the cells in a gdf. They can be also computed using the summary-object showcased later.
 
 ```python
 from from cellseg_gsontools.geometry import shape_metric
@@ -63,9 +63,9 @@ shape_metric(
 
 ### Entropy and diversity
 
-Entropy can be calculated in any summary-object by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric. Spatial_weights must be passed in the call.
+Local diversity metrics be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial_weights must be passed in the call.
 
-**Local-diversity** calculates a feature's heterogeneity in a cell's neighborhood.
+**Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood.
 
 ```python
 from cellseg_gsontools.diversity import local_diversity
@@ -75,7 +75,7 @@ weights = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 local_diversity(
      gdf,
      spatial_weights = weights,
-     val_col = "area",              #columns for which to compute the metric
+     val_col = "area", # the feature or column for which to compute the diversity metric
      metrics = ["simpson_index"]
 )
 ```
@@ -91,7 +91,7 @@ local_diversity(
 
 ### Spatial-context
 
-Combine cell-segmentation with area-segmentation for spatial context. `Fit`-method must be called before using context.
+Spatial Context classes combine cell-segmentation maps with area-segmentation to provide spatial context for the cells/nuclei. `Fit`-method must be called before using the context-classes.
 
 **WithinContext**
 
@@ -136,7 +136,7 @@ Here we pick the border area between the neoplastic lesion and the stroma to stu
 
 **PointClusterContext**
 
-Uses given algorithm to cluster cells.
+Uses a given clustering algorithm to cluster cells of the given type. This can help to extract spatial clusters of cells.
 
 ```python
 cluster_context = PointClusterContext(
@@ -157,7 +157,7 @@ Here we clustered immune cells on the slide and fitted a network on a cluster.
 
 ### Summary
 
-Summarize cells, areas, contexts, and intermediates into a tabular format for further analysis. `Summarise`-method must be called before using summary. Use `filter_pattern` argument to choose groups used in summary.
+Summarize cells, areas, contexts, and intermediates of a slide into a tabular format for further analysis. `Summarise`-method must be called before using summary. Use `filter_pattern` argument to choose groups used in summary.
 
 **InstanceSummary**
 
@@ -227,7 +227,7 @@ interface_summary.summarize()
 
 **DistanceSummary**
 
-Summarizes distances between contexts. For example how many immune clusters are close to a neoplastic lesion.
+Summarizes distances between different areas. For example how many immune clusters are close to a neoplastic lesion.
 
 ```python
 immune_proximities = DistanceSummary(
