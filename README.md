@@ -39,7 +39,14 @@ shape_metric(
     ]
 )
 ```
-![table of features](/images/table1.png)
+| **uid** |                                      **geometry** | **class_name** |   **area** | **major_axis_len** | **circularity** | **eccentricity** | **squareness** |
+|--------:|--------------------------------------------------:|---------------:|-----------:|-------------------:|----------------:|-----------------:|---------------:|
+|       1 | POLYGON ((52163.012 153274.003, 52163.939 1532... |   inflammatory | 161.314012 |          15.390584 |        0.942791 |         0.834633 |       1.198831 |
+|       2 | POLYGON ((52087.012 153346.996, 52089.009 1533... |     connective | 401.877306 |          26.137359 |        0.948243 |         0.783638 |       1.205882 |
+|       3 | POLYGON ((52094.012 153389.003, 52094.012 1533... |     connective | 406.584839 |          29.674783 |        0.877915 |         0.594909 |       1.117796 |
+|       4 | POLYGON ((52119.012 153408.995, 52121.005 1534... |     connective | 281.779998 |          24.017928 |        0.885816 |         0.617262 |       1.127856 |
+|       5 | POLYGON ((52065.012 153470.990, 52068.003 1534... |     connective | 257.550056 |          17.988285 |        0.891481 |         0.999339 |       1.131054 |
+|     ... |                                               ... |            ... |        ... |                ... |             ... |              ... |            ... |
 
 
 ### Entropy and diversity
@@ -61,7 +68,14 @@ local_diversity(
 )
 ```
 
-![table of features](/images/table2.png)
+| uid |                                          geometry |   class_name |       area | major_axis_len | circularity | eccentricity | squareness | area_simpson_index |
+|----:|--------------------------------------------------:|-------------:|-----------:|---------------:|------------:|-------------:|-----------:|-------------------:|
+|   1 | POLYGON ((52163.012 153274.003, 52163.939 1532... | inflammatory | 161.314012 |      15.390584 |    0.942791 |     0.834633 |   1.198831 |           0.000000 |
+|   2 | POLYGON ((52087.012 153346.996, 52089.009 1533... |   connective | 401.877306 |      26.137359 |    0.948243 |     0.783638 |   1.205882 |           0.000000 |
+|   3 | POLYGON ((52094.012 153389.003, 52094.012 1533... |   connective | 406.584839 |      29.674783 |    0.877915 |     0.594909 |   1.117796 |           0.444444 |
+|   4 | POLYGON ((52119.012 153408.995, 52121.005 1534... |   connective | 281.779998 |      24.017928 |    0.885816 |     0.617262 |   1.127856 |           0.500000 |
+|   5 | POLYGON ((52065.012 153470.990, 52068.003 1534... |   connective | 257.550056 |      17.988285 |    0.891481 |     0.999339 |   1.131054 |           0.000000 |
+| ... |                                               ... |          ... |        ... |            ... |         ... |          ... |        ... |                ... |
 
 ### Spatial-context
 
@@ -148,8 +162,15 @@ lesion_summary = InstanceSummary(
 )
 lesion_summary.summarize()
 ```
-![table.png](/images/table3.png)
 
+|                                         | **sample_cells** |
+|----------------------------------------:|-----------------:|
+|     **lesion-cells-inflammatory-count** |           118.00 |
+|       **lesion-cells-neoplastic-count** |          4536.00 |
+|            **lesion-cells-total-count** |          4787.00 |
+| **lesion-cells-inflammatory-area-mean** |           241.17 |
+|   **lesion-cells-neoplastic-area-mean** |           532.79 |
+| ...                                     |               ...|
 
 **SemanticSummary**
 
@@ -164,8 +185,11 @@ immune_areas = SemanticSummary(
 )
 immune_areas.summarize()
 ```
-![table.png](/images/table4.png)
-
+|                                                 | **sample_cells** |
+|------------------------------------------------:|-----------------:|
+| **immune-clusters-immune-clusters-total-count** |            42.00 |
+|                   **immune-clusters-area-mean** |       2558514.25 |
+| ...                                             | ...              |
 
 **SpatialWeightSummary**
 
@@ -194,7 +218,11 @@ immune_proximities = DistanceSummary(
 )
 immune_proximities.summarize()
 ```
-![table.png](/images/table5.png)
+|                              | **sample_cells** |
+|-----------------------------:|-----------------:|
+| **icc-close2lesion-0-count** |               34 |
+| **icc-close2lesion-1-count** |                8 |
+| ...                          | ...              |
 
 
 ### Pipeline
@@ -267,7 +295,18 @@ res = pipe()
 res.to_csv("result.csv")
 
 ```
-![table.png](/images/table6.png)
+
+|   |                                       | **sample_cells** |
+|--:|--------------------------------------:|-----------------:|
+|   |     **lesion-cells-neoplastic-count** |          4536.00 |
+|   |          **lesion-cells-total-count** |          4787.00 |
+|   | **lesion-cells-neoplastic-area-mean** |           532.79 |
+|   |  **lesion-cells-neoplastic-area-min** |            19.64 |
+|   |  **lesion-cells-neoplastic-area-25%** |           346.53 |
+|   |  **lesion-cells-neoplastic-area-50%** |           489.16 |
+|   |  **lesion-cells-neoplastic-area-75%** |           676.79 |
+|   |  **lesion-cells-neoplastic-area-max** |          2466.25 |
+|   | ...                                   | ...              |
 
 
 ## Whats next
