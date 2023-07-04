@@ -16,6 +16,12 @@
 pip install cellseg-gsontools
 ```
 
+To add some extra capabilities, like, support for arrow files or abdscan clustering use:
+
+```shell
+pip install cellseg-gsontools[all]
+```
+
 ## Usage
 
 1. Define the features to be computed using the provided methods or create your own.
