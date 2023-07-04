@@ -1,6 +1,6 @@
 ## Introduction
 
-**Cellseg_gsontools** is a toolset to analyse and summarize cell and tissue segmentations into interpretable features. Widely used metrics are provided out of the box but the pipeline infrastructure is amenable to self-defined functions to suit specific needs.  
+**Cellseg_gsontools** is a Python toolset designed to analyze and summarize cell and tissue segmentations into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pip install cellseg-gsontools
 
 ## Usage
 
-1. Define features to be computed 
+1. Define the features to be computed using the provided methods or create your own. 
 
 * Methods for nuclei metrics, entropy, subsetting cells with areas, clustering and more are provided
 
@@ -18,16 +18,16 @@ pip install cellseg-gsontools
 
 * **Summary-classes** reduce context objects into summarised tabular form.
 
-2. Wrap the computation inside a `Pipeline`-class.
+2. 	Wrap the computation inside a `Pipeline`-class. This class allows you to organize and execute the analysis pipeline.
 
-3. Run the `Pipeline` on segmented cell and area gson-files.
+3. Run the pipeline on segmented cell and area gson-files. The pipeline takes care of processing the input files and generating the desired features.
 
 
 ## Code examples
 
 ### Geometry
 
-Geometrical features of nuclei provided are listed in the example code below. They can be computed for single polygons directly or for a whole dataframe using the summary-object showcased later.
+Geometrical features of nuclei can be calculated for a whole gdf. They can be also computed using the summary-object showcased later.
 
 ```python
 from from cellseg_gsontools.geometry import shape_metric
@@ -72,18 +72,18 @@ local_diversity(
 )
 ```
 
-| **uid** | **class_name** |   **area** | **major_axis_len** | **circularity** | **eccentricity** | **squareness** | **area_simpson_index** |
-|--------:|---------------:|-----------:|-------------------:|----------------:|-----------------:|---------------:|-----------------------:|
-|       1 |   inflammatory | 161.314012 |          15.390584 |        0.942791 |         0.834633 |       1.198831 |               0.000000 |
-|       2 |     connective | 401.877306 |          26.137359 |        0.948243 |         0.783638 |       1.205882 |               0.000000 |
-|       3 |     connective | 406.584839 |          29.674783 |        0.877915 |         0.594909 |       1.117796 |               0.444444 |
-|       4 |     connective | 281.779998 |          24.017928 |        0.885816 |         0.617262 |       1.127856 |               0.500000 |
-|       5 |     connective | 257.550056 |          17.988285 |        0.891481 |         0.999339 |       1.131054 |               0.000000 |
-|     ... |            ... |        ... |                ... |             ... |              ... |            ... |                    ... |
+| **uid** | **class_name** |   **area** | **area_simpson_index** |
+|--------:|---------------:|-----------:|-----------------------:|
+|       1 |   inflammatory | 161.314012 |               0.000000 |
+|       2 |     connective | 401.877306 |               0.000000 |
+|       3 |     connective | 406.584839 |               0.444444 |
+|       4 |     connective | 281.779998 |               0.500000 |
+|       5 |     connective | 257.550056 |               0.000000 |
+|     ... |            ... |        ... |                    ... |
 
 ### Spatial-context
 
-Combine cell-segmentation with area-segmentation for spatial information. `Fit`-method must be called before using context.
+Combine cell-segmentation with area-segmentation for spatial context. `Fit`-method must be called before using context.
 
 **WithinContext**
 
@@ -124,11 +124,11 @@ interface_context.plot(key = "interface_area")
 ```
 ![border_network.png](/images/border_network.png)
 
-Here we pick the border area between the neoplastic lesion and the stroma to study for example immune cells on the border.
+Here we pick the border area between the neoplastic lesion and the stroma to study for example the immune cells on the border.
 
 **PointClusterContext**
 
-Uses chosen clustering algorithm to cluster cells.
+Uses given algorithm to cluster cells.
 
 ```python
 cluster_context = PointClusterContext(
@@ -151,7 +151,7 @@ Here we clustered immune cells on the slide and fitted a network on a cluster.
 
 Summarize cells, areas, contexts, and intermediates into a tabular format for further analysis. `Summarise`-method must be called before using summary. Use `filter_pattern` argument to choose groups used in summary.
 
- **InstanceSummary**
+**InstanceSummary**
  
 Easy way to calculate nuclei and area `metrics` for `groups`
  
@@ -176,7 +176,7 @@ lesion_summary.summarize()
 |            **lesion-cells-total-count** |          4787.00 |
 | **lesion-cells-inflammatory-area-mean** |           241.17 |
 |   **lesion-cells-neoplastic-area-mean** |           532.79 |
-| ...                                     |               ...|
+
 
 **SemanticSummary**
 
@@ -195,11 +195,11 @@ immune_areas.summarize()
 |------------------------------------------------:|-----------------:|
 | **immune-clusters-immune-clusters-total-count** |            42.00 |
 |                   **immune-clusters-area-mean** |       2558514.25 |
-| ...                                             | ...              |
+
 
 **SpatialWeightSummary**
 
-Summarizes cell networks by counting edges between cells.
+Summarizes cell networks by counting edges between neighboring cells.
 
 ```python
 interface_summary = SpatialWeightSummary(
@@ -215,11 +215,11 @@ interface_summary.summarize()
 | **interface-inflammatory-inflammatory** |               19 |
 |   **interface-inflammatory-neoplastic** |              153 |
 |     **interface-neoplastic-neoplastic** |              363 |
-|                                     ... |              ... |
+
 
 **DistanceSummary**
 
-Summarizes distances between contexts.
+Summarizes distances between contexts. For example how many immune clusters are close to a neoplastic lesion.
 
 ```python
 immune_proximities = DistanceSummary(
@@ -234,7 +234,7 @@ immune_proximities.summarize()
 |-----------------------------:|-----------------:|
 | **icc-close2lesion-0-count** |               34 |
 | **icc-close2lesion-1-count** |                8 |
-| ...                          | ...              |
+
 
 
 ### Pipeline
@@ -318,11 +318,3 @@ res.to_csv("result.csv")
 |  **lesion-cells-neoplastic-area-50%** |           489.16 |
 |  **lesion-cells-neoplastic-area-75%** |           676.79 |
 |  **lesion-cells-neoplastic-area-max** |          2466.25 |
-| ...                                   | ...              |
-
-
-## Whats next
-
-* More examples are provided in jupyter notebooks
-* Documentation contains more detailed explanations for classes and functions
-
