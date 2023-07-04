@@ -10,13 +10,17 @@ pip install cellseg-gsontools
 
 ## Usage
 
-1. Create a **pipeline-class**
+1. Define features to be computed 
+
+* Methods for nuclei metrics, entropy, subsetting cells with areas, clustering and more are provided
 
 * **Context-classes** help handling and combining cell and tissue segmentations. Classes include algorithms and methods e.g. clustering.
 
 * **Summary-classes** reduce context objects into summarised tabular form.
 
-2. Run the **pipeline** on segmented cell and area gson-files.
+2. Wrap the computation inside a `Pipeline`-class.
+
+3. Run the `Pipeline` on segmented cell and area gson-files.
 
 
 ## Code examples
@@ -83,7 +87,7 @@ Combine cell-segmentation with area-segmentation for spatial information. `Fit`-
 
 **WithinContext**
 
-Extracts cells from the `cell_gdf` within areas in `area_gdf`. Call `context2gdf`-method to retrieve the cells in a gdf. `context2weights` can be used to fit a graphical network on the cells.
+Extracts cells from the `cell_gdf` within areas in `area_gdf`. Call `context2gdf`-method to retrieve the cells in a gdf. `context2weights` can be used to fit a graph network on the cells.
 
 ```python
 from cellseg_gsontools.summary import (
@@ -119,6 +123,7 @@ interface_context.fit()
 interface_context.plot(key = "interface_area")
 ```
 ![border_network.png](/images/border_network.png)
+
 Here we pick the border area between the neoplastic lesion and the stroma to study for example immune cells on the border.
 
 **PointClusterContext**
@@ -139,6 +144,7 @@ cluster_context.context2weights("roi_cells")
 cluster_context.plot_weights("roi_network")
 ```
 ![cluster_network.png](/images/inf_network.png)
+
 Here we clustered immune cells on the slide and fitted a network on a cluster.
 
 ### Summary
@@ -193,7 +199,7 @@ immune_areas.summarize()
 
 **SpatialWeightSummary**
 
-Summarizes cell networks.
+Summarizes cell networks by counting edges between cells.
 
 ```python
 interface_summary = SpatialWeightSummary(
@@ -204,6 +210,12 @@ interface_summary = SpatialWeightSummary(
 )
 interface_summary.summarize()
 ```
+|                                         | **sample_cells** |
+|----------------------------------------:|-----------------:|
+| **interface-inflammatory-inflammatory** |               19 |
+|   **interface-inflammatory-neoplastic** |              153 |
+|     **interface-neoplastic-neoplastic** |              363 |
+|                                     ... |              ... |
 
 **DistanceSummary**
 
