@@ -1,4 +1,12 @@
 ## Introduction
+<div align="center">
+
+[![Github Test](https://img.shields.io/github/actions/workflow/status/okunator/cellseg_gsontools/tests.yml?label=tests)](https://github.com/okunator/cellseg_models.pytorch/actions/workflows/tests.yml) [![Generic badge](https://img.shields.io/github/license/okunator/cellseg_gsontools
+)](https://github.com/okunator/cellseg_gsontools/blob/master/LICENSE) [![Python - Version](https://img.shields.io/pypi/pyversions/cellseg_gsontools
+)](https://www.python.org/) [![Package - Version](https://img.shields.io/pypi/v/cellseg_gsontools)
+](https://pypi.org/project/cellseg-gsontools/)
+
+</div>
 
 **Cellseg_gsontools** is a Python toolset designed to analyze and summarize cell and tissue segmentations into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs.
 
@@ -10,7 +18,7 @@ pip install cellseg-gsontools
 
 ## Usage
 
-1. Define the features to be computed using the provided methods or create your own. 
+1. Define the features to be computed using the provided methods or create your own.
 
 * Methods for nuclei metrics, entropy, subsetting cells with areas, clustering and more are provided
 
@@ -35,11 +43,11 @@ from from cellseg_gsontools.geometry import shape_metric
 shape_metric(
     gdf,
     metrics = [
-     "area",
-     "major_axis_len",
-     "circularity",
-     "eccentricity",
-     "squareness"
+        "area",
+        "major_axis_len",
+        "circularity",
+        "eccentricity",
+        "squareness"
     ]
 )
 ```
@@ -152,9 +160,9 @@ Here we clustered immune cells on the slide and fitted a network on a cluster.
 Summarize cells, areas, contexts, and intermediates into a tabular format for further analysis. `Summarise`-method must be called before using summary. Use `filter_pattern` argument to choose groups used in summary.
 
 **InstanceSummary**
- 
+
 Easy way to calculate nuclei and area `metrics` for `groups`
- 
+
 ```python
 neoplastic_areas = within_context.context2gdf("roi_cells")
 spatial_weights =  within_context.context2weights("interface_cells", threshold=75.0)
@@ -257,7 +265,7 @@ class ExamplePipeline(Pipeline):
     ) -> None:
 
     super().__init__(in_path_cells, in_path_areas, parallel_df, parallel_sample)
-        
+
     def pipeline(
         self,
         fn_cell_gdf: Path = None,
@@ -290,9 +298,11 @@ class ExamplePipeline(Pipeline):
         fpat = "connective|glandular_epithel|dead|squamous_epithel|background|inflammatory"
         return pd.concat(
             [
-                lesion_summary.summarize(filter_pattern = fpat,
-                                         return_counts = True,
-                                         return_quantiles = True)
+                lesion_summary.summarize(
+                    filter_pattern = fpat,
+                    return_counts = True,
+                    return_quantiles = True
+                )
             ]
         )
 
