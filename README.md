@@ -1,12 +1,17 @@
-## Introduction
 <div align="center">
+
+# Cellseg_gsontools
 
 [![Github Test](https://img.shields.io/github/actions/workflow/status/okunator/cellseg_gsontools/tests.yml?label=tests)](https://github.com/okunator/cellseg_models.pytorch/actions/workflows/tests.yml) [![Generic badge](https://img.shields.io/github/license/okunator/cellseg_gsontools
 )](https://github.com/okunator/cellseg_gsontools/blob/master/LICENSE) [![Python - Version](https://img.shields.io/pypi/pyversions/cellseg_gsontools
 )](https://www.python.org/) [![Package - Version](https://img.shields.io/pypi/v/cellseg_gsontools)
 ](https://pypi.org/project/cellseg-gsontools/)
 
+Localized quantification of cell and tissue segmentation maps.
+
 </div>
+
+## Introduction
 
 **Cellseg_gsontools** is a Python toolset designed to analyze and summarize cell and tissue segmentations into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs.
 
@@ -69,15 +74,17 @@ shape_metric(
 
 ### Entropy and diversity
 
-Local diversity metrics be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial_weights must be passed in the call.
+Local diversity metrics be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial weights must be passed in the call.
 
-**Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood.
+**Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood. The neihborhood is defined by a spatial weights object. Spatial weights objects can be created with `libpysal` package.
 
 ```python
 from cellseg_gsontools.diversity import local_diversity
 from libpysal.weights import DistanceBand
 
+# Spatial weights can be created with libpysal package.
 weights = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+
 local_diversity(
      gdf,
      spatial_weights = weights,
@@ -97,7 +104,7 @@ local_diversity(
 
 ### Spatial-context
 
-Spatial Context classes combine cell-segmentation maps with area-segmentation to provide spatial context for the cells/nuclei. `Fit`-method must be called before using the context-classes.
+Spatial Context classes combine cell-segmentation maps with area-segmentation maps to provide spatial context for the cells/nuclei. The context-classes include a `.fit()`-method that builds the context.
 
 **WithinContext**
 
@@ -131,7 +138,7 @@ interface_context = InterfaceContext(
     cell_gdf = cell_gdf,
     label1 = "area_cin",
     label2 = "areastroma",
-    min_area_size = 100000.0
+    min_area_size = 100000.0 # discard areas smaller than this
 )
 interface_context.fit()
 interface_context.plot(key = "interface_area")
@@ -159,15 +166,15 @@ cluster_context.plot_weights("roi_network")
 ```
 ![cluster_network.png](/images/inf_network.png)
 
-Here we clustered immune cells on the slide and fitted a network on a cluster.
+Here we clustered the immune cells on the slide and fitted a network on the cells that were within the alpha shape of the cluster.
 
 ### Summary
 
-Summarize cells, areas, contexts, and intermediates of a slide into a tabular format for further analysis. `Summarise`-method must be called before using summary. Use `filter_pattern` argument to choose groups used in summary.
+Summarize cells, areas, contexts, and intermediates of a slide into a tabular format for further analysis. `Summarise`-method must be called before using summary. The summaries can be grouped by any metadata or annotation column in the gdf. You can also use `filter_pattern` argument to choose the statistics (`mean`, `count` etc.) or groups used in summary output.
 
 **InstanceSummary**
 
-Easy way to calculate nuclei and area `metrics` for `groups`
+Easy way to calculate nuclei and area `metrics` for different classes of cells over the neoplastic areas of the tissue.
 
 ```python
 neoplastic_areas = within_context.context2gdf("roi_cells")
@@ -194,7 +201,7 @@ lesion_summary.summarize()
 
 **SemanticSummary**
 
-Summarizes tissues areas.
+Summarizes tissues areas. Here we summarize the areas of immune clusters in the while tissue.
 
 ```python
 immune_cluster_areas = cluster_context.context2gdf("roi_area")
@@ -213,7 +220,7 @@ immune_areas.summarize()
 
 **SpatialWeightSummary**
 
-Summarizes cell networks by counting edges between neighboring cells.
+Summarizes cell networks by counting edges between neighboring cells. Here we compute the cell-cell connections over the tumor-stroma interface. The cell-cell connections are defined by the spatial weights graph.
 
 ```python
 interface_summary = SpatialWeightSummary(
