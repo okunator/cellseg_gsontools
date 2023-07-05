@@ -74,7 +74,7 @@ shape_metric(
 
 ### Entropy and diversity
 
-Local diversity metrics be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial weights must be passed in the call.
+Local diversity metrics can be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial weights must be passed in the call.
 
 **Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood. The neihborhood is defined by a spatial weights object. Spatial weights objects can be created with `libpysal` package.
 
