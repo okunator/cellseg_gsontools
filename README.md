@@ -76,14 +76,14 @@ shape_metric(
 
 Local diversity metrics can be calculated by passing one of `["simpson_index", "shannon_index", "gini_index", "theil_index"]` as a metric to `local_diversity`-function. Spatial weights must be passed in the call.
 
-**Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood. The neihborhood is defined by a spatial weights object. Spatial weights objects can be created with `libpysal` package.
+**Local-diversity** metrics calculate any feature's (e.g. nuclei area) heterogeneity in a cell's immediate neighborhood. The neihborhood is defined by a spatial weights grpah object. The `fit_graph`-method can be used to fit a spatial weights graph object to the `gdf`. Allowed graph fitting methods are `["delaunay", "knn", "distband", "relative_nhood"]`
 
 ```python
 from cellseg_gsontools.diversity import local_diversity
-from libpysal.weights import DistanceBand
+from cellseg_gsontools.graphs import fit_graph
 
-# Spatial weights can be created with libpysal package.
-weights = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+# Fit a spatial weights object to the gdf.
+weights = fit_graph(gdf, type="distband", thresh=70)
 
 local_diversity(
      gdf,
@@ -104,24 +104,20 @@ local_diversity(
 
 ### Spatial-context
 
-Spatial Context classes combine cell-segmentation maps with area-segmentation maps to provide spatial context for the cells/nuclei. The context-classes include a `.fit()`-method that builds the context.
+Spatial Context classes combine cell-segmentation maps with area-segmentation maps to provide spatial context for the cells/nuclei. The context-classes include a `.fit()`-method that builds the context. The `.plot()`-method can be used to plot different context in the gdf
 
 **WithinContext**
 
-Extracts cells from the `cell_gdf` within areas in `area_gdf`. Call `context2gdf`-method to retrieve the cells in a gdf. `context2weights` can be used to fit a graph network on the cells.
+Extracts cells from the `cell_gdf` within areas in `area_gdf`. Call `context2gdf`-method to retrieve the cells in a gdf. The different context that can be accessed with the `WithinContext`-class are `["roi_area", "roi_cells", "roi_network"]`.
 
 ```python
-from cellseg_gsontools.summary import (
-    InstanceSummary,
-    SemanticSummary,
-    DistanceSummary
-)
+from cellseg_gsontools.spatial_context import WithinContext
 
 within_context = WithinContext(
     area_gdf = area_gdf,
     cell_gdf = cell_gdf,
-    label = "area_cin",
-    min_area_size = 100000.0
+    label = "area_cin", # Extract the cells that are within tissue areas of this type
+    min_area_size = 100000.0 # discard areas smaller than this
 )
 
 within_context.fit()
@@ -130,9 +126,11 @@ within_context.context2gdf("roi_cells")
 
 **InterfaceContext**
 
-Returns border region between two types of area given.
+Returns border region between two types of area given. The different context that can be accessed with the `InterfaceContext`-class are:  `["roi_area", "roi_cells", "roi_network", "interface_cells", "interface_area", "interface_network", "border_network", "full_network"]`.
 
 ```python
+from cellseg_gsontools.spatial_context import InterfaceContext
+
 interface_context = InterfaceContext(
     area_gdf = area_gdf,
     cell_gdf = cell_gdf,
@@ -152,16 +150,17 @@ Here we pick the border area between the neoplastic lesion and the stroma to stu
 Uses a given clustering algorithm to cluster cells of the given type. This can help to extract spatial clusters of cells.
 
 ```python
+from cellseg_gsontools.spatial_context import PointClusterContext
+
 cluster_context = PointClusterContext(
     cell_gdf = cell_gdf,
-    label = "inflammatory",
+    label = "inflammatory", # cells of this type will be clustered
     cluster_method = "dbscan",
-    min_area_size = 5000.0,
-    min_samples = 70
+    min_area_size = 5000.0, # dbscan param
+    min_samples = 70 # dbscan param
 )
 
 cluster_context.fit()
-cluster_context.context2weights("roi_cells")
 cluster_context.plot_weights("roi_network")
 ```
 ![cluster_network.png](/images/inf_network.png)

@@ -314,8 +314,6 @@ class _SpatialContext:
         >>> clusters.fit(verbose=False)
         >>> clusters.plot("roi_area", show_legends=True, aspect=1)
         <AxesSubplot: >
-
-        Plot the slide with interfaces highlighted
         """
         allowed = ("roi_area", "interface_area")
         if key not in allowed:
