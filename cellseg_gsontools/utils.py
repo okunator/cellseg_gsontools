@@ -111,6 +111,12 @@ def read_gdf(
             gdf["class_name"] = gdf["properties"].apply(
                 lambda x: x["classification"]["name"]
             )
+
+            if "probabilities" in gdf["properties"].loc[0]["classification"].keys():
+                # add probs column
+                gdf["probs"] = gdf["properties"].apply(
+                    lambda x: x["classification"]["probabilities"]
+                )
         elif qupath_format == "latest":
             gdf = gpd.read_file(fname)
             gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
