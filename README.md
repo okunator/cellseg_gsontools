@@ -13,7 +13,7 @@ Localized quantification of cell and tissue segmentation maps.
 
 ## Introduction
 
-**Cellseg_gsontools** is a Python toolset designed to analyze and summarize cell and tissue segmentations into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs.
+**Cellseg_gsontools** is a Python toolset designed to analyze and summarize cell and tissue segmentations into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs. The library is built on top of [`geopandas`](https://geopandas.org/en/stable/index.html) and heavily utilizes the `GeoDataFrame` data structure or `gdf` for short.
 
 ## Installation
 
