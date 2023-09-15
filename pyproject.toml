@@ -6,12 +6,12 @@ authors = ["Okunator <oskari.lehtonen@helsinki.fi>"]
 readme = "README.md"
 homepage = "https://github.com/okunator/cellseg_gsontools"
 repository = "https://github.com/okunator/cellseg_gsontools"
-packages = [{include = "cellseg_gsontools"}]
+packages = [{ include = "cellseg_gsontools" }]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-geopandas = "^0.11.1"
-shapely = "^1.8.5.post1"
+geopandas = ">=0.13"
+shapely = ">=2.0"
 numpy = "^1.23.4"
 scipy = "^1.9.2"
 pathos = "^0.2.9"
@@ -23,10 +23,11 @@ pandarallel = "^1.6.4"
 libpysal = "^4.7.0"
 mapclassify = "^2.5.0"
 pygeos = "^0.14"
-geojson = {version = "^2.5.0", optional = true}
-esda = {version = "^2.4.3", optional = true}
-geomstats = {version = "^2.5.0", optional = true}
-pyarrow = {version = "^11.0.0", optional = true}
+geojson = { version = "^2.5.0", optional = true }
+esda = { version = "^2.4.3", optional = true }
+geomstats = { version = "^2.5.0", optional = true }
+pyarrow = { version = "^11.0.0", optional = true }
+numba = "^0.57.1"
 
 [tool.poetry.extras]
 all = ["geojson", "esda", "geomstats", "pyarrow"]
@@ -44,7 +45,7 @@ isort = "^5.10.1"
 black = "^22.3.0"
 
 [tool.poetry.group.dev.dependencies]
-scriv = {extras = ["toml"], version = "^0.16.0"}
+scriv = { extras = ["toml"], version = "^0.16.0" }
 ipykernel = "^6.16.0"
 
 [tool.scriv]
@@ -85,9 +86,8 @@ exclude_lines = [
     "except TypeError",
     "except Exception",
     "def extra_repr",
-    "plot()"
+    "plot()",
 ]
-
 
 
 [build-system]
