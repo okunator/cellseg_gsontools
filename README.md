@@ -13,7 +13,7 @@ Localized quantification of cell and tissue segmentation maps.
 
 ## Introduction
 
-**Cellseg_gsontools** is a Python toolset designed to analyze and summarize large cell and tissue segmentation maps created from Whole Slide Images (WSI) into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs. The library is built on top of [`geopandas`](https://geopandas.org/en/stable/index.html) and heavily utilizes the `GeoDataFrame` data structure or `gdf` for short. In other words, the library is built to process `geospatial` data with `GeoJSON`-interface. The library is synergistic with [cellseg_models.pytorch](https://github.com/okunator/cellseg_models.pytorch) segmentation library which enables you to segment your WSI into `GeoJSON` format.
+**Cellseg_gsontools** is a Python toolset designed to analyze and summarize large cell and tissue segmentation maps created from Whole Slide Images (WSI) into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs. The library is built on top of [`geopandas`](https://geopandas.org/en/stable/index.html) and heavily utilizes the `GeoDataFrame` data structure or `gdf` for short. In other words, the library is built to process `geospatial` data with `GeoJSON`-interface. The library is synergetic with the [cellseg_models.pytorch](https://github.com/okunator/cellseg_models.pytorch) segmentation library which enables you to segment your WSI into `GeoJSON` format.
 
 **NOTE** The toolset is still in alpha-phase and under constant development.
 
