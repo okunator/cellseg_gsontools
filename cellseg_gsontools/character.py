@@ -60,7 +60,7 @@ def local_character(
     gdf: gpd.GeoDataFrame,
     spatial_weights: W,
     val_col: Union[str, Tuple[str, ...]],
-    reduction: Union[str, Tuple[str, ...]] = "sum",
+    reductions: Tuple[str, ...] = ("sum",),
     weight_by_area: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
@@ -70,7 +70,7 @@ def local_character(
 
     Local character: The sum/mean/median of the immediate neighborhood of a cell.
 
-    NOTE: Option to weight the nhood values by their area before reduction.
+    NOTE: Option to weight the nhood values by their area before reductions.
 
     Parameters
     ----------
@@ -81,9 +81,9 @@ def local_character(
         val_col: Union[str, Tuple[str, ...]]
             The name of the column in the gdf for which the reduction is computed.
             If a tuple, the reduction is computed for each column.
-        reduction : Union[str, Tuple[str, ...]], default="sum"
-            The reduction method for the neighborhood. One of "sum", "mean", "median".
-            Can be a tuple of multiple reduction methods also.
+        reductions : Tuple[str, ...], default=("sum", )
+            A list of reduction methods for the neighborhood. One of "sum", "mean",
+            "median".
         weight_by_area : bool, default=False
             Flag wheter to weight the neighborhood values by the area of the object.
         parallel : bool, default=False
@@ -109,7 +109,7 @@ def local_character(
     ...     gdf,
     ...     spatial_weights=w_dist,
     ...     val_col="eccentricity",
-    ...     reduction="mean",
+    ...     reduction=["mean"],
     ...     weight_by_area=True
     ... )
     """
@@ -141,11 +141,8 @@ def local_character(
 
         # Compute the neighborhood characters
         col_prefix = "" if col_prefix is None else col_prefix
-        if isinstance(reduction, str):
-            reduction = (reduction,)
-
         # loop over the reduction methods
-        for r in reduction:
+        for r in reductions:
             data[f"{col_prefix}{col}_nhood_{r}"] = gdf_apply(
                 data,
                 reduce,

@@ -3,7 +3,7 @@ from libpysal.weights import DistanceBand
 
 from cellseg_gsontools.apply import gdf_apply
 from cellseg_gsontools.character import local_character
-from cellseg_gsontools.geometry import eccentricity, solidity
+from cellseg_gsontools.geometry import eccentricity
 from cellseg_gsontools.utils import set_uid
 
 
@@ -20,7 +20,7 @@ def test_character(cell_gson, reduction, weight, parallel):
     data = local_character(
         data,
         w_dist,
-        reduction=reduction,
+        reductions=[reduction],
         val_col="eccentricity",
         weight_by_area=weight,
         parallel=parallel,
