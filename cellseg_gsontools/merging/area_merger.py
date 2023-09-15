@@ -160,7 +160,11 @@ class AreaMerger(BaseGSONMerger):
                 # convert multipolygons to polygons
                 for poly in list(geo.geoms):
                     poly = poly.buffer(1.0)
-                    inter = [p for p in tree.query(poly) if p.intersects(poly)]
+                    inter = [
+                        tree.geometries.take(p)
+                        for p in tree.query(poly)
+                        if tree.geometries.take(p).intersects(poly)
+                    ]
                     merged = unary_union(inter)
                     new_coords.append(merged)
 
