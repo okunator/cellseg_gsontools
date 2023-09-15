@@ -42,7 +42,7 @@ The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract feat
 
 Specifically:
 * **Function API** helps to quickly compute object-level metrics in a `GeoDataFrame`.
-* **Spatial Context classes** help handling and combining cell and tissue segmentations for more localized and spatially contextualized feature extraction. These classes include algorithms to subset different spatial contexts with methods like spatial joins, graph networks, and clustering. These classes include `InterfaceContext` `WithinContext`, `PointClusterContext`. These classes also include helpful methods for plotting your data.
+* **Spatial Context classes** help handling and combining cell and tissue segmentations for more localized and spatially contextualized feature extraction. These classes include algorithms to subset different spatial contexts with methods like spatial joins, graph networks, and clustering. The specific classes are `InterfaceContext` `WithinContext`, and `PointClusterContext`. They also include helpful methods for plotting your data.
 
 * **Summary classes** can be used to reduce context objects into summarised tabular form, if you for some reason happen to be too lazy for `geopandas`-based data-wrangling. These classes include `InstanceSummary`, `DistanceSummary`, `SemanticSummary`, `SpatialWeightSummary`
 
@@ -147,11 +147,11 @@ gdf = shape_metric(gdf, metrics = ["area"], parallel=True)
 # fit a spatial weights object
 w = fit_graph(gdf, type="delaunay", thresh=150, id_col="cell_id")
 
-# compute the heterogeneity of the neighborhood eccentricities
+# compute the heterogeneity of the neighborhood areas
 local_diversity(
     gdf,
     spatial_weights=w,
-    val_col="eccentricity",
+    val_col="area",
     metrics=["simpson_index"],
 )
 ```

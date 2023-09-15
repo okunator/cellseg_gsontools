@@ -12,11 +12,11 @@
 
 - Add option to add multiple columns to `local_diversity` and `local_character`
 - add `is_categorical` helper func
-
+- Add hbdscan clustering method.
 - Add option to not fit graphs in `.fit()` method of `_SpatialContext`-classes
 
 ## Chore
-
+- add scikit-learn (1.3.0) dependency
 - Update to latest geopandas (0.13) and shapely (> 2.0)
 <a id='changelog-0.1.0'></a>
 # 0.1.0 — 2023-06-28

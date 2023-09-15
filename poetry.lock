@@ -3099,4 +3099,4 @@ all = ["esda", "geojson", "geomstats", "pyarrow"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "bbe98e47fc1a570f3e198ef6bbc162889ec2b669b63a30f15d15024977cceab3"
+content-hash = "c5cd885776adcdc6bfeff82c02ae4c0eac6b0b38efeeee03fe927f541e028291"
