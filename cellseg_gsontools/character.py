@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -59,8 +59,8 @@ def reduce(
 def local_character(
     gdf: gpd.GeoDataFrame,
     spatial_weights: W,
-    val_col: str,
-    reduction: str = "sum",
+    val_col: Union[str, Tuple[str, ...]],
+    reduction: Union[str, Tuple[str, ...]] = "sum",
     weight_by_area: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
@@ -78,10 +78,12 @@ def local_character(
             The input GeoDataFrame.
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
-        val_col: str
-            The name of the column in the gdf for which the reduction is computed
-        reduction : str, default="sum"
+        val_col: Union[str, Tuple[str, ...]]
+            The name of the column in the gdf for which the reduction is computed.
+            If a tuple, the reduction is computed for each column.
+        reduction : Union[str, Tuple[str, ...]], default="sum"
             The reduction method for the neighborhood. One of "sum", "mean", "median".
+            Can be a tuple of multiple reduction methods also.
         weight_by_area : bool, default=False
             Flag wheter to weight the neighborhood values by the area of the object.
         parallel : bool, default=False
@@ -126,30 +128,38 @@ def local_character(
             data, nhood_vals, col="nhood", values=data.geometry.area, parallel=False
         )
 
+    if isinstance(val_col, str):
+        val_col = (val_col,)
+
     # get character values
-    values = data[val_col]
-    char_col = f"{val_col}_nhood_vals"
-    data[char_col] = gdf_apply(
-        data, nhood_vals, col="nhood", values=values, parallel=False
-    )
+    for col in val_col:
+        values = data[col]
+        char_col = f"{col}_nhood_vals"
+        data[char_col] = gdf_apply(
+            data, nhood_vals, col="nhood", values=values, parallel=False
+        )
 
-    if col_prefix is None:
-        col_prefix = ""
-    else:
-        col_prefix += "_"
+        # Compute the neighborhood characters
+        col_prefix = "" if col_prefix is None else col_prefix
+        if isinstance(reduction, str):
+            reduction = (reduction,)
 
-    # Compute the neighborhood characters
-    data[f"{col_prefix}{val_col}_nhood_{reduction}"] = gdf_apply(
-        data,
-        reduce,
-        col=char_col,
-        parallel=parallel,
-        how=reduction,
-        extra_col=area_col,
-    )
+        # loop over the reduction methods
+        for r in reduction:
+            data[f"{col_prefix}{col}_nhood_{r}"] = gdf_apply(
+                data,
+                reduce,
+                col=char_col,
+                parallel=parallel,
+                how=r,
+                extra_col=area_col,
+            )
+
+        if rm_nhood_cols:
+            data = data.drop(labels=[char_col], axis=1)
 
     if rm_nhood_cols:
-        labs = [char_col, "nhood"]
+        labs = ["nhood"]
         if weight_by_area:
             labs.append(area_col)
         data = data.drop(labels=labs, axis=1)

@@ -31,7 +31,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 
 import geopandas as gpd
 import mapclassify
@@ -40,7 +40,7 @@ from libpysal.weights import W
 
 from .apply import gdf_apply
 from .neighbors import neighborhood, nhood_counts, nhood_vals
-from .utils import set_uid
+from .utils import is_categorical, set_uid
 
 __all__ = [
     "simpson_index",
@@ -223,11 +223,10 @@ GROUP_DIVERSITY_LOOKUP = {
 def local_diversity(
     gdf: gpd.GeoDataFrame,
     spatial_weights: W,
-    val_col: str,
+    val_col: Union[str, Tuple[str, ...]],
     id_col: str = None,
     metrics: Tuple[str, ...] = ("simpson_index",),
     scheme: str = "FisherJenks",
-    categorical: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
@@ -243,15 +242,15 @@ def local_diversity(
             The input GeoDataFrame.
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
-        val_col : str
-            The name of the column in the gdf for which the diversity is computed
+        val_col : Union[str, Tuple[str, ...]]
+            The name of the column in the gdf for which the diversity is computed.
+            You can also pass in a list of columns, in which case the diversity is
+            computed for each column.
         metrics : Tuple[str, ...]
             A Tuple/List of diversity metrics. Allowed metrics: "shannon_index",
             "simpson_index", "gini_index", "theil_index"
         scheme : str, default="HeadTailBreaks"
             `pysal.mapclassify` classification scheme.
-        categorical : bool, default=False
-            A flag, signalling whether the `val_col` column of the gdf is categorical.
         parallel : bool, default=False
             Flag whether to use parallel apply operations when computing the diversities
         rm_nhood_cols : bool, default=True
@@ -325,51 +324,52 @@ def local_diversity(
         parallel=False,
     )
 
-    # Get bins if data not categorical
-    values = data[val_col]
-    if not categorical:
-        bins = mapclassify.classify(values, scheme=scheme).bins
-    else:
-        bins = None
+    if isinstance(val_col, str):
+        val_col = (val_col,)
 
-    # Get the counts of the binned metric inside the neighborhoods
-    if ret_counts:
-        data[f"{val_col}_nhood_counts"] = gdf_apply(
-            data,
-            nhood_counts,
-            col="nhood",
-            values=values,
-            bins=bins,
-            categorical=categorical,
-        )
+    for col in val_col:
+        values = data[col]
 
-    if ret_vals:
-        data[f"{val_col}_nhood_vals"] = gdf_apply(
-            data,
-            nhood_vals,
-            col="nhood",
-            values=values,
-        )
+        # Get bins if data not categorical
+        if not is_categorical(values):
+            bins = mapclassify.classify(values, scheme=scheme).bins
+        else:
+            bins = None
 
-    if col_prefix is None:
-        col_prefix = ""
-    else:
-        col_prefix += "_"
+        # Get the counts of the binned metric inside the neighborhoods
+        if ret_counts:
+            data[f"{col}_nhood_counts"] = gdf_apply(
+                data,
+                nhood_counts,
+                col="nhood",
+                values=values,
+                bins=bins,
+            )
 
-    # Compute the diversity metrics for the neighborhood counts
-    for metric in metrics:
-        colname = (
-            f"{val_col}_nhood_counts" if metric not in gt else f"{val_col}_nhood_vals"
-        )
+        if ret_vals:
+            data[f"{col}_nhood_vals"] = gdf_apply(
+                data,
+                nhood_vals,
+                col="nhood",
+                values=values,
+            )
 
-        data[f"{col_prefix}{val_col}_{metric}"] = gdf_apply(
-            data,
-            DIVERSITY_LOOKUP[metric],
-            col=colname,
-            parallel=parallel,
-        )
+        # Compute the diversity metrics for the neighborhood counts
+        for metric in metrics:
+            colname = f"{col}_nhood_counts" if metric not in gt else f"{col}_nhood_vals"
+
+            col_prefix = "" if col_prefix is None else col_prefix
+            data[f"{col_prefix}{col}_{metric}"] = gdf_apply(
+                data,
+                DIVERSITY_LOOKUP[metric],
+                col=colname,
+                parallel=parallel,
+            )
+
+        if rm_nhood_cols:
+            data = data.drop(labels=[colname], axis=1)
 
     if rm_nhood_cols:
-        data = data.drop(labels=[colname, "nhood"], axis=1)
+        data = data.drop(labels=["nhood"], axis=1)
 
     return data
