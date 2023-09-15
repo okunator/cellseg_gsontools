@@ -5,9 +5,25 @@ from typing import Optional, Tuple, Union
 import geopandas as gpd
 import pandas as pd
 import shapely
+from pandas.api.types import (
+    is_bool_dtype,
+    is_categorical_dtype,
+    is_object_dtype,
+    is_string_dtype,
+)
 from shapely.geometry import Polygon
 
-__all__ = ["set_uid", "read_gdf", "pre_proc_gdf", "clip_gdf"]
+__all__ = ["set_uid", "read_gdf", "pre_proc_gdf", "clip_gdf", "is_categorical"]
+
+
+def is_categorical(col: pd.Series) -> bool:
+    """Check if a column is categorical."""
+    return (
+        is_categorical_dtype(col)
+        or is_string_dtype(col)
+        or is_object_dtype(col)
+        or is_bool_dtype(col)
+    )
 
 
 def set_uid(

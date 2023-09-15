@@ -6,6 +6,7 @@ import pandas as pd
 from libpysal.weights import W
 
 from .geometry.axis import _dist
+from .utils import is_categorical
 
 __all__ = [
     "neighborhood",
@@ -151,11 +152,7 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
 
 
 def nhood_counts(
-    nhood: Sequence[int],
-    values: pd.Series,
-    bins: Sequence,
-    categorical: bool = False,
-    **kwargs
+    nhood: Sequence[int], values: pd.Series, bins: Sequence, **kwargs
 ) -> np.ndarray:
     """Get the counts of objects that belong to bins/classes in the neighborhood.
 
@@ -167,8 +164,6 @@ def nhood_counts(
             A value column-vector of shape (N, ).
         bins : Sequence
             The bins of any value vector. Shape (n_bins, ).
-        categorical : bool, default=False
-            A flag to signal, whether the value vector values are categorical.
         return_vals : bool, default=False
             If True, also, the values the values are
 
@@ -197,7 +192,6 @@ def nhood_counts(
 
     >>> # Define the gdf column that will be binned
     >>> val_col = "eccentricity"
-    >>> categorical = False # the column-values are not categorical
     >>> values = data.set_index("uid")[val_col]
 
     >>> # compute the counts of the bins inside the neighborhood
@@ -226,7 +220,7 @@ def nhood_counts(
     if nhood not in (None, np.nan):
         nhood_vals = values.loc[nhood]
 
-        if categorical:
+        if is_categorical(nhood_vals):
             counts = nhood_vals.value_counts().values
         else:
             sample_bins = mapclassify.UserDefined(nhood_vals, bins)
