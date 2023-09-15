@@ -1,3 +1,23 @@
+
+<a id='changelog-0.1.0-alpha.2'></a>
+# 0.1.0-alpha.2 — 2023-09-15
+
+## Fixes
+
+- Set crs in `_SpatialContext` to avoid warnings
+
+- Unify the `local_character` and `local_diversity` function api.
+
+## Features
+
+- Add option to add multiple columns to `local_diversity` and `local_character`
+- add `is_categorical` helper func
+
+- Add option to not fit graphs in `.fit()` method of `_SpatialContext`-classes
+
+## Chore
+
+- Update to latest geopandas (0.13) and shapely (> 2.0)
 <a id='changelog-0.1.0'></a>
 # 0.1.0 — 2023-06-28
 
