@@ -29,6 +29,11 @@ To add some extra capabilities, like, support for arrow files or abdscan cluster
 pip install cellseg-gsontools[all]
 ```
 
+For latest pre-release, use
+```shell
+pip install cellseg-gsontools==0.1.0a2
+```
+
 ## Usage
 
 The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract features from `GeoJSON`-formatted cell/nuclei/tissue segmentation maps that are extracted from WSI. This can be done via different spatial-analysis methods including:

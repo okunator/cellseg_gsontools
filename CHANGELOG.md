@@ -18,6 +18,7 @@
 ## Chore
 - add scikit-learn (1.3.0) dependency
 - Update to latest geopandas (0.13) and shapely (> 2.0)
+
 <a id='changelog-0.1.0'></a>
 # 0.1.0 — 2023-06-28
 
