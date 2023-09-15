@@ -42,7 +42,12 @@ class _SpatialContext:
         self.graph_type = graph_type
         self.silence_warnings = silence_warnings
         self.label = label
+
+        # set up cell gdf
         self.cell_gdf = set_uid(cell_gdf, id_col="global_id")
+
+        # set up area gdf and filter small areas
+        area_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
         self.area_gdf = area_gdf
         thresh = self._get_thresh(
             area_gdf[area_gdf["class_name"] == label], min_area_size, q
@@ -51,6 +56,11 @@ class _SpatialContext:
         self.context_area = set_uid(
             self.context_area, id_col="global_id"
         )  # set global uid (parent gdf), starts from 1
+
+        # set to geocentric cartesian crs. (unit is metre not degree as by default)
+        # helps to avoid warning flood
+        self.cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
+        self.context_area.set_crs(epsg=4328, inplace=True, allow_override=True)
 
     @staticmethod
     def filter_above_thresh(
@@ -87,7 +97,9 @@ class _SpatialContext:
                 The ith roi area.
         """
         row: gpd.GeoSeries = self.context_area.loc[ix]
-        return gpd.GeoDataFrame([row])
+        roi_area = gpd.GeoDataFrame([row], crs=self.context_area.crs)
+
+        return roi_area
 
     def roi_cells(self, ix: int) -> gpd.GeoDataFrame:
         """Get the cells within the roi area.
@@ -331,6 +343,7 @@ class _SpatialContext:
                 legend_kwds={
                     "loc": "upper center",
                 },
+                aspect=None,
                 **kwargs,
             )
             leg1 = ax.legend_
@@ -344,6 +357,7 @@ class _SpatialContext:
                 legend_kwds={
                     "loc": "upper right",
                 },
+                aspect=None,
                 **kwargs,
             )
             leg2 = ax.legend_
@@ -357,6 +371,7 @@ class _SpatialContext:
             legend=show_legends,
             categorical=True,
             legend_kwds={"loc": "upper left"},
+            aspect=None,
             **kwargs,
         )
         if show_legends:
@@ -382,7 +397,7 @@ class _SpatialContext:
         ----------
             key : str
                 The key of the context dictionary that contains the spatial weights
-                to be plotted. One of "roi_network", "ful_network",
+                to be plotted. One of "roi_network", "full_network",
                 "interface_network", "border_network"
             ax : plt.Axes, optional
                 The axes to plot on. If None, a new figure is created.

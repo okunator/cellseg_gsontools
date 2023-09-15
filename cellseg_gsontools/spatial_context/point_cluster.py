@@ -42,9 +42,7 @@ class PointClusterContext(WithinContext):
             The clustering method used to extract the point-clusters. One of:
             "dbscan", "adbscan", "optics"
         min_area_size : float or str, optional
-            The minimum area of the cluster areas that are kept.
-        min_area_size : float or str, optional
-            The minimum area of the objects that are kept. All the objects in the
+            The minimum area of the clusters that are kept. All the clusters in the
             `area_gdf` that are larger are kept than `min_area_size`. Can be either
             a float or one of: "mean", "median", "quantile" None. If None, all the
             areas are kept.
@@ -105,6 +103,7 @@ class PointClusterContext(WithinContext):
             )
         <AxesSubplot: >
         """
+        cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
         area_gdf = self.run_clustering(
             cell_gdf, label, cluster_method, n_jobs, **kwargs
         )
