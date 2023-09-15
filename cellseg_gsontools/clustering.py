@@ -1,7 +1,7 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from sklearn.cluster import DBSCAN, OPTICS
+from sklearn.cluster import DBSCAN, HDBSCAN, OPTICS
 
 __all__ = ["cluster_points"]
 
@@ -62,7 +62,7 @@ def cluster_points(
     ...     min_samples=30
     ... )
     """
-    allowed = ("dbscan", "adbscan", "optics")
+    allowed = ("dbscan", "adbscan", "optics", "hdbscan")
     if method not in allowed:
         raise ValueError(
             f"Illegal clustering method was given. Got: {method}, allowed: {allowed}"
@@ -88,6 +88,8 @@ def cluster_points(
         clusterer = ADBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs)
     elif method == "dbscan":
         clusterer = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs)
+    elif method == "hdbscan":
+        clusterer = HDBSCAN(min_samples=min_samples, n_jobs=n_jobs, **kwargs)
     elif method == "optics":
         clusterer = OPTICS(
             max_eps=eps, min_samples=min_samples, n_jobs=n_jobs, **kwargs

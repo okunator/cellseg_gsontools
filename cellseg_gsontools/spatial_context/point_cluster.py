@@ -158,8 +158,8 @@ class PointClusterContext(WithinContext):
 
             c = cells[cells["labels"] == lab]
             coords = np.vstack([c.centroid.x, c.centroid.y]).T
-            alpha_shape = alpha_shape_auto(coords, step=10)
-            area_data["geometry"].append(alpha_shape)
+            alpha_shape = alpha_shape_auto(coords, step=15)
+            area_data["geometry"].append(alpha_shape.buffer(10.0).buffer(-20.0))
 
         area_gdf = gpd.GeoDataFrame(area_data)
         area_gdf["class_name"] = [label] * len(area_gdf)
