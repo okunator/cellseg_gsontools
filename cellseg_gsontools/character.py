@@ -60,11 +60,13 @@ def local_character(
     gdf: gpd.GeoDataFrame,
     spatial_weights: W,
     val_col: Union[str, Tuple[str, ...]],
+    id_col: str = None,
     reductions: Tuple[str, ...] = ("sum",),
     weight_by_area: bool = False,
     parallel: bool = False,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
+    create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
     """Compute the local sum/mean/median of a specified metric for each row in a gdf.
 
@@ -81,6 +83,8 @@ def local_character(
         val_col: Union[str, Tuple[str, ...]]
             The name of the column in the gdf for which the reduction is computed.
             If a tuple, the reduction is computed for each column.
+        id_col : str, default=None
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
         reductions : Tuple[str, ...], default=("sum", )
             A list of reduction methods for the neighborhood. One of "sum", "mean",
             "median".
@@ -92,6 +96,8 @@ def local_character(
             Flag, whether to remove the extra neighborhood columns from the result gdf.
         col_prefix : str, optional
             Prefix for the new column names.
+        create_copy : bool, default=True
+            Flag whether to create a copy of the input gdf and return that.
 
     Returns
     -------
@@ -113,7 +119,22 @@ def local_character(
     ...     weight_by_area=True
     ... )
     """
-    data = set_uid(gdf)
+    allowed = ("mean", "median", "sum")
+    if not all(r in allowed for r in reductions):
+        raise ValueError(
+            f"Illegal reduction in `reductions`. Got: {reductions}. "
+            f"Allowed reductions: {allowed}."
+        )
+
+    if create_copy:
+        data = gdf.copy()
+    else:
+        data = gdf
+
+    # set uid
+    if id_col is None:
+        id_col = "uid"
+        data = set_uid(data)
 
     # Get the immediate node neighborhood
     data["nhood"] = gdf_apply(

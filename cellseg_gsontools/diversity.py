@@ -230,6 +230,7 @@ def local_diversity(
     parallel: bool = False,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
+    create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
     """Compute the local diversity/heterogenity metric for each row in a gdf.
 
@@ -246,6 +247,8 @@ def local_diversity(
             The name of the column in the gdf for which the diversity is computed.
             You can also pass in a list of columns, in which case the diversity is
             computed for each column.
+        id_col : str, default=None
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
         metrics : Tuple[str, ...]
             A Tuple/List of diversity metrics. Allowed metrics: "shannon_index",
             "simpson_index", "gini_index", "theil_index"
@@ -257,6 +260,8 @@ def local_diversity(
             Flag, whether to remove the extra neighborhood columns from the result gdf.
         col_prefix : str, optional
             Prefix for the new column names.
+        create_copy : bool, default=True
+            Flag whether to create a copy of the input gdf or not.
 
     Raises
     ------
@@ -287,7 +292,10 @@ def local_diversity(
             f"Illegal metric in `metrics`. Got: {metrics}. Allowed metrics: {allowed}."
         )
 
-    data = gdf.copy()
+    if create_copy:
+        data = gdf.copy()
+    else:
+        data = gdf
 
     # set uid
     if id_col is None:
