@@ -26,6 +26,7 @@ def get_objs(
         gpd.GeoDataFrame:
             The objects (cells) within the area gdf.
     """
+    # NOTE, gdfs need to have same crs, otherwise warning flood.
     objs_within: gpd.GeoDataFrame = sjoin(
         right_df=area, left_df=objects, how="inner", predicate="within"
     )
@@ -71,7 +72,10 @@ def get_interface_zones(
         gpd.GeoDataFrame:
             A geodataframe containing the intersecting polygons including the buffer.
     """
-    buffer_zone = gpd.GeoDataFrame({"geometry": list(buffer_area.buffer(buffer_dist))})
+    buffer_zone = gpd.GeoDataFrame(
+        {"geometry": list(buffer_area.buffer(buffer_dist))},
+        crs=buffer_area.crs,
+    )
     inter = areas.overlay(buffer_zone, how="intersection")
 
     # if the intersecting area is covered totally by any polygon in the `areas` gdf

@@ -166,7 +166,7 @@ class InterfaceContext(_SpatialContext):
         self.context_area2 = self.filter_above_thresh(area_gdf, label2, thresh)
         self.context_area2 = set_uid(self.context_area2, id_col="global_id")
 
-    def fit(self, verbose: bool = True) -> None:
+    def fit(self, verbose: bool = True, fit_graph: bool = True) -> None:
         """Fit the interfaces.
 
         NOTE: This only sets the `context_dict` attribute.
@@ -175,9 +175,11 @@ class InterfaceContext(_SpatialContext):
         ----------
             verbose : bool, default=True
                 Flag, whether to use tqdm pbar when creating the interfaces.
+            fit_graph : bool, default=True
+                Flag, whether to fit the spatial weights networks for the context.
 
-        Returns
-        -------
+        Created Attributes
+        -------------------
             context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]
                 A nested dict that contains dicts for each of the distinct interface
                 area. The keys of the outer dict are the indices of these areas.
@@ -227,17 +229,18 @@ class InterfaceContext(_SpatialContext):
             context_dict[ix]["roi_cells"] = self.roi_cells(ix)
 
             # context networks
-            union_net, inter_net, roi_net, border_net = self.cell_neighbors(
-                ix,
-                graph_type=self.graph_type,
-                thresh=self.dist_thresh,
-                roi_cell_type=self.roi_cell_type,
-                iface_cell_type=self.interface_cell_type,
-            )
-            context_dict[ix]["roi_network"] = roi_net
-            context_dict[ix]["interface_network"] = inter_net
-            context_dict[ix]["full_network"] = union_net
-            context_dict[ix]["border_network"] = border_net
+            if fit_graph:
+                union_net, inter_net, roi_net, border_net = self.cell_neighbors(
+                    ix,
+                    graph_type=self.graph_type,
+                    thresh=self.dist_thresh,
+                    roi_cell_type=self.roi_cell_type,
+                    iface_cell_type=self.interface_cell_type,
+                )
+                context_dict[ix]["roi_network"] = roi_net
+                context_dict[ix]["interface_network"] = inter_net
+                context_dict[ix]["full_network"] = union_net
+                context_dict[ix]["border_network"] = border_net
 
         self.context = context_dict
 

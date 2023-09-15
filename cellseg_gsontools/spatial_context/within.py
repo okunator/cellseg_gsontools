@@ -109,7 +109,7 @@ class WithinContext(_SpatialContext):
             graph_type=graph_type,
         )
 
-    def fit(self, verbose: bool = True) -> None:
+    def fit(self, verbose: bool = True, fit_graph: bool = True) -> None:
         """Fit the within regions.
 
         NOTE: This only sets the `context_dict` attribute.
@@ -118,9 +118,11 @@ class WithinContext(_SpatialContext):
         ----------
             verbose : bool, default=True
                 Flag, whether to use tqdm pbar when creating the interfaces.
+            fit_graph : bool, default=True
+                Flag, whether to fit the spatial weights networks for the context.
 
-        Returns
-        -------
+        Created Attributes
+        ------------------
             context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]
             A nested dict that contains dicts for each of the distinct regions of
             interest areas. The keys of the outer dict are the indices of these
@@ -147,9 +149,11 @@ class WithinContext(_SpatialContext):
                 pbar.set_description(f"Processing roi area: {ix}")
             context_dict[ix] = {"roi_area": self.roi(ix)}
             context_dict[ix]["roi_cells"] = self.roi_cells(ix)
-            context_dict[ix]["roi_network"] = self.cell_neighbors(
-                ix, graph_type=self.graph_type, thresh=self.dist_thresh
-            )
+
+            if fit_graph:
+                context_dict[ix]["roi_network"] = self.cell_neighbors(
+                    ix, graph_type=self.graph_type, thresh=self.dist_thresh
+                )
 
         self.context = context_dict
 
