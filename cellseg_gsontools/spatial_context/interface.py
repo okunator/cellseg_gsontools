@@ -241,7 +241,7 @@ class InterfaceContext(_SpatialContext):
 
             # context networks
             if fit_graph:
-                union_net, inter_net, roi_net, border_net = self.cell_neighbors(
+                union_net, roi_net, inter_net, border_net = self.cell_neighbors(
                     roi_cells=roi_cells,
                     iface_cells=iface_cells,
                     graph_type=self.graph_type,
