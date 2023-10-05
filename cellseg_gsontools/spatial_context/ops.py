@@ -8,7 +8,10 @@ __all__ = ["get_interface_zones", "get_objs"]
 
 
 def get_objs(
-    area: gpd.GeoDataFrame, objects: gpd.GeoDataFrame, silence_warnings: bool = True
+    area: gpd.GeoDataFrame,
+    objects: gpd.GeoDataFrame,
+    silence_warnings: bool = True,
+    predicate: str = "within",
 ) -> Union[gpd.GeoDataFrame, None]:
     """Get the objects within the area.
 
@@ -20,6 +23,8 @@ def get_objs(
             The objects (cells) of interest.
         silence_warnings : bool, default=True
             Flag, whether to suppress warnings.
+        predicate : str, default="within"
+            The predicate to use for the spatial join. See `geopandas.tools.sjoin`
 
     Returns
     -------
@@ -28,7 +33,7 @@ def get_objs(
     """
     # NOTE, gdfs need to have same crs, otherwise warning flood.
     objs_within: gpd.GeoDataFrame = sjoin(
-        right_df=area, left_df=objects, how="inner", predicate="within"
+        right_df=area, left_df=objects, how="inner", predicate=predicate
     )
 
     if objs_within.empty and not silence_warnings:
