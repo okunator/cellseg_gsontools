@@ -1,11 +1,11 @@
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import geopandas as gpd
 import pandas as pd
 from libpysal.weights import W, w_subset
 from tqdm import tqdm
 
-from ..graphs import fit_graph
+from ..graphs import fit_graph, get_border_crosser_links
 from ..utils import set_uid
 from ._base import _SpatialContext
 from .ops import get_interface_zones
@@ -23,8 +23,8 @@ class InterfaceContext(_SpatialContext):
         min_area_size: Union[float, str] = None,
         q: float = 25.0,
         buffer_dist: int = 200,
-        graph_type: str = "delaunay",
-        dist_thresh: float = 100.0,
+        graph_type: str = "distband",
+        dist_thresh: float = 50.0,
         roi_cell_type: Optional[str] = None,
         iface_cell_type: Optional[str] = None,
         silence_warnings: bool = True,
@@ -67,10 +67,10 @@ class InterfaceContext(_SpatialContext):
             This is only used if `min_area_size = "quantile"`, ignored otherwise.
         buffer_dist : int, default=200
             The radius of the buffer.
-        graph_type : str, default="delaunay"
+        graph_type : str, default="distband"
             The type of the graph to be fitted to the cells inside interfaces. One of:
             "delaunay", "distband", "relative_nhood", "knn"
-        dist_thresh : float, default=100.0
+        dist_thresh : float, default=50.0
             Distance threshold for the length of the network links.
         roi_cell_type : str, optional
             The cell type in the roi area. If None, all cells are returned.
@@ -285,49 +285,6 @@ class InterfaceContext(_SpatialContext):
 
         return self.get_objs_within(interface_area, self.cell_gdf)
 
-    def roi_interface_cells(
-        self, ix: int, roi_cell_type: str = None, iface_cell_type: str = None
-    ) -> Tuple[gpd.GeoDataFrame, int, int]:
-        """Get the cells within the roi and interface areas in one gdf.
-
-        NOTE: Sets a new column `roi_iface_id` that is the unique id of the new gdf.
-
-        Parameters
-        ----------
-            context : InterfaceContext
-                The interface context.
-            ix : int
-                The index of the interface area. I.e., the ith interface area.
-            roi_cell_type : str, optional
-                The cell type of the roi area. If None, all cells are returned.
-            iface_cell_type : str, optional
-                The cell type of the interface area. If None, all cells are returned.
-
-        Returns
-        -------
-            Tuple[gpd.GeoDataFrame, int, int]:
-                The cells within the roi and interface areas in one gdf.
-                The number of cells in the roi area.
-                The number of cells in the interface area.
-        """
-        region_cells = self.roi_cells(ix)
-        iface_cells = self.interface_cells(ix)
-
-        if iface_cells is None or region_cells is None:
-            return None, None, None
-
-        # subset only specific cell types
-        if roi_cell_type is not None:
-            region_cells = region_cells[region_cells["class_name"] == roi_cell_type]
-        if iface_cell_type is not None:
-            iface_cells = iface_cells[iface_cells["class_name"] == iface_cell_type]
-
-        roi_iface_cells = set_uid(
-            pd.concat([region_cells, iface_cells]), id_col="roi_iface_id"
-        )
-
-        return roi_iface_cells, len(region_cells), len(iface_cells)
-
     def cell_neighbors(
         self,
         ix: int,
@@ -335,6 +292,7 @@ class InterfaceContext(_SpatialContext):
         graph_type: str = "delaunay",
         roi_cell_type: Optional[str] = None,
         iface_cell_type: Optional[str] = None,
+        only_border_crossers: bool = True,
     ) -> Tuple[W, W, W, W]:
         """Get the spatial weights of the cells.
 
@@ -356,6 +314,9 @@ class InterfaceContext(_SpatialContext):
                 The cell type in the roi area. If None, all cells are returned.
             iface_cell_type : str, optional
                 The cell type in the interface area. If None, all cells are returned.
+            only_border_crossers : bool, default=True
+                Whether to return only the links that cross the border between the ROI
+                and interface areas.
 
         Returns
         -------
@@ -366,12 +327,24 @@ class InterfaceContext(_SpatialContext):
             - inside the interface areas.
             - crossing the border of the roi and interface areas.
         """
-        cells, len_roi, len_iface = self.roi_interface_cells(
-            ix, roi_cell_type=roi_cell_type, iface_cell_type=iface_cell_type
-        )
-        if cells is None:
+        # get roi and interface cells
+        rcells = self.roi_cells(ix)
+        icells = self.interface_cells(ix)
+
+        # return None if neither gdf has cells
+        if (icells is None or icells.empty) or (rcells is None or rcells.empty):
             return None, None, None, None
 
+        # subset only specific cell types if needed
+        if roi_cell_type is not None:
+            rcells = rcells[rcells["class_name"] == roi_cell_type]
+        if iface_cell_type is not None:
+            icells = icells[icells["class_name"] == iface_cell_type]
+
+        # merge the gdfs to compute union weights
+        cells = pd.concat([rcells, icells], sort=False)
+
+        # fit the union graph
         union_weights = fit_graph(
             cells,
             type=graph_type,
@@ -379,32 +352,17 @@ class InterfaceContext(_SpatialContext):
             thresh=thresh,
         )
 
-        # get the subset ids
-        subset_ids1 = list(range(1, len_roi + 1))
-        subset_ids2 = list(range(len_roi + 1, len_iface + len_roi + 1))
-        ids1 = self._get_subset(union_weights, subset_ids1, cells)
-        ids2 = self._get_subset(union_weights, subset_ids2, cells)
-
         # Get the weight subsets
-        roi_weights = w_subset(union_weights, sorted(set(ids1)), silence_warnings=True)
-        iface_weights = w_subset(
-            union_weights, sorted(set(ids2)), silence_warnings=True
+        roi_weights = w_subset(
+            union_weights, sorted(set(rcells.global_id)), silence_warnings=True
         )
-        border_weights = w_subset(
-            union_weights,
-            sorted(
-                set(roi_weights.neighbors.keys()) & set(iface_weights.neighbors.keys())
-            ),
-            silence_warnings=True,
+        iface_weights = w_subset(
+            union_weights, sorted(set(icells.global_id)), silence_warnings=True
+        )
+
+        # get the weights for the nodes that have links crossing the interface border
+        border_weights = get_border_crosser_links(
+            union_weights, roi_weights, iface_weights, only_border_crossers
         )
 
         return union_weights, roi_weights, iface_weights, border_weights
-
-    def _get_subset(self, w: W, subset_ids: List[int], cells: gpd.GeoDataFrame):
-        """Get the global_ids of the ids in the `subset_ids`."""
-        ids = []
-        for id in subset_ids:
-            uid = cells["global_id"].loc[id]
-            if uid in w.neighbors.keys():
-                ids.extend([uid] + list(w.neighbors[uid]))
-        return ids

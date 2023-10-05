@@ -9,6 +9,7 @@ from libpysal.weights import KNN, Delaunay, DistanceBand, Relative_Neighborhood,
 __all__ = [
     "fit_graph",
     "dist_thresh_weights_sequential",
+    "get_border_crosser_links",
     "_drop_neighbors",
 ]
 
@@ -163,6 +164,56 @@ def dist_thresh_weights_sequential(
 
     gdf["new_neighbors"] = new_neighbors
     return W(dict(zip(gdf[id_col], gdf["new_neighbors"])), silence_warnings=True)
+
+
+def get_border_crosser_links(
+    union_weights: W,
+    roi_weights: W,
+    iface_weights: W,
+    only_border_crossers: bool = True,
+) -> W:
+    """Get the links that cross the border between the ROI and interface cells.
+
+    Parameters
+    ----------
+    union_weights : W
+        The union of the ROI and interface weights. NOTE: contains links between ROI
+        & interface cells.
+    roi_weights : W
+        The ROI weights. NOTE: contains only links between ROI cells.
+    iface_weights : W
+        The interface weights. NOTE: contains only links between interface cells.
+    only_border_crossers : bool, optional
+        Whether to return only the links that cross the border between the ROI and
+        interface cells or all neighbors of the node that has a border crossing link.
+        This includes also the liks that do not cross the border. By default True.
+
+    Returns
+    -------
+    W:
+        The links that cross the border between the ROI and interface cells.
+    """
+    # loop the nodes in the union graph and check if they are border crossing links
+    graph = {}
+    for node, neigh in union_weights.neighbors.items():
+        is_roi_node = node in roi_weights.neighbors.keys()
+        is_iface_node = node in iface_weights.neighbors.keys()
+
+        neighbors = []
+        for n in neigh:
+            is_roi_neigh = n in roi_weights.neighbors.keys()
+            is_iface_neigh = n in iface_weights.neighbors.keys()
+            if (is_roi_node and is_iface_neigh) or (is_iface_node and is_roi_neigh):
+                # return all neighbors if requested
+                if not only_border_crossers:
+                    neighbors.extend(neigh)
+                    break
+                else:
+                    neighbors.append(n)
+
+        graph[node] = neighbors
+
+    return W(graph, silence_warnings=True)
 
 
 def _drop_neighbors(
