@@ -7,6 +7,7 @@ import pandas as pd
 from libpysal.weights import W, w_subset, w_union
 
 from ..graphs import fit_graph
+from ..plotting import plot_graph
 from ..utils import set_uid
 from .ops import get_objs
 
@@ -23,6 +24,7 @@ class _SpatialContext:
         q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        predicate: str = "intersects",
         silence_warnings: bool = True,
     ) -> None:
         """Create a base class for spatial context."""
@@ -42,6 +44,7 @@ class _SpatialContext:
         self.graph_type = graph_type
         self.silence_warnings = silence_warnings
         self.label = label
+        self.predicate = predicate
 
         # set up cell gdf
         self.cell_gdf = set_uid(cell_gdf, id_col="global_id")
@@ -101,24 +104,40 @@ class _SpatialContext:
 
         return roi_area
 
-    def roi_cells(self, ix: int) -> gpd.GeoDataFrame:
+    def roi_cells(
+        self,
+        ix: int = None,
+        roi_area: gpd.GeoDataFrame = None,
+        predicate: str = "within",
+    ) -> gpd.GeoDataFrame:
         """Get the cells within the roi area.
 
         Parameters
         ----------
-            ix : int
-                The index of the roi area. I.e., the ith roi area.
+            ix : int, optional
+                The index of the roi area. I.e., the ith roi area. If None, the
+                `roi_area` must be given.
+            roi_area : gpd.GeoDataFrame, optional
+                The roi area. If None, the roi area is extracted from the context with
+                the `ix` key.
+            predicate : str, default="within"
+                The predicate to use for the spatial join. See `geopandas.tools.sjoin`
 
         Returns
         -------
             gpd.GeoDataFrame:
                 The cells within the roi area.
         """
-        roi_area: gpd.GeoDataFrame = self.roi(ix)
+        # check to not compute roi_area if already computed
+        if not isinstance(roi_area, gpd.GeoDataFrame):
+            if (roi_area, ix) == (None, None):
+                raise ValueError("Either `ix` or `roi_area` must be given.")
+            roi_area: gpd.GeoDataFrame = self.roi(ix)
+
         if roi_area is None or roi_area.empty:
             return
 
-        return self.get_objs_within(roi_area, self.cell_gdf)
+        return self.get_objs_within(roi_area, self.cell_gdf, predicate=predicate)
 
     def merge_weights(self, key: str) -> W:
         """Merge libpysal spatial weights of the context.
@@ -179,7 +198,7 @@ class _SpatialContext:
             con,
             keys=[i for i in self.context.keys() if self.context[i][key] is not None],
         )
-        gdf = gdf.drop_duplicates(subset=["global_id"], keep="first")
+        gdf = gdf.explode(ignore_index=True)
 
         return gdf.reset_index(level=0, names="label")
 
@@ -214,6 +233,7 @@ class _SpatialContext:
         self,
         area: gpd.GeoDataFrame,
         objects: gpd.GeoDataFrame,
+        predicate: str = "within",
     ) -> gpd.GeoDataFrame:
         """Get the objects within the area.
 
@@ -223,13 +243,17 @@ class _SpatialContext:
                 The area of interest in GeoDataFrame.
             objects : gpd.GeoDataFrame
                 The objects (cells) of interest.
+            predicate : str, default="within"
+                The predicate to use for the spatial join. See `geopandas.tools.sjoin`
 
         Returns
         -------
             gpd.GeoDataFrame:
                 The objects (cells) within the area gdf.
         """
-        objs_within = get_objs(area, objects, silence_warnings=self.silence_warnings)
+        objs_within = get_objs(
+            area, objects, silence_warnings=self.silence_warnings, predicate=predicate
+        )
 
         if objs_within is None or objs_within.empty:
             return
@@ -280,6 +304,7 @@ class _SpatialContext:
     def plot(
         self,
         key: str,
+        network_key: str = None,
         show_area: bool = True,
         show_cells: bool = True,
         show_legends: bool = True,
@@ -293,10 +318,16 @@ class _SpatialContext:
         ----------
             key : str
                 The key of the context dictionary that contains the data to be plotted.
+                One of "roi_area", "roi_cells",
+            network_key : str, optional
+                The key of the context dictionary that contains the spatial weights to
+                be plotted. One of "roi_network", "full_network", "interface_network",
+                "border_network"
             show_area : bool, default=True
                 Flag, whether to include the tissue areas in the plot.
             show_cells : bool, default=True
                 Flag, whether to include the cells in the plot.
+
             show_legends : bool, default=True
                 Flag, whether to include legends for each in the plot.
             color : str, optional
@@ -362,8 +393,8 @@ class _SpatialContext:
             )
             leg2 = ax.legend_
 
-        ifaces = self.context2gdf(key)
-        ax = ifaces.plot(
+        context = self.context2gdf(key)
+        ax = context.plot(
             ax=ax,
             color=color,
             column="label",
@@ -380,16 +411,26 @@ class _SpatialContext:
             if show_cells:
                 ax.add_artist(leg2)
 
+        if network_key is not None:
+            _, ax = self.plot_weights(
+                network_key,
+                ax=ax,
+                ix=-1,
+                edge_kws=dict(color="r", linestyle=":", linewidth=1),
+                node_kws=dict(marker=""),
+            )
+
         return ax
 
     def plot_weights(
         self,
         key: str,
-        ax=plt.Axes,
+        ax: plt.Axes,
         ix: int = -1,
         id_col: str = "global_id",
         node_kws: Dict = None,
         edge_kws: Dict = None,
+        figsize: Tuple[float, float] = (10, 10),
     ) -> Tuple[plt.Figure, plt.Axes]:
         """Plot the spatial weights graph.
 
@@ -399,7 +440,7 @@ class _SpatialContext:
                 The key of the context dictionary that contains the spatial weights
                 to be plotted. One of "roi_network", "full_network",
                 "interface_network", "border_network"
-            ax : plt.Axes, optional
+            ax : plt.Axes
                 The axes to plot on. If None, a new figure is created.
             ix : int, default=-1
                 The index of the context network. I.e., the ith context network of
@@ -410,6 +451,8 @@ class _SpatialContext:
                 Keyword arguments passed to the `ax.scatter` method.
             edge_kws : dict, optional
                 Keyword arguments passed to the `ax.plot` method.
+            figsize : Tuple[float, float], optional
+                The size of the figure to plot, by default (10, 10).
 
         Returns
         -------
@@ -511,45 +554,14 @@ class _SpatialContext:
                 "is None."
             )
 
-        if ax is None:
-            f = plt.figure()
-            ax = plt.gca()
-        else:
-            f = plt.gcf()
-
-        gdf = gdf.copy()
-        color = "k"
-        if node_kws is None:
-            node_kws = dict(color=color)
-        if edge_kws is None:
-            edge_kws = dict(color=color)
-        indexed_on = id_col
-
-        for idx, neighbors in w.neighbors.items():
-            # skip islands
-            if idx in w.islands:
-                continue
-
-            if indexed_on is not None:
-                neighbors = gdf[gdf[indexed_on].isin(neighbors)].index.tolist()
-                idx = gdf[gdf[indexed_on] == idx].index.tolist()[0]
-
-            centroids = gdf.loc[neighbors].centroid.apply(lambda p: (p.x, p.y))
-            centroids = np.vstack(centroids.values)
-            focal = np.hstack(gdf.loc[idx].geometry.centroid.xy)
-
-            seen = set()
-            for nidx, neighbor in zip(neighbors, centroids):
-                if (idx, nidx) in seen:
-                    continue
-                ax.plot(*list(zip(focal, neighbor)), marker=None, **edge_kws)
-                seen.update((idx, nidx))
-                seen.update((nidx, idx))
-
-        ax.scatter(
-            gdf.centroid.apply(lambda p: p.x),
-            gdf.centroid.apply(lambda p: p.y),
-            **node_kws,
+        f, ax = plot_graph(
+            gdf,
+            w,
+            indexed_on=id_col,
+            ax=ax,
+            node_kws=node_kws,
+            edge_kws=edge_kws,
+            figsize=figsize,
         )
 
         return f, ax

@@ -27,6 +27,7 @@ class InterfaceContext(_SpatialContext):
         dist_thresh: float = 50.0,
         roi_cell_type: Optional[str] = None,
         iface_cell_type: Optional[str] = None,
+        predicate: str = "intersects",
         silence_warnings: bool = True,
     ) -> None:
         """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
@@ -76,6 +77,9 @@ class InterfaceContext(_SpatialContext):
             The cell type in the roi area. If None, all cells are returned.
         iface_cell_type : str, optional
             The cell type in the interface area. If None, all cells are returned.
+        predicate : str, default="intersects"
+            The predicate to use for the spatial join when extracting the ROI cells.
+            See `geopandas.tools.sjoin`
         silence_warnings : bool, default=True
             Flag, whether to silence all the warnings related to creating the graphs.
 
@@ -153,6 +157,7 @@ class InterfaceContext(_SpatialContext):
             silence_warnings=silence_warnings,
             dist_thresh=dist_thresh,
             graph_type=graph_type,
+            predicate=predicate,
         )
         self.roi_cell_type = roi_cell_type
         self.interface_cell_type = iface_cell_type
@@ -220,22 +225,30 @@ class InterfaceContext(_SpatialContext):
             if verbose:
                 pbar.set_description(f"Processing interface area: {ix}")
 
-            # context areas
-            context_dict[ix] = {"roi_area": self.roi(ix)}
-            context_dict[ix]["interface_area"] = self.interface(ix)
+            # roi context
+            roi_area = self.roi(ix)
+            roi_cells = self.roi_cells(roi_area=roi_area, predicate=self.predicate)
+            context_dict[ix] = {"roi_area": roi_area}
+            context_dict[ix]["roi_cells"] = roi_cells
 
-            # context cells
-            context_dict[ix]["interface_cells"] = self.interface_cells(ix)
-            context_dict[ix]["roi_cells"] = self.roi_cells(ix)
+            # interface context
+            iface_area = self.interface(roi_area=roi_area)
+            iface_cells = self.interface_cells(
+                iface_area=iface_area, predicate=self.predicate
+            )
+            context_dict[ix]["interface_area"] = iface_area
+            context_dict[ix]["interface_cells"] = iface_cells
 
             # context networks
             if fit_graph:
                 union_net, inter_net, roi_net, border_net = self.cell_neighbors(
-                    ix,
+                    roi_cells=roi_cells,
+                    iface_cells=iface_cells,
                     graph_type=self.graph_type,
                     thresh=self.dist_thresh,
                     roi_cell_type=self.roi_cell_type,
                     iface_cell_type=self.interface_cell_type,
+                    predicate=self.predicate,
                 )
                 context_dict[ix]["roi_network"] = roi_net
                 context_dict[ix]["interface_network"] = inter_net
@@ -244,18 +257,28 @@ class InterfaceContext(_SpatialContext):
 
         self.context = context_dict
 
-    def interface(self, ix: int) -> gpd.GeoDataFrame:
+    def interface(
+        self, ix: int = None, roi_area: gpd.GeoDataFrame = None
+    ) -> gpd.GeoDataFrame:
         """Get an interface area of index `ix`.
 
         Parameters
         ----------
-            ix : int
+            ix : int, default=None
                 The index of the interface area. I.e., the ith interface area.
+                If None, `roi_area` must be given.
+            roi_area : gpd.GeoDataFrame, default=None
+                The roi area. If None, `ix` must be given.
         """
+        # check to not compute the roi area twice
+        if not isinstance(roi_area, gpd.GeoDataFrame):
+            if (roi_area, ix) == (None, None):
+                raise ValueError("Either `ix` or `roi_area` must be given.")
+            roi_area: gpd.GeoDataFrame = self.roi(ix)
+
         # Get the intersection of the roi and the area of type `label2`
-        buffer_region = self.roi(ix)
         iface = get_interface_zones(
-            buffer_area=buffer_region,
+            buffer_area=roi_area,
             areas=self.context_area2,
             buffer_dist=self.buffer_dist,
         )
@@ -266,35 +289,53 @@ class InterfaceContext(_SpatialContext):
 
         return iface
 
-    def interface_cells(self, ix: int) -> gpd.GeoDataFrame:
+    def interface_cells(
+        self,
+        ix: int = None,
+        iface_area: gpd.GeoDataFrame = None,
+        predicate: str = "intersects",
+    ) -> gpd.GeoDataFrame:
         """Get the cells within the interface area.
 
         Parameters
         ----------
-            ix : int
+            ix : int, default=None
                 The index of the interface area. I.e., the ith interface area.
+                If None, `iface_area` must be given.
+            iface_area : gpd.GeoDataFrame, default=None
+                The interface area. If None, `ix` must be given.
+            predicate : str, default="within"
+                The predicate to use for the spatial join when extracting the ROI cells.
 
         Returns
         -------
             gpd.GeoDataFrame:
                 The cells within the interface area.
         """
-        interface_area = self.interface(ix)
-        if interface_area is None or interface_area.empty:
+        # check to not compute the iface area twice
+        if not isinstance(iface_area, gpd.GeoDataFrame):
+            if (iface_area, ix) == (None, None):
+                raise ValueError("Either `ix` or `iface_area` must be given.")
+            iface_area: gpd.GeoDataFrame = self.interface(ix)
+
+        if iface_area is None or iface_area.empty:
             return
 
-        return self.get_objs_within(interface_area, self.cell_gdf)
+        return self.get_objs_within(iface_area, self.cell_gdf, predicate=predicate)
 
     def cell_neighbors(
         self,
-        ix: int,
+        ix: int = None,
+        roi_cells: gpd.GeoDataFrame = None,
+        iface_cells: gpd.GeoDataFrame = None,
         thresh: float = 100.0,
         graph_type: str = "delaunay",
         roi_cell_type: Optional[str] = None,
         iface_cell_type: Optional[str] = None,
         only_border_crossers: bool = True,
+        predicate: str = "intersects",
     ) -> Tuple[W, W, W, W]:
-        """Get the spatial weights of the cells.
+        """Get the spatial weight objects of the cells for different spatial contexts.
 
         Gets the spatial weights of the cells:
             - inside the roi
@@ -317,6 +358,9 @@ class InterfaceContext(_SpatialContext):
             only_border_crossers : bool, default=True
                 Whether to return only the links that cross the border between the ROI
                 and interface areas.
+            predicate : str, default="intersects"
+                The predicate to use for the spatial join when extracting the ROI and
+                interface cells.
 
         Returns
         -------
@@ -327,11 +371,19 @@ class InterfaceContext(_SpatialContext):
             - inside the interface areas.
             - crossing the border of the roi and interface areas.
         """
-        # get roi and interface cells
-        rcells = self.roi_cells(ix)
-        icells = self.interface_cells(ix)
+        # get roi cells
+        rcells = roi_cells
+        if not isinstance(roi_cells, gpd.GeoDataFrame):
+            if ix is not None:
+                rcells = self.roi_cells(ix, predicate=predicate)
 
-        # return None if neither gdf has cells
+        # get interface cells
+        icells = iface_cells
+        if not isinstance(iface_cells, gpd.GeoDataFrame):
+            if ix is not None:
+                icells = self.interface_cells(ix, predicate=predicate)
+
+        # return None if neither roi or iface gdf has no cells
         if (icells is None or icells.empty) or (rcells is None or rcells.empty):
             return None, None, None, None
 

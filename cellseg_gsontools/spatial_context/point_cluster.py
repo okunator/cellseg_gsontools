@@ -20,6 +20,7 @@ class PointClusterContext(WithinContext):
         q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        predicate: str = "intersects",
         silence_warnings: bool = True,
         n_jobs: int = -1,
         **kwargs,
@@ -54,6 +55,9 @@ class PointClusterContext(WithinContext):
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=100.0
             Distance threshold for the length of the network links.
+        predicate : str, default="within"
+            The predicate to use for the spatial join when extracting the ROI cells.
+            See `geopandas.tools.sjoin`
         silence_warnings : bool, default=True
             Flag, whether to silence all the warnings.
         n_jobs : int,default=-1
@@ -116,6 +120,7 @@ class PointClusterContext(WithinContext):
             q=q,
             dist_thresh=dist_thresh,
             graph_type=graph_type,
+            predicate=predicate,
             silence_warnings=silence_warnings,
         )
 

@@ -20,6 +20,7 @@ class WithinContext(_SpatialContext):
         q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        predicate: str = "intersects",
         silence_warnings: bool = True,
     ) -> None:
         """Handle & extract cells from the `cell_gdf` within areas in `area_gdf`.
@@ -52,6 +53,9 @@ class WithinContext(_SpatialContext):
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=100.0
             Distance threshold for the length of the network links.
+        predicate : str, default="intersects"
+            The predicate to use for the spatial join when extracting the ROI cells.
+            See `geopandas.tools.sjoin`
         silence_warnings : bool, default=True
             Flag, whether to silence all the warnings.
 
@@ -106,6 +110,7 @@ class WithinContext(_SpatialContext):
             q=q,
             silence_warnings=silence_warnings,
             dist_thresh=dist_thresh,
+            predicate=predicate,
             graph_type=graph_type,
         )
 
@@ -147,41 +152,57 @@ class WithinContext(_SpatialContext):
         for ix in pbar:
             if verbose:
                 pbar.set_description(f"Processing roi area: {ix}")
-            context_dict[ix] = {"roi_area": self.roi(ix)}
-            context_dict[ix]["roi_cells"] = self.roi_cells(ix)
+
+            roi_area = self.roi(ix)
+            roi_cells = self.roi_cells(ix, roi_area, predicate=self.predicate)
+            context_dict[ix] = {"roi_area": roi_area}
+            context_dict[ix]["roi_cells"] = roi_cells
 
             if fit_graph:
                 context_dict[ix]["roi_network"] = self.cell_neighbors(
-                    ix, graph_type=self.graph_type, thresh=self.dist_thresh
+                    roi_cells=roi_cells,
+                    graph_type=self.graph_type,
+                    thresh=self.dist_thresh,
+                    predicate=self.predicate,
                 )
 
         self.context = context_dict
 
     def cell_neighbors(
         self,
-        ix: int,
+        ix: int = None,
+        roi_cells: gpd.GeoDataFrame = None,
         thresh: float = 75.0,
         graph_type: str = "delaunay",
+        predicate: str = "intersects",
     ) -> W:
         """Create a distance network of the cells.
 
         Parameters
         ----------
-            ix : int
-                The index of the ROI geo-object. Starts from one.
+            ix : int, default=None
+                The index of the ROI geo-object. Starts from one. If None, `cells`
+                must be given.
+            roi_cells :  gpd.GeoDataFrame, default=None
+                The cells to create the network from. If None, `ix` must be given.
             thresh : float, default=75.0
                 Distance threshold for the network.
         Returns
         -------
-            DistanceBand:
-                Either one distance network or all three possible distance networks.
+            W:
+                A spatial weights network of the cells.
         """
-        cells = self.roi_cells(ix)
-        if cells.empty or cells is None:
-            return None
+        # check to not compute the roi cells thing twice
+        rcells = roi_cells
+        if not isinstance(roi_cells, gpd.GeoDataFrame):
+            if ix is not None:
+                rcells = self.roi_cells(ix, predicate=predicate)
+
+        if rcells is None or rcells.empty:
+            return
 
         w = fit_graph(
-            cells,
+            rcells,
             type=graph_type,
             id_col="global_id",
             thresh=thresh,
