@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Dict, Tuple, Union
 
 import geopandas as gpd
 import pandas as pd
@@ -12,6 +12,8 @@ from pandas.api.types import (
     is_string_dtype,
 )
 from shapely.geometry import Polygon
+
+from .apply import gdf_apply
 
 __all__ = ["set_uid", "read_gdf", "pre_proc_gdf", "clip_gdf", "is_categorical"]
 
@@ -58,10 +60,23 @@ def set_uid(
     return gdf
 
 
+def _get_class(property_dict: Dict) -> str:
+    """Return the class of the gdf."""
+    if "classification" in property_dict.keys():
+        return property_dict["classification"]["name"]
+    return property_dict["name"]
+
+
+def _get_prob(property_dict: Dict) -> str:
+    """Return the class probabilities of the gdf."""
+    if "classification" in property_dict.keys():
+        return property_dict["classification"]["probabilities"]
+    return property_dict["probabilities"]
+
+
 def read_gdf(
     fname: Union[Path, str],
-    qupath_format: Optional[str] = None,
-    suppress_warnigns: bool = True,
+    silence_warnigns: bool = True,
 ) -> gpd.GeoDataFrame:
     """Read a file into geodataframe.
 
@@ -72,13 +87,12 @@ def read_gdf(
     ----------
         fname : Union[Path, str]
             The filename of the gson file.
-        qupath_format : str, optional
-            One of: "old", "latest", None.
+        silence_warnings : bool, optional
+            Whether to silence warnings, by default True.
 
     Raises
     ------
         ValueError: If suffix is not one of ".json", ".geojson", ".feather", ".parquet".
-        ValueError: If `qupath_format` is not one of "old", "latest", None.
 
     Returns
     -------
@@ -102,53 +116,44 @@ def read_gdf(
             f"Illegal `format`. Got: {format}. Allowed: {allowed_formats}."
         )
 
-    allowed_qupath_formats = ("old", "latest", None)
-    if qupath_format not in allowed_qupath_formats:
-        raise ValueError(
-            f"Illegal `qupath_format`. Got: {qupath_format}. "
-            f"Allowed: {allowed_qupath_formats}."
-        )
-
-    if format in (".geojson", ".json"):
-        if qupath_format == "old":
-            gdf = pd.read_json(fname)
-
-            if gdf.empty or gdf is None:
-                if not suppress_warnigns:
-                    warnings.warn(
-                        f"Empty geojson file: {fname.name}. Returning empy gdf."
-                    )
-                return gpd.GeoDataFrame()
-
-            gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
-            gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
-
-            # add class name column
-            gdf["class_name"] = gdf["properties"].apply(
-                lambda x: x["classification"]["name"]
-            )
-
-            if "probabilities" in gdf["properties"].loc[0]["classification"].keys():
-                # add probs column
-                gdf["probs"] = gdf["properties"].apply(
-                    lambda x: x["classification"]["probabilities"]
-                )
-        elif qupath_format == "latest":
-            gdf = gpd.read_file(fname)
-            gdf["geometry"] = gdf["geometry"].apply(shapely.geometry.shape)
-            gdf = gpd.GeoDataFrame(gdf).set_geometry("geometry")
-            gdf["class_name"] = gdf["classification"].apply(lambda x: x["name"])
-        else:
-            gdf = gpd.read_file(fname)
+    if format == ".json":
+        df = pd.read_json(fname)
+    elif format == ".geojson":
+        df = gpd.read_file(fname)
     elif format == ".feather":
-        gdf = gpd.read_feather(fname)
+        df = gpd.read_feather(fname)
     elif format == ".parquet":
-        gdf = gpd.read_parquet(fname)
+        df = gpd.read_parquet(fname)
 
-    if gdf.empty:
-        warnings.warn(f"Empty geojson file: {fname.name}. Returning empty gdf.")
+    if df.empty:
+        if not silence_warnigns:
+            warnings.warn(f"Empty geojson file: {fname.name}. Returning empty gdf.")
+        return df
 
-    return gdf
+    property_col = "properties" if "properties" in df.columns else "classification"
+
+    if "class_name" not in df.columns:
+        try:
+            df["class_name"] = gdf_apply(df, _get_class, col=property_col)
+        except KeyError:
+            if not silence_warnigns:
+                warnings.warn(
+                    f"Could not find 'name' key in {property_col} column."
+                    "Can't set the `class_name` column to the output gdf."
+                )
+
+    if "class_probs" not in df.columns:
+        try:
+            df["class_probs"] = gdf_apply(df, _get_prob, col=property_col)
+        except KeyError:
+            if not silence_warnigns:
+                warnings.warn(
+                    f"Could not find 'probabilities' key in {property_col} column. "
+                    "Can't set the `class_probs` column to the output gdf."
+                )
+
+    df["geometry"] = gdf_apply(df, shapely.geometry.shape, col="geometry")
+    return gpd.GeoDataFrame(df).set_geometry("geometry")
 
 
 def pre_proc_gdf(
