@@ -27,7 +27,7 @@ def is_categorical(col: pd.Series) -> bool:
 
 
 def set_uid(
-    gdf: gpd.GeoDataFrame, start_ix: int = 1, id_col: str = "uid", drop: bool = False
+    gdf: gpd.GeoDataFrame, start_ix: int = 0, id_col: str = "uid", drop: bool = False
 ) -> gpd.GeoDataFrame:
     """Set a unique identifier column to gdf.
 
@@ -37,7 +37,7 @@ def set_uid(
     ----------
         gdf : gpd.GeoDataFrame
             Input Geodataframe.
-        start_ix : int, default=1
+        start_ix : int, default=0
             The starting index of the id column.
         id_col : str, default="uid"
             The name of the column that will be used or set to the id.
