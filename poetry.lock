@@ -1269,30 +1269,30 @@ files = [
 
 [[package]]
 name = "libpysal"
-version = "4.7.0"
-description = "Core components of PySAL A library of spatial analysis functions."
+version = "4.8.0"
+description = "Core components of PySAL - A library of spatial analysis functions"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "libpysal-4.7.0-py3-none-any.whl", hash = "sha256:b769a928528091c553b27385566b855838e2bf2e38add6fbd9475684d68a9c9f"},
-    {file = "libpysal-4.7.0.tar.gz", hash = "sha256:a4730688e2c8134930ff4de42d7be58e360c03904b859fa374dfd70dca1f93bf"},
+    {file = "libpysal-4.8.0-py3-none-any.whl", hash = "sha256:e89cc13b5a42975af1fd4620c0f7bf4744d82aea10aabb86fa65dfb870ff153d"},
+    {file = "libpysal-4.8.0.tar.gz", hash = "sha256:af6904f11cf63d4d111beab0fd63bdecedf07c11184e26ffa6601a036fba27e2"},
 ]
 
 [package.dependencies]
-beautifulsoup4 = "*"
-jinja2 = "*"
-numpy = ">=1.3"
+beautifulsoup4 = ">=4.10"
+geopandas = ">=0.9"
+numpy = ">=1.20"
 packaging = "*"
-pandas = "*"
-platformdirs = "*"
+pandas = ">=1.4"
+platformdirs = ">=2.0.2"
 requests = "*"
-scipy = ">=0.11"
+scipy = ">=1.8"
+shapely = ">=2"
 
 [package.extras]
-dev = ["black", "pre-commit"]
-docs = ["nbsphinx", "numpydoc", "pandoc", "sphinx (>=1.4.3)", "sphinx-bootstrap-theme (>=0.7.0)", "sphinx-gallery", "sphinxcontrib-bibtex"]
-plus-conda = ["bokeh (>=0.11.1)", "folium (>=0.2.1)", "geojson (>=1.3.2)", "geopandas (>=0.2)", "matplotlib (>=1.5.1)", "mplleaflet (>=0.0.5)", "networkx", "numba", "numexpr", "scikit-learn (>=0.17.1)", "seaborn (>=0.7.0)", "sqlalchemy", "statsmodels (>=0.6.1)", "xarray"]
-plus-pip = ["geomet"]
+dev = ["pre-commit"]
+docs = ["mkdocs-jupyter", "myst-parser", "nbsphinx", "numpydoc", "pandoc", "sphinx", "sphinx-bootstrap-theme", "sphinxcontrib-bibtex"]
+tests = ["black", "codecov", "coverage", "geodatasets", "geopandas", "matplotlib", "pyarrow", "pytest", "pytest-cov", "pytest-mpl", "pytest-xdist", "watermark"]
 
 [[package]]
 name = "llvmlite"
