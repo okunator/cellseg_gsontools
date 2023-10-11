@@ -48,7 +48,7 @@ class CellMerger(BaseGSONMerger):
         Merge the annotations of the tiles in a directory.
         >>> from cellseg_gsontools.merging import CellMerger
         >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir(out.geojson, format="geojson", in_qupath_format="latest")
+        >>> merger.merge_dir(out.geojson, format="geojson")
         """
         super().__init__(in_dir, tile_size)
 
@@ -81,8 +81,6 @@ class CellMerger(BaseGSONMerger):
         self,
         out_fn: Optional[Union[Path, str]] = None,
         format: Optional[str] = None,
-        in_qupath_format: Optional[str] = None,
-        out_qupath_format: Optional[str] = None,
         verbose: bool = True,
     ) -> None:
         """Merge all the instance segmentation files in the input directory.
@@ -94,36 +92,26 @@ class CellMerger(BaseGSONMerger):
 
         Parameters
         ----------
-            out_fn : Union[Path, str], optional
-                Filename for the output file. If None, the merged gdf is saved to the
-                class attribute `self.annots` only.
-            format : str, optional
-                The format of the output geojson file. One of: "feather", "parquet",
-                "geojson", None. This is ignored if `out_fn` is None.
-            in_qupath_format : str, optional
-                This specifies the qupath format of the input files. If they are not in
-                QuPath-readable format set this to None. One of: "old", "latest",
-                NOTE: `old` works for versions less than 0.3.0. `latest` works for
-                newer versions. This is ignored if `out_fn` is None or format is not
-                "geojson".
-            out_qupath_format : str, optional
-                If this is not None, some additional metadata is added to the geojson
-                file to make it properly readable by QuPath when the file is written.
-                One of: "old", "latest",
-                NOTE: `old` works for versions less than 0.3.0. `latest` works for
-                newer versions. This is ignored if `out_fn` is None or format is not
-                "geojson".
-            verbose : bool, default=True
-                Whether to show a progress bar or not.
+        out_fn : Union[Path, str], optional
+            Filename for the output file. If None, the merged gdf is saved to the
+            class attribute `self.annots` only.
+        format : str, optional
+            The format of the output geojson file. One of: "feather", "parquet",
+            "geojson", None. This is ignored if `out_fn` is None.
+        verbose : bool, default=True
+            Whether to show a progress bar or not.
+
+        Attributes
+        ----------
+        self.annots : gpd.GeoDataFrame
+            A gdf of the merged annotations. Available after merging.
 
         Examples
         --------
-        Write QuPath formatted input geojson files to a standard '.geojson' file.
+        Write geojson files to a standard '.geojson' file.
         >>> from cellseg_gsontools.merging import CellMerger
         >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir(
-        ...     "/path/to/output.json", format="geojson", in_qupath_format="latest"
-        ... )
+        >>> merger.merge_dir("/path/to/output.json", format="geojson")
 
         Write input geojson files to feather file.
         >>> from cellseg_gsontools.merging import CellMerger
@@ -135,20 +123,21 @@ class CellMerger(BaseGSONMerger):
         >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
         >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
         """
+        out_fn = Path(out_fn)
+        if format not in (".feather", ".parquet", ".geojson"):
+            raise ValueError(
+                f"Invalid format. Got: {format}. Allowed: .feather, .parquet, .geojson"
+            )
+
         # merge the tiles
-        self._merge(qupath_format=in_qupath_format, verbose=verbose)
+        self._merge(verbose=verbose)
+
+        msg = f"{format}-format" if out_fn is not None else "`self.annots`"
+        print(f"Saving the merged geojson file to {msg}")
 
         if out_fn is not None:
-            msg = f"{format}-format" if format is not None else "`self.annots`"
-            qmsg = (
-                f"{out_qupath_format} QuPath-readable"
-                if out_qupath_format is not None
-                else ""
-            )
-            print(f"Saving the merged geojson file to {qmsg} {msg}")
-
             # save the merged geojson
-            gdf_to_file(self.annots, out_fn, format, out_qupath_format)
+            gdf_to_file(self.annots, out_fn, format)
 
     def _get_non_border_polygons(self, gson: GSONTile) -> List[Dict[str, Any]]:
         """Get all the polygons that do not touch any edges of the tile.
@@ -249,7 +238,7 @@ class CellMerger(BaseGSONMerger):
 
         return new_polys, new_classes
 
-    def _merge(self, qupath_format: str, verbose: bool = True) -> None:
+    def _merge(self, verbose: bool = True) -> None:
         """Merge all annotations in the files to one.
 
         Handles the split cells at the image borders.
@@ -269,7 +258,7 @@ class CellMerger(BaseGSONMerger):
             adj = self._get_adjascent_tiles(f.name)
 
             # Init GSONTile obj
-            gson = GSONTile(f, tile_size=self.tile_size, qupath_format=qupath_format)
+            gson = GSONTile(f, tile_size=self.tile_size)
             if gson.gdf is not None and not gson.gdf.empty:
                 # add the non border polygons
                 if self.visited[f.name]["non_border"] is None:
@@ -284,11 +273,7 @@ class CellMerger(BaseGSONMerger):
                 for pos, f_adj in adj.items():
                     if f_adj is not None:
                         if self.visited[f.name][pos] is None:
-                            gson_adj = GSONTile(
-                                f_adj,
-                                tile_size=self.tile_size,
-                                qupath_format=qupath_format,
-                            )
+                            gson_adj = GSONTile(f_adj, tile_size=self.tile_size)
 
                             if gson_adj.gdf is not None and not gson_adj.gdf.empty:
                                 border_polygons, border_cls = self._merge_adj_ploygons(
