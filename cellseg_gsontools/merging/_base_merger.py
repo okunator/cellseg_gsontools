@@ -22,11 +22,7 @@ class BaseGSONMerger:
                 Height and width of the tile in pixels.
         """
         self.tile_size = tile_size
-        self.files = [
-            f
-            for f in sorted(Path(in_dir).glob("*"))
-            if f.is_file() and f.suffix in (".json", ".geojson")
-        ]
+        self.files = sorted(Path(in_dir).glob("*"))
 
         # Check that all the files are in the correct format
         if self.files:
