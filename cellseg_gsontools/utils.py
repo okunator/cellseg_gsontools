@@ -103,10 +103,7 @@ def read_gdf(
     --------
     Read a geojson file that is QuPath-readable.
         >>> from cellseg_gsontools.utils import read_gdf
-        >>> gdf = read_gdf(
-        ...    "path/to/file.json", qupath_format="latest"
-        ... )
-
+        >>> gdf = read_gdf("path/to/file.json")
     """
     fname = Path(fname)
     format = fname.suffix
