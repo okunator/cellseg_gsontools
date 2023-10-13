@@ -32,7 +32,7 @@ class TestPipeline(Pipeline):
         fn_cell_gdf = Path(fn_cell_gdf)
         fn_area_gdf = Path(fn_area_gdf)
 
-        cell_gdf = self.read_input(fn_cell_gdf, preproc=True, qupath_format="old")
+        cell_gdf = self.read_input(fn_cell_gdf, preproc=True)
         # area_gdf = self.read_input(fn_area_gdf, preproc=False, qupath_format="old")
 
         cell_gdf = shape_metric(

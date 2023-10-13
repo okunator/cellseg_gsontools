@@ -13,7 +13,7 @@ Localized quantification of cell and tissue segmentation maps.
 
 ## Introduction
 
-**Cellseg_gsontools** is a Python toolset designed to analyze and summarize large cell and tissue segmentation maps created from Whole Slide Images (WSI) into interpretable features. It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs. The library is built on top of [`geopandas`](https://geopandas.org/en/stable/index.html) and heavily utilizes the `GeoDataFrame` data structure or `gdf` for short. In other words, the library is built to process `geospatial` data with `GeoJSON`-interface. The library is synergetic with the [cellseg_models.pytorch](https://github.com/okunator/cellseg_models.pytorch) segmentation library which enables you to segment your WSI into `GeoJSON` format.
+**Cellseg_gsontools** is a Python toolset designed to analyze and summarize large cell and tissue segmentation maps created from Whole Slide Images (WSI). It provides a range of metrics and algorithms out of the box, while also allowing users to define their own functions to meet specific needs. The library is built on top of [`geopandas`](https://geopandas.org/en/stable/index.html) and heavily utilizes the `GeoDataFrame` data structure or `gdf` for short. In other words, the library is built to process `geospatial` data with `GeoJSON`-interface. The library is synergetic with the [cellseg_models.pytorch](https://github.com/okunator/cellseg_models.pytorch) segmentation library which enables you to segment your WSI into `GeoJSON` format.
 
 **NOTE** The toolset is still in alpha-phase and under constant development.
 
@@ -36,7 +36,7 @@ pip install cellseg-gsontools==0.1.0a2
 
 ## Usage
 
-The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract features from `GeoJSON`-formatted cell/nuclei/tissue segmentation maps that are extracted from WSI. This can be done via different spatial-analysis methods including:
+The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract features from `GeoJSON`-formatted cell/nuclei/tissue segmentation maps. This can be done via different spatial-analysis methods including:
 
 * Methods for computing morphological metrics.
 * Methods for extracting neighborhoods metrics.
@@ -46,9 +46,8 @@ The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract feat
 * Utilities for pretty visualization of the spatial data.
 
 Specifically:
-* **Function API** helps to quickly compute object-level metrics in a `GeoDataFrame`.
-* **Spatial Context classes** help handling and combining cell and tissue segmentations for more localized and spatially contextualized feature extraction. These classes include algorithms to subset different spatial contexts with methods like spatial joins, graph networks, and clustering. The specific classes are `InterfaceContext` `WithinContext`, and `PointClusterContext`. They also include helpful methods for plotting your data.
-
+* **Functional API** helps to quickly compute object-level metrics in a `GeoDataFrame`.
+* **Spatial Context classes** help handling and combining cell and tissue segmentations for more localized and spatially contextualized feature extraction. These classes include algorithms to subset different spatial contexts with methods like spatial joins, graph networks, and clustering.
 * **Summary classes** can be used to reduce context objects into summarised tabular form, if you for some reason happen to be too lazy for `geopandas`-based data-wrangling. These classes include `InstanceSummary`, `DistanceSummary`, `SemanticSummary`, `SpatialWeightSummary`
 
 **NOTE**: The input `GeoDataFrame`s always need to contain a column called `class_name` or otherwise nothing will work. The column should contain the class or category of the geo-object, e.g. the cell type, or tissue type. This restriction might loosen in the future.
@@ -69,6 +68,7 @@ from cellseg_gsontools.geometry import shape_metric
 
 path = "/path/to/cells.json"
 gdf = read_gdf(path)
+gdf = set_uid(gdf, id_col="uid") # set a running index id column 'uid'
 
 shape_metric(
     gdf,
@@ -105,13 +105,13 @@ from cellseg_gsontools.geometry import shape_metric
 
 path = "/path/to/cells.json"
 gdf = read_gdf(path)
-gdf = set_uid(gdf, id_col="cell_id") # set a running index id column 'cell_id'
+gdf = set_uid(gdf, id_col="uid") # set a running index id column 'uid'
 
 # compute the eccentricity of the cells
 gdf = shape_metric(gdf, metrics = ["eccentricity"], parallel=True)
 
 # fit a spatial weights object
-w = fit_graph(gdf, type="delaunay", thresh=150, id_col="cell_id")
+w = fit_graph(gdf, type="delaunay", thresh=150, id_col="uid")
 
 # compute the mean eccentricity of each cell's neighborhood
 local_character(
@@ -170,9 +170,10 @@ local_diversity(
 |       5 | Polygon((x, y)...) |     connective | 257.550056 |               0.000000 |
 |     ... |                    |            ... |        ... |                    ... |
 
-## Spatial-context
+## Spatial Contexts
 
-Spatial Context classes combine cell-segmentation maps with area-segmentation maps to provide spatial context for the cells/nuclei. The context-classes include a `.fit()`-method that builds the context. The `.plot()`-method can be used to plot different context in the gdf
+Spatial Context classes combine cell segmentation maps with tissue area segmentation maps which helps to extract cells under different spatial contexts. The specific Spatial Context classes are the `InterfaceContext` `WithinContext`, and `PointClusterContext`. All the context-classes include a `.fit()`-method that builds the context. The `.plot()`-method can be used to plot figures where the different spatial context areas are highlighted.
+
 
 **WithinContext**
 
@@ -322,89 +323,3 @@ immune_proximities.summarize()
 |-----------------------------:|-----------------:|
 | **icc-close2lesion-0-count** |               34 |
 | **icc-close2lesion-1-count** |                8 |
-
-
-
-### Pipeline
-
-Infrastructure for bulk analysis of gson-files. Computation is defined in the `pipeline`-method.
-
-```python
-from cellseg_gsontools.pipeline import Pipeline
-from pathlib import Path
-from typing import Union
-import pandas as pd
-
-class ExamplePipeline(Pipeline):
-    def __init__(
-        self,
-        in_path_cells: Union[str, Path] = None,
-        in_path_areas: Union[str, Path] = None,
-        parallel_df: bool = True,
-        parallel_sample: bool = False
-    ) -> None:
-
-    super().__init__(in_path_cells, in_path_areas, parallel_df, parallel_sample)
-
-    def pipeline(
-        self,
-        fn_cell_gdf: Path = None,
-        fn_area_gdf: Path = None,
-    ) -> None:
-
-        cell_gdf = self.read_input(fn_cell_gdf, preproc=True, qupath_format="old")
-        cell_gdf = set_uid(cell_gdf)
-        area_gdf = self.read_input(fn_area_gdf, preproc=False, qupath_format="old")
-
-        # Define the neoplastic lesion as context
-        within_context = WithinContext(
-            area_gdf = area_gdf,
-            cell_gdf = cell_gdf,
-            label = "area_cin",
-            min_area_size = 100000.0
-        )
-        within_context.fit()
-
-        # Retrieve geometrical metrics for cells inside the context
-        neoplastic_areas = within_context.context2gdf("roi_cells")
-        lesion_summary = InstanceSummary(
-            neoplastic_areas,
-            metrics = ["area"],
-            groups = ["class_name"],
-            prefix = "lesion-cells-"
-        )
-
-        # Filter everything but neoplastic and inflammatory cells from the summary. Also include cell counts and metric quantiles
-        fpat = "connective|glandular_epithel|dead|squamous_epithel|background|inflammatory"
-        return pd.concat(
-            [
-                lesion_summary.summarize(
-                    filter_pattern = fpat,
-                    return_counts = True,
-                    return_quantiles = True
-                )
-            ]
-        )
-
-pipe = ExamplePipeline(
-    "/path_to_data/cells",
-    "/path_to_data/areas",
-    parallel_df = False,
-    parallel_sample = True
-)
-
-res = pipe()
-res.to_csv("result.csv")
-
-```
-
-|                                       | **sample_cells** |
-|--------------------------------------:|-----------------:|
-|     **lesion-cells-neoplastic-count** |          4536.00 |
-|          **lesion-cells-total-count** |          4787.00 |
-| **lesion-cells-neoplastic-area-mean** |           532.79 |
-|  **lesion-cells-neoplastic-area-min** |            19.64 |
-|  **lesion-cells-neoplastic-area-25%** |           346.53 |
-|  **lesion-cells-neoplastic-area-50%** |           489.16 |
-|  **lesion-cells-neoplastic-area-75%** |           676.79 |
-|  **lesion-cells-neoplastic-area-max** |          2466.25 |

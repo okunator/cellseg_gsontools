@@ -20,7 +20,7 @@ def test_cluster_context(cells_and_areas, clust_method):
     )
     cluster_context.fit()
 
-    assert len(cluster_context.context[1]["roi_area"]) == 1
+    assert len(cluster_context.context[0]["roi_area"]) == 1
 
 
 def test_interface_context(cells_and_areas):

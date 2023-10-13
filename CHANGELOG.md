@@ -1,4 +1,26 @@
 
+<a id='changelog-0.1.1'></a>
+# 0.1.1 — 2023-10-13
+
+## Features
+
+- Add join predicate param for `sjoin` operation in `get_objs_within` function
+
+## Performance
+
+- Optimize spatial subsetting operations by getting rid of redundant operations in spatial context classes.
+
+## Perf
+
+- Parallelize and memory optimize `AreaMerger`.
+
+## Fixes
+
+- Simplify `border_network` computation and return only the node-node links that go accross the border.
+- Simplify weights plotting interfacee
+
+- Fix bug in interface and roi network fitting.
+
 <a id='changelog-0.1.0-alpha.2'></a>
 # 0.1.0-alpha.2 — 2023-09-15
 

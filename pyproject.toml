@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cellseg-gsontools"
-version = "0.1.0-alpha.2"
+version = "0.1.1"
 description = "Toolbelt for merging and extracting features from geojson masks."
 authors = ["Okunator <oskari.lehtonen@helsinki.fi>"]
 readme = "README.md"
