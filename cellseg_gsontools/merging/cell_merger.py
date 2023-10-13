@@ -123,17 +123,19 @@ class CellMerger(BaseGSONMerger):
         >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
         >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
         """
-        out_fn = Path(out_fn)
-        if format not in (".feather", ".parquet", ".geojson"):
+        if out_fn is not None:
+            out_fn = Path(out_fn)
+
+        if format not in (".feather", ".parquet", ".geojson", None):
             raise ValueError(
                 f"Invalid format. Got: {format}. Allowed: .feather, .parquet, .geojson"
             )
 
         # merge the tiles
-        self._merge(verbose=verbose)
+        self.annots = self._merge(verbose=verbose)
 
         msg = f"{format}-format" if out_fn is not None else "`self.annots`"
-        print(f"Saving the merged geojson file to {msg}")
+        print(f"Saving the merged geojson file: {out_fn} to {msg}")
 
         if out_fn is not None:
             # save the merged geojson
@@ -238,7 +240,7 @@ class CellMerger(BaseGSONMerger):
 
         return new_polys, new_classes
 
-    def _merge(self, verbose: bool = True) -> None:
+    def _merge(self, verbose: bool = True) -> gpd.GeoDataFrame:
         """Merge all annotations in the files to one.
 
         Handles the split cells at the image borders.
@@ -296,10 +298,10 @@ class CellMerger(BaseGSONMerger):
             {"geometry": border_annots, "class_name": border_classes}
         )
         self.border_annots = merge_overlaps(border_annots)  # merge overlapping objects
-        self.annots = set_uid(
+        annots = set_uid(
             pd.concat([self.non_border_annots, self.border_annots]),
             0,
             id_col="id",
             drop=False,
         )
-        self.annots = self.annots[self.annots.class_name != "background"]
+        return annots[annots.class_name != "background"]

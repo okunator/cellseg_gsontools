@@ -43,7 +43,7 @@ def gdf_to_file(
         ValueError: If the input gdf does not have a "class_name" column.
     """
     out_fn = Path(out_fn)
-    if format not in (".feather", ".parquet", ".geojson"):
+    if format not in (".feather", ".parquet", ".geojson", None):
         raise ValueError(
             f"Invalid format. Got: {format}. Allowed: .feather, .parquet, .geojson"
         )

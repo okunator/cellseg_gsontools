@@ -21,6 +21,7 @@ class BaseGSONMerger:
             tile_size : Tuple[int, int], default=(1000, 1000)
                 Height and width of the tile in pixels.
         """
+        self.in_dir = Path(in_dir)
         self.tile_size = tile_size
         self.files = sorted(Path(in_dir).glob("*"))
 
