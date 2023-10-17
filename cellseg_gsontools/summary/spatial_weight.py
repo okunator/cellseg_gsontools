@@ -165,6 +165,6 @@ class SpatialWeightSummary(Summary):
                 self.prefix + link_summary.index.astype(str)
             )
 
-        self.summary = link_summary.squeeze()
+        self.summary = link_summary
 
         return self.summary
