@@ -200,7 +200,7 @@ class _SpatialContext:
         )
         gdf = gdf.explode(ignore_index=True)
 
-        return gdf.reset_index(level=0, names="label")
+        return gdf.reset_index(level=0, names="label").drop_duplicates("geometry")
 
     def context2weights(self, key: str, **kwargs) -> W:
         """Fit a network on the cells inside the context `key`.
