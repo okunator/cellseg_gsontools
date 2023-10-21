@@ -302,16 +302,6 @@ def local_diversity(
         id_col = "uid"
         data = set_uid(data)
 
-    # # drop duplicate indices
-    # data = data.drop_duplicates(subset=[id_col], keep="first")
-    # if not sorted(spatial_weights.neighbors.keys()) == sorted(data[id_col]):
-    #     raise ValueError(
-    #         "The spatial weights neighbors must have the same keys as the indices "
-    #         f"in the `id_col={id_col}` column. If `id_col` is not set, the default "
-    #         "column name is set to `uid` and the `w.neighbors.keys()` might not. "
-    #         "match the `gdf.uid` column values."
-    #     )
-
     # If shannon or simpson index in metrics, counts are needed
     ret_counts = False
     if any([m in metrics for m in ("simpson_index", "shannon_index")]):
