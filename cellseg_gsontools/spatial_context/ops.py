@@ -33,7 +33,7 @@ def get_objs(
     """
     # NOTE, gdfs need to have same crs, otherwise warning flood.
     objs_within: gpd.GeoDataFrame = sjoin(
-        right_df=area, left_df=objects, how="inner", predicate=predicate
+        left_df=objects, right_df=area, how="inner", predicate=predicate
     )
 
     if objs_within.empty and not silence_warnings:
