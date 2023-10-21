@@ -406,6 +406,7 @@ def shape_metric(
     metrics: Tuple[str, ...],
     parallel: bool = False,
     col_prefix: str = None,
+    create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
     """Compute a set of shape metrics for every row of the gdf.
 
@@ -419,6 +420,8 @@ def shape_metric(
             Flag whether to use parallel apply operations when computing the diversities
         col_prefix : str, optional
             Prefix for the new column names.
+        create_copy : bool, default=True
+            Flag whether to create a copy of the input gdf or not.
 
     Raises
     ------
@@ -449,6 +452,9 @@ def shape_metric(
         raise ValueError(
             f"Illegal metric in `metrics`. Got: {metrics}. Allowed metrics: {allowed}."
         )
+
+    if create_copy:
+        gdf = gdf.copy()
 
     if col_prefix is None:
         col_prefix = ""
