@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -14,10 +14,9 @@ class PointClusterContext(WithinContext):
     def __init__(
         self,
         cell_gdf: gpd.GeoDataFrame,
-        label: str,
+        labels: Union[Tuple[str, ...], str],
         cluster_method: str = "dbscan",
         min_area_size: Union[float, str] = None,
-        q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
         predicate: str = "intersects",
@@ -37,19 +36,15 @@ class PointClusterContext(WithinContext):
         ----------
         cell_gdf : gpd.GeoDataFrame
             A geo dataframe that contains cell objects.
-        label : str
-            The class name of the objects of interest. E.g. "cancer", "immune".
+        labels : Union[Tuple[str, ...], str]
+            The class name(s) of the objects of interest. E.g. "cancer", "immune".
         cluster_method : str, default="dbscan"
             The clustering method used to extract the point-clusters. One of:
             "dbscan", "adbscan", "optics"
         min_area_size : float or str, optional
             The minimum area of the clusters that are kept. All the clusters in the
-            `area_gdf` that are larger are kept than `min_area_size`. Can be either
-            a float or one of: "mean", "median", "quantile" None. If None, all the
-            areas are kept.
-        q : float, default=25.0
-            The quantile. I.e. areas smaller than `q` in the `area_gdf` are dropped.
-            This is only used if `min_area_size = "quantile"`, ignored otherwise.
+            `area_gdf` that are larger are kept than `min_area_size`. If None, all the
+            cluster areas are kept.
         graph_type : str, default="delaunay"
             The type of the graph to be fitted to the cells inside interfaces. One of:
             "delaunay", "distband", "relative_nhood", "knn"
@@ -92,7 +87,7 @@ class PointClusterContext(WithinContext):
         >>> cell_gdf = pre_proc_gdf(read_gdf("cells.json"))
         >>> cluster_context = PointClusterContext(
                 cell_gdf=cell_gdf,
-                label="inflammatory",
+                labels=["inflammatory"],
                 cluster_method="adbscan",
                 silence_warnings=True,
             )
@@ -109,15 +104,20 @@ class PointClusterContext(WithinContext):
         """
         cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
         area_gdf = self.run_clustering(
-            cell_gdf, label, cluster_method, n_jobs, **kwargs
+            cell_gdf, labels, cluster_method, n_jobs, **kwargs
         )
+
+        if isinstance(labels, (list, tuple)):
+            if len(labels) == 1:
+                labels = labels[0]
+            else:
+                labels = "-".join(labels)
 
         super().__init__(
             area_gdf=area_gdf,
             cell_gdf=cell_gdf,
-            label=label,
+            labels=labels,
             min_area_size=min_area_size,
-            q=q,
             dist_thresh=dist_thresh,
             graph_type=graph_type,
             predicate=predicate,
@@ -127,7 +127,7 @@ class PointClusterContext(WithinContext):
     def run_clustering(
         self,
         cell_gdf: gpd.GeoDataFrame,
-        label: str,
+        labels: Union[Tuple[str, ...], str],
         cluster_method: str,
         n_jobs: int,
         **kwargs,
@@ -136,8 +136,8 @@ class PointClusterContext(WithinContext):
 
         Parameters
         ----------
-        label : str
-            The class name of the objects of interest. E.g. "cancer", "immune".
+        labels : Union[Tuple[str, ...], str]
+            The class name(s of the objects of interest. E.g. "cancer", "immune".
         cluster_method : str, default="dbscan"
             The clustering method used to extract the point-clusters. One of:
             "dbscan", "adbscan", "optics"
@@ -148,7 +148,15 @@ class PointClusterContext(WithinContext):
             A gdf containing the areas of the clusters.
         """
         # cluster the cells
-        cells = cell_gdf[cell_gdf["class_name"] == label].copy()
+        if isinstance(labels, str):
+            # a little faster than .isin
+            cells = cell_gdf[cell_gdf["class_name"] == labels].copy()
+        else:
+            if len(labels) == 1:
+                cells = cell_gdf[cell_gdf["class_name"] == labels[0]].copy()
+            else:
+                cells = cell_gdf[cell_gdf["class_name"].isin(labels)].copy()
+
         cells = cluster_points(cells, method=cluster_method, n_jobs=n_jobs, **kwargs)
 
         # convert the clusters to areas with alpha-shapes
@@ -167,6 +175,13 @@ class PointClusterContext(WithinContext):
             area_data["geometry"].append(alpha_shape.buffer(10.0).buffer(-20.0))
 
         area_gdf = gpd.GeoDataFrame(area_data)
-        area_gdf["class_name"] = [label] * len(area_gdf)
+
+        if isinstance(labels, (list, tuple)):
+            if len(labels) == 1:
+                labels = labels[0]
+            else:
+                labels = "-".join(labels)
+
+        area_gdf["class_name"] = [labels] * len(area_gdf)
 
         return area_gdf

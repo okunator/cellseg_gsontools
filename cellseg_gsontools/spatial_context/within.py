@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Tuple, Union
 
 import geopandas as gpd
 from libpysal.weights import W
@@ -15,9 +15,8 @@ class WithinContext(_SpatialContext):
         self,
         area_gdf: gpd.GeoDataFrame,
         cell_gdf: gpd.GeoDataFrame,
-        label: str,
+        labels: Union[Tuple[str, ...], str],
         min_area_size: Union[float, str] = None,
-        q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
         predicate: str = "intersects",
@@ -37,17 +36,13 @@ class WithinContext(_SpatialContext):
         cell_gdf : gpd.GeoDataFrame
             A geo dataframe that contains small cellular objectss that are enclosed
             by larger tissue areas in `area_gdf`.
-        label : str
-            The class name of the areas of interest. The objects within these areas are
-            extracted. E.g. "cancer" or "stroma".
+        labels : Union[Tuple[str, ...], str]
+            The class name(s) of the areas of interest. The objects within these areas
+            are extracted. E.g. "cancer" or "stroma".
         min_area_size : float or str, optional
             The minimum area of the objects that are kept. All the objects in the
-            `area_gdf` that are larger are kept than `min_area_size`. Can be either
-            a float or one of: "mean", "median", "quantile" None. If None, all the
+            `area_gdf` that are larger are kept than `min_area_size`. If None, all the
             areas are kept.
-        q : float, default=25.0
-            The quantile. I.e. areas smaller than `q` in the `area_gdf` are dropped.
-            This is only used if `min_area_size = "quantile"`, ignored otherwise.
         graph_type : str, default="delaunay"
             The type of the graph to be fitted to the cells inside interfaces. One of:
             "delaunay", "distband", "relative_nhood", "knn"
@@ -89,7 +84,7 @@ class WithinContext(_SpatialContext):
         >>> within_context = WithinContext(
                 area_gdf=area_gdf,
                 cell_gdf=cell_gdf,
-                label="area_cin",
+                labels=["area_cin"],
                 silence_warnings=True,
                 min_area_size=100000.0
             )
@@ -105,9 +100,8 @@ class WithinContext(_SpatialContext):
         super().__init__(
             area_gdf=area_gdf,
             cell_gdf=cell_gdf,
-            label=label,
+            labels=labels,
             min_area_size=min_area_size,
-            q=q,
             silence_warnings=silence_warnings,
             dist_thresh=dist_thresh,
             predicate=predicate,
@@ -202,10 +196,7 @@ class WithinContext(_SpatialContext):
             return
 
         w = fit_graph(
-            rcells,
-            type=graph_type,
-            id_col="global_id",
-            thresh=thresh,
+            rcells, type=graph_type, id_col="global_id", thresh=thresh, use_index=False
         )
 
         return w

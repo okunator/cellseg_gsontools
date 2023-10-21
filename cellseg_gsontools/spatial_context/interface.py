@@ -18,10 +18,9 @@ class InterfaceContext(_SpatialContext):
         self,
         area_gdf: gpd.GeoDataFrame,
         cell_gdf: gpd.GeoDataFrame,
-        label1: str,
-        label2: str,
+        top_labels: Union[Tuple[str, ...], str],
+        bottom_labels: Union[Tuple[str, ...], str],
         min_area_size: Union[float, str] = None,
-        q: float = 25.0,
         buffer_dist: int = 200,
         graph_type: str = "distband",
         dist_thresh: float = 50.0,
@@ -32,11 +31,11 @@ class InterfaceContext(_SpatialContext):
     ) -> None:
         """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
 
-        Interfaces are created by buffering areas of type `label1` on top of the areas
-        of type `label2` and taking the intersection of the buffered area and the
-        original area of type `label1`. The result interface is a band-like area b/w
-        `label1` and `label2`areas. The bredth of the interface is given by the
-        `buffer_dist` param.
+        Interfaces are created by buffering areas of type `top_label` on top of the
+        areas of type `bottom_labels` and taking the intersection of the buffered area
+        and the `top_label` area. The result interface is a band-like area b/w
+        `top_label` and `bottom_label` areas. The bredth of the interface is given by
+        the `buffer_dist` param.
 
         NOTE: `area_gdf` and `cell_gdf` have to contain a column named 'class_name'
             specifying the class of the area/cell.
@@ -49,23 +48,19 @@ class InterfaceContext(_SpatialContext):
         cell_gdf : gpd.GeoDataFrame
             A geo dataframe that contains small cellular objectss that are enclosed
             by larger tissue areas in `area_gdf`.
-        label1 : str
-            The class name of the areas of interest. E.g. "tumor". These areas are
-            buffered on top of the area of type `label2`. Typically you want to
-            buffer the tumor area on top of the stromal area to get the tumor-stroma
-            interface. Other options are ofc possible.
-        label2 : str
-            The class name of the area on top of which the buffering is applied.
-            Typically you want to buffer on top of the stromal area to get e.g.
+        top_labels : Union[Tuple[str, ...], str]
+            The class name(s) of the areas of interest. E.g. "tumor". These areas are
+            buffered on top of the areas that have type in `bottom_labels`.For example,
+            buffering the tumor area on top of the stroma will get the tumor-stroma
+            interface.
+        bottom_labels : Union[Tuple[str, ...], str]
+            The class name(s) of the area(s) on top of which the buffering is applied.
+            Typically you want to buffer at least on top of the stromal area to get e.g.
             tumor-stroma interface. Other options are ofc possible.
-        min_area_size : float or str, optional
+        min_area_size : float, optional
             The minimum area of the objects that are kept. All the objects in the
-            `area_gdf` that are larger are kept than `min_area_size`. Can be either
-            a float or one of: "mean", "median", "quantile" None. If None, all the
+            `area_gdf` that are larger are kept than `min_area_size`. If None, all
             areas are kept.
-        q : float, default=25.0
-            The quantile. I.e. areas smaller than `q` in the `area_gdf` are dropped.
-            This is only used if `min_area_size = "quantile"`, ignored otherwise.
         buffer_dist : int, default=200
             The radius of the buffer.
         graph_type : str, default="distband"
@@ -130,8 +125,8 @@ class InterfaceContext(_SpatialContext):
         >>> interface_context = InterfaceContext(
                 area_gdf=area_gdf,
                 cell_gdf=cell_gdf,
-                label1="area_cin",
-                label2="area_stroma",
+                top_labels=["area_cin"],
+                bottom_labels=["area_stroma"],
                 buffer_dist=250.0,
                 graph_type="delaunay",
                 silence_warnings=True,
@@ -151,9 +146,8 @@ class InterfaceContext(_SpatialContext):
         super().__init__(
             area_gdf=area_gdf,
             cell_gdf=cell_gdf,
-            label=label1,
+            labels=top_labels,
             min_area_size=min_area_size,
-            q=q,
             silence_warnings=silence_warnings,
             dist_thresh=dist_thresh,
             graph_type=graph_type,
@@ -163,13 +157,30 @@ class InterfaceContext(_SpatialContext):
         self.interface_cell_type = iface_cell_type
         self.buffer_dist = buffer_dist
 
-        # Get the areas of type `label2` that are above the threshold
-        # set uid, starts from 1
-        thresh = self._get_thresh(
-            area_gdf[area_gdf["class_name"] == label2], min_area_size, q
-        )
-        self.context_area2 = self.filter_above_thresh(area_gdf, label2, thresh)
+        # Get the bottom_label areas
+        # (top label areas are in base-class self.context_area)
+        if isinstance(bottom_labels, str):
+            # a little faster than .isin
+            self.context_area2 = area_gdf[area_gdf["class_name"] == bottom_labels]
+        else:
+            if len(bottom_labels) == 1:
+                self.context_area2 = area_gdf[
+                    area_gdf["class_name"] == bottom_labels[0]
+                ]
+            else:
+                self.context_area2 = area_gdf[
+                    area_gdf["class_name"].isin(bottom_labels)
+                ]
+
+        # drop areas smaller than min_area_size
+        if min_area_size is not None:
+            self.context_area2 = self.context_area2.loc[
+                self.context_area2.area >= min_area_size
+            ]
+
+        # set global_id and crs
         self.context_area2 = set_uid(self.context_area2, id_col="global_id")
+        self.context_area2.set_crs(epsg=4328, inplace=True, allow_override=True)
 
     def fit(self, verbose: bool = True, fit_graph: bool = True) -> None:
         """Fit the interfaces.
@@ -402,6 +413,7 @@ class InterfaceContext(_SpatialContext):
             type=graph_type,
             id_col="global_id",
             thresh=thresh,
+            use_index=False,
         )
 
         # Get the weight subsets

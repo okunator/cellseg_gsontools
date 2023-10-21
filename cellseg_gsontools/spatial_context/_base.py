@@ -2,7 +2,6 @@ from typing import Dict, Tuple, Union
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from libpysal.weights import W, w_subset, w_union
 
@@ -19,9 +18,8 @@ class _SpatialContext:
         self,
         area_gdf: gpd.GeoDataFrame,
         cell_gdf: gpd.GeoDataFrame,
-        label: str,
+        labels: str,
         min_area_size: Union[float, str] = None,
-        q: float = 25.0,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
         predicate: str = "intersects",
@@ -43,7 +41,7 @@ class _SpatialContext:
         self.dist_thresh = dist_thresh
         self.graph_type = graph_type
         self.silence_warnings = silence_warnings
-        self.label = label
+        self.labels = labels
         self.predicate = predicate
 
         # set up cell gdf
@@ -52,39 +50,28 @@ class _SpatialContext:
         # set up area gdf and filter small areas
         area_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
         self.area_gdf = area_gdf
-        thresh = self._get_thresh(
-            area_gdf[area_gdf["class_name"] == label], min_area_size, q
-        )
-        self.context_area = self.filter_above_thresh(area_gdf, label, thresh)
-        self.context_area = set_uid(
-            self.context_area, id_col="global_id"
-        )  # set global uid (parent gdf), starts from 1
+
+        # get the areas that have type in labels
+        if isinstance(labels, str):
+            # a little faster than .isin
+            self.context_area = area_gdf[area_gdf["class_name"] == labels]
+        else:
+            if len(labels) == 1:
+                self.context_area = area_gdf[area_gdf["class_name"] == labels[0]]
+            else:
+                self.context_area = area_gdf[area_gdf["class_name"].isin(labels)]
+
+        # drop areas smaller than min_area_size
+        if min_area_size is not None:
+            self.context_area = self.context_area.loc[
+                self.context_area.area >= min_area_size
+            ]
+        self.context_area = set_uid(self.context_area, id_col="global_id")
 
         # set to geocentric cartesian crs. (unit is metre not degree as by default)
         # helps to avoid warning flood
         self.cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
         self.context_area.set_crs(epsg=4328, inplace=True, allow_override=True)
-
-    @staticmethod
-    def filter_above_thresh(
-        gdf: gpd.GeoDataFrame,
-        label: str,
-        thresh: float = None,
-    ) -> gpd.GeoDataFrame:
-        """Filter areas or objects that are above a threshold.
-
-        NOTE: threshold by default is the mean of the area.
-        """
-        gdf = gdf.loc[gdf["class_name"] == label].copy()
-        gdf.loc[:, "area"] = np.round(gdf.area)
-
-        if thresh is not None:
-            gdf = gdf.loc[gdf.area >= thresh]
-
-        # drop the area column to avoid confusion
-        gdf = gdf.drop(columns=["area"])
-
-        return gdf
 
     def roi(self, ix) -> gpd.GeoDataFrame:
         """Get a roi area of index `ix`.
@@ -273,33 +260,6 @@ class _SpatialContext:
         objs_within.drop(columns=["global_id_right"], inplace=True)
 
         return objs_within
-
-    def _get_thresh(self, area_gdf, min_area_size, q=None) -> float:
-        """Get the threshold value for filtering by area."""
-        if isinstance(min_area_size, str):
-            allowed = ("mean", "median", "quantile")
-            if min_area_size not in allowed:
-                raise ValueError(
-                    f"Got illegal `min_area_size`. Got: {min_area_size}. "
-                    f"Allowed values are floats or these options: {allowed}."
-                )
-            if min_area_size == "mean":
-                thresh = area_gdf.area.mean()
-            elif min_area_size == "median":
-                thresh = area_gdf.area.median()
-            elif min_area_size == "quantile":
-                thresh = np.nanpercentile(area_gdf.area, q)
-        elif isinstance(min_area_size, (int, float)):
-            thresh = float(min_area_size)
-        elif min_area_size is None:
-            thresh = None
-        else:
-            raise ValueError(
-                f"Got illegal `min_area_size`. Got: {min_area_size}. "
-                f"Allowed values are floats or these options: {allowed}."
-            )
-
-        return thresh
 
     def plot(
         self,
