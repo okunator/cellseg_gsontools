@@ -46,7 +46,7 @@ from cellseg_gsontools.geometry import (
 )
 def test_shape_metrics(cell_gson, func, parallel):
     gdf = cell_gson
-    gdf["m"] = gdf_apply(gdf, func, parallel=parallel)
+    gdf["m"] = gdf_apply(gdf, func, columns=["geometry"], parallel=parallel)
 
     assert gdf["m"].mean() >= 0
 

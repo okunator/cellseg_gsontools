@@ -404,7 +404,7 @@ SHAPE_LOOKUP = {
 def shape_metric(
     gdf: gpd.GeoDataFrame,
     metrics: Tuple[str, ...],
-    parallel: bool = False,
+    parallel: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
@@ -416,7 +416,7 @@ def shape_metric(
             The input GeoDataFrame.
         metrics : Tuple[str, ...]
             A Tuple/List of shape metrics.
-        parallel : bool, default=False
+        parallel : bool, default=True
             Flag whether to use parallel apply operations when computing the diversities
         col_prefix : str, optional
             Prefix for the new column names.
@@ -467,10 +467,10 @@ def shape_metric(
         met.remove("area")
 
     for metric in met:
-        gdf[f"{col_prefix}{metric}"] = gdf_apply(
+        gdf[metric] = gdf_apply(
             gdf,
             SHAPE_LOOKUP[metric],
-            col="geometry",
+            columns=["geometry"],
             parallel=parallel,
         )
 

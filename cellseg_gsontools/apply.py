@@ -1,6 +1,7 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import geopandas as gpd
+import psutil
 from pandarallel import pandarallel
 
 __all__ = ["gdf_apply"]
@@ -9,10 +10,11 @@ __all__ = ["gdf_apply"]
 def gdf_apply(
     gdf: gpd.GeoDataFrame,
     func: Callable,
-    col: Optional[str] = "geometry",
-    extra_col: Optional[str] = None,
-    parallel: bool = False,
+    axis: int = 1,
+    parallel: bool = True,
+    num_processes: Optional[int] = -1,
     pbar: bool = False,
+    columns: Optional[Tuple[str, ...]] = None,
     **kwargs,
 ) -> gpd.GeoSeries:
     """Apply or parallel apply a function to any col of a GeoDataFrame.
@@ -23,16 +25,20 @@ def gdf_apply(
             Input GeoDataFrame.
         func : Callable
             A callable function.
-        col : str, optional, default="geometry"
-            The name of the column of the gdf that is used as the input
-            to apply operation.
-        extra_col : str, optional
-            An extra column that can be used in the apply operation.
-        parallel : bool, default=False
+        axis : int, default=1
+            The gdf axis to apply the function on. axis=1 means rowise.
+            axis=0 means columnwise.
+        parallel : bool, default=True
             Flag, whether to parallelize the operation with pandarallel
+        num_processes : int, default=-1
+            The number of processes to use when parallel=True. If -1, this will use
+            all available cores.
         pbar : bool, default=False
             Show progress bar when executing in parallel mode. Ignored if
             `parallel=False`
+        columns : Optional[Tuple[str, ...]], default=None
+            A tuple of column names to apply the function on. If None, this will apply
+            the function to all columns.
         **kwargs:
             Arbitrary keyword args for the `func` callable.
 
@@ -46,31 +52,20 @@ def gdf_apply(
     --------
     Get the compactness of the polygons in a gdf
     >>> from cellseg_gsontools.utils import gdf_apply
-    >>> gdf["compactness"] = gdf_apply(gdf, compactness, parallel=True)
-
-    Get a list of QuPath readable geojson dict objects from a gdf
-    >>> from cellseg_gsontools.utils import gdf_apply
-    >>> from cellseg_gsontools.merging.save_utils import row_to_qupath
-    >>> gdf_apply(gdf, row_to_qupath, col=None, axis=1, parallel=True).tolist()
+    >>> gdf["compactness"] = gdf_apply(
+    ...     gdf, compactness, columns=["geometry"], parallel=True
+    ... )
     """
+    if columns is not None:
+        if not isinstance(columns, (tuple, list)):
+            raise ValueError(f"columns must be a tuple or list, got {type(columns)}")
+        gdf = gdf[columns]
+
     if not parallel:
-        if col is None:
-            res = gdf.apply(func, **kwargs)
-        else:
-            if extra_col is None:
-                res = gdf[col].apply(func, **kwargs)
-            else:
-                res = gdf[[col, extra_col]].apply(lambda x: func(*x, **kwargs), axis=1)
+        res = gdf.apply(lambda x: func(*x, **kwargs), axis=axis)
     else:
-        pandarallel.initialize(verbose=1, progress_bar=pbar)
-        if col is None:
-            res = gdf.parallel_apply(func, **kwargs)
-        else:
-            if extra_col is None:
-                res = gdf[col].parallel_apply(func, **kwargs)
-            else:
-                res = gdf[[col, extra_col]].parallel_apply(
-                    lambda x: func(*x, **kwargs), axis=1
-                )
+        cpus = psutil.cpu_count(logical=False) if num_processes == -1 else num_processes
+        pandarallel.initialize(verbose=1, progress_bar=pbar, nb_workers=cpus)
+        res = gdf.parallel_apply(lambda x: func(*x, **kwargs), axis=axis)
 
     return res

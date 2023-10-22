@@ -31,6 +31,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+from functools import partial
 from typing import Sequence, Tuple, Union
 
 import geopandas as gpd
@@ -49,6 +50,8 @@ __all__ = [
     "local_diversity",
 ]
 
+SMALL = np.finfo("float").tiny
+
 
 def simpson_index(counts: Sequence) -> float:
     """Compute the simpson diversity index on a count vector.
@@ -65,7 +68,7 @@ def simpson_index(counts: Sequence) -> float:
         float:
             The computed simpson diversity index.
     """
-    N = np.sum(counts)
+    N = np.sum(counts) + SMALL
     return 1 - np.sum([(n / N) ** 2 for n in counts if n != 0])
 
 
@@ -84,10 +87,15 @@ def shannon_index(counts: Sequence) -> float:
         float:
             The computed shannon diversity index.
     """
-    N = np.sum(counts)
+    N = np.sum(counts) + SMALL
     probs = [float(n) / N for n in counts]
 
-    return -np.sum([p * np.log(p) for p in probs if p != 0])
+    entropy = -np.sum([p * np.log(p) for p in probs if p != 0])
+
+    if entropy == 0:
+        return 0.0
+
+    return entropy
 
 
 def gini_index(x: Sequence) -> float:
@@ -115,7 +123,7 @@ def gini_index(x: Sequence) -> float:
 
     n = len(x)
     s = np.sum(x)
-    nx = n * s
+    nx = n * s + SMALL
 
     rx = (2.0 * np.arange(1, n + 1) * x[np.argsort(x)]).sum()
     return (rx - nx - s) / nx
@@ -134,11 +142,9 @@ def theil_index(x: Sequence) -> float:
         float:
             The computed Theil index.
     """
-    SMALL = np.finfo("float").tiny
-
     n = len(x)
     x = x + SMALL * (x == 0)  # can't have 0 values
-    xt = np.sum(x, axis=0)
+    xt = np.sum(x, axis=0) + SMALL
     s = x / (xt * 1.0)
     lns = np.log(n * s)
     slns = s * lns
@@ -163,7 +169,7 @@ def theil_between_group(x: Sequence, partition: Sequence) -> float:
             The computed between group Theil index.
     """
     groups = np.unique(partition)
-    x_total = x.sum(0)
+    x_total = x.sum(0) + SMALL
 
     # group totals
     g_total = np.array([x[partition == gid].sum(axis=0) for gid in groups])
@@ -227,7 +233,7 @@ def local_diversity(
     id_col: str = None,
     metrics: Tuple[str, ...] = ("simpson_index",),
     scheme: str = "FisherJenks",
-    parallel: bool = False,
+    parallel: bool = True,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -254,7 +260,7 @@ def local_diversity(
             "simpson_index", "gini_index", "theil_index"
         scheme : str, default="HeadTailBreaks"
             `pysal.mapclassify` classification scheme.
-        parallel : bool, default=False
+        parallel : bool, default=True
             Flag whether to use parallel apply operations when computing the diversities
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
@@ -293,14 +299,12 @@ def local_diversity(
         )
 
     if create_copy:
-        data = gdf.copy()
-    else:
-        data = gdf
+        gdf = gdf.copy()
 
     # set uid
     if id_col is None:
         id_col = "uid"
-        data = set_uid(data)
+        gdf = set_uid(gdf)
 
     # If shannon or simpson index in metrics, counts are needed
     ret_counts = False
@@ -314,19 +318,14 @@ def local_diversity(
         ret_vals = True
 
     # Get the immediate node neighborhood
-    data["nhood"] = gdf_apply(
-        data,
-        neighborhood,
-        col=id_col,
-        spatial_weights=spatial_weights,
-        parallel=False,
-    )
+    func = partial(neighborhood, spatial_weights=spatial_weights)
+    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
 
     if isinstance(val_col, str):
         val_col = (val_col,)
 
     for col in val_col:
-        values = data[col]
+        values = gdf[col]
 
         # Get bins if data not categorical
         if not is_categorical(values):
@@ -336,20 +335,23 @@ def local_diversity(
 
         # Get the counts of the binned metric inside the neighborhoods
         if ret_counts:
-            data[f"{col}_nhood_counts"] = gdf_apply(
-                data,
-                nhood_counts,
-                col="nhood",
-                values=values,
-                bins=bins,
+            func = partial(nhood_counts, values=values, bins=bins)
+            gdf[f"{col}_nhood_counts"] = gdf_apply(
+                gdf,
+                func,
+                columns=["nhood"],
+                axis=1,
+                parallel=parallel,
             )
 
         if ret_vals:
-            data[f"{col}_nhood_vals"] = gdf_apply(
-                data,
-                nhood_vals,
-                col="nhood",
-                values=values,
+            func = partial(nhood_vals, values=values)
+            gdf[f"{col}_nhood_vals"] = gdf_apply(
+                gdf,
+                func,
+                columns=["nhood"],
+                axis=1,
+                parallel=parallel,
             )
 
         # Compute the diversity metrics for the neighborhood counts
@@ -357,17 +359,17 @@ def local_diversity(
             colname = f"{col}_nhood_counts" if metric not in gt else f"{col}_nhood_vals"
 
             col_prefix = "" if col_prefix is None else col_prefix
-            data[f"{col_prefix}{col}_{metric}"] = gdf_apply(
-                data,
+            gdf[f"{col_prefix}{col}_{metric}"] = gdf_apply(
+                gdf,
                 DIVERSITY_LOOKUP[metric],
-                col=colname,
+                columns=[colname],
                 parallel=parallel,
             )
 
         if rm_nhood_cols:
-            data = data.drop(labels=[colname], axis=1)
+            gdf = gdf.drop(labels=[colname], axis=1)
 
     if rm_nhood_cols:
-        data = data.drop(labels=["nhood"], axis=1)
+        gdf = gdf.drop(labels=["nhood"], axis=1)
 
-    return data
+    return gdf

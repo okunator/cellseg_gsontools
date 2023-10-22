@@ -12,7 +12,9 @@ from cellseg_gsontools.utils import set_uid
 @pytest.mark.parametrize("parallel", [True, False])
 def test_character(cell_gson, reduction, weight, parallel):
     gdf = cell_gson
-    gdf["eccentricity"] = gdf_apply(gdf, eccentricity, parallel=True)
+    gdf["eccentricity"] = gdf_apply(
+        gdf, eccentricity, columns=["geometry"], parallel=True
+    )
 
     data = set_uid(gdf)
     w_dist = DistanceBand.from_dataframe(data, ids="uid", threshold=55.0, alpha=-1.0)

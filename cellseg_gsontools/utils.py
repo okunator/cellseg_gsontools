@@ -131,7 +131,7 @@ def read_gdf(
 
     if "class_name" not in df.columns:
         try:
-            df["class_name"] = gdf_apply(df, _get_class, col=property_col)
+            df["class_name"] = gdf_apply(df, _get_class, columns=[property_col])
         except KeyError:
             if not silence_warnigns:
                 warnings.warn(
@@ -141,7 +141,7 @@ def read_gdf(
 
     if "class_probs" not in df.columns:
         try:
-            df["class_probs"] = gdf_apply(df, _get_prob, col=property_col)
+            df["class_probs"] = gdf_apply(df, _get_prob, columns=[property_col])
         except KeyError:
             if not silence_warnigns:
                 warnings.warn(
@@ -149,7 +149,7 @@ def read_gdf(
                     "Can't set the `class_probs` column to the output gdf."
                 )
 
-    df["geometry"] = gdf_apply(df, shapely.geometry.shape, col="geometry")
+    df["geometry"] = gdf_apply(df, shapely.geometry.shape, columns=["geometry"])
     return gpd.GeoDataFrame(df).set_geometry("geometry")
 
 

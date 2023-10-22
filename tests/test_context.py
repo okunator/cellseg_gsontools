@@ -18,6 +18,7 @@ def test_cluster_context(cells_and_areas, clust_method, labels):
         cluster_method=clust_method,
         silence_warnings=True,
         min_area_size=50,
+        graph_type="distband",
     )
     cluster_context.fit()
 
@@ -37,6 +38,7 @@ def test_interface_context(cells_and_areas, toplabels, bottomlabels):
         bottom_labels=bottomlabels,
         silence_warnings=True,
         min_area_size=50,
+        graph_type="distband",
     )
     interface_context.fit()
 
@@ -55,6 +57,7 @@ def test_within_context(cells_and_areas, labels):
         labels=labels,
         silence_warnings=True,
         min_area_size=50,
+        graph_type="distband",
     )
     within_context.fit()
 

@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Optional, Sequence, Tuple, Union
 
 import geopandas as gpd
@@ -63,7 +64,7 @@ def local_character(
     id_col: str = None,
     reductions: Tuple[str, ...] = ("sum",),
     weight_by_area: bool = False,
-    parallel: bool = False,
+    parallel: bool = True,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -90,7 +91,7 @@ def local_character(
             "median".
         weight_by_area : bool, default=False
             Flag wheter to weight the neighborhood values by the area of the object.
-        parallel : bool, default=False
+        parallel : bool, default=True
             Flag whether to use parallel apply operations when computing the character
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
@@ -114,8 +115,8 @@ def local_character(
     >>> local_character(
     ...     gdf,
     ...     spatial_weights=w_dist,
-    ...     val_col="eccentricity",
-    ...     reduction=["mean"],
+    ...     val_col="[eccentricity", "area"],
+    ...     reduction=["mean", "median"],
     ...     weight_by_area=True
     ... )
     """
@@ -127,62 +128,71 @@ def local_character(
         )
 
     if create_copy:
-        data = gdf.copy()
-    else:
-        data = gdf
+        gdf = gdf.copy()
 
     # set uid
     if id_col is None:
         id_col = "uid"
-        data = set_uid(data)
+        gdf = set_uid(gdf)
 
     # Get the immediate node neighborhood
-    data["nhood"] = gdf_apply(
-        data, neighborhood, col=id_col, spatial_weights=spatial_weights, parallel=False
-    )
+    func = partial(neighborhood, spatial_weights=spatial_weights)
+    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
 
     # get areas
     area_col = None
     if weight_by_area:
-        area_col = f"{val_col}_nhood_areas"
-        data[area_col] = gdf_apply(
-            data, nhood_vals, col="nhood", values=data.geometry.area, parallel=False
+        area_col = "nhood_areas"
+        func = partial(nhood_vals, values=gdf.geometry.area)
+        gdf[area_col] = gdf_apply(
+            gdf, func, columns=["nhood"], axis=1, parallel=parallel
         )
 
     if isinstance(val_col, str):
         val_col = (val_col,)
 
     # get character values
+    # Compute the neighborhood characters
+    col_prefix = "" if col_prefix is None else col_prefix
     for col in val_col:
-        values = data[col]
+        values = gdf[col]
         char_col = f"{col}_nhood_vals"
-        data[char_col] = gdf_apply(
-            data, nhood_vals, col="nhood", values=values, parallel=False
+        func = partial(nhood_vals, values=values)
+        gdf[char_col] = gdf_apply(
+            gdf,
+            func,
+            columns=["nhood"],
+            axis=1,
+            parallel=parallel,
         )
 
-        # Compute the neighborhood characters
-        col_prefix = "" if col_prefix is None else col_prefix
         # loop over the reduction methods
         for r in reductions:
-            data[f"{col_prefix}{col}_nhood_{r}"] = gdf_apply(
-                data,
-                reduce,
-                col=char_col,
+            columns = [char_col]
+            new_col = f"{col_prefix}{col}_nhood_{r}"
+            if area_col in gdf.columns:
+                columns.append(area_col)
+                new_col = f"{col_prefix}{col}_nhood_{r}_area_weighted"
+
+            func = partial(reduce, how=r)
+            gdf[new_col] = gdf_apply(
+                gdf,
+                func,
+                columns=columns,
+                axis=1,
                 parallel=parallel,
-                how=r,
-                extra_col=area_col,
             )
 
         if rm_nhood_cols:
-            data = data.drop(labels=[char_col], axis=1)
+            gdf = gdf.drop(labels=[char_col], axis=1)
 
     if rm_nhood_cols:
         labs = ["nhood"]
         if weight_by_area:
             labs.append(area_col)
-        data = data.drop(labels=labs, axis=1)
+        gdf = gdf.drop(labels=labs, axis=1)
 
-    return data
+    return gdf
 
 
 def local_distances(
@@ -191,7 +201,7 @@ def local_distances(
     id_col: str = None,
     reductions: Tuple[str, ...] = ("mean",),
     weight_by_area: bool = False,
-    parallel: bool = False,
+    parallel: bool = True,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -213,7 +223,7 @@ def local_distances(
             "median".
         weight_by_area : bool, default=False
             Flag wheter to weight the neighborhood values by the area of the object.
-        parallel : bool, default=False
+        parallel : bool, default=True
             Flag whether to use parallel apply operations when computing the character
         rm_nhood_cols : bool, default=True
             Flag, whether to remove the extra neighborhood columns from the result gdf.
@@ -249,51 +259,51 @@ def local_distances(
         )
 
     if create_copy:
-        data = gdf.copy()
-    else:
-        data = gdf
+        gdf = gdf.copy()
 
     # set uid
     if id_col is None:
         id_col = "uid"
-        data = set_uid(data)
+        gdf = set_uid(gdf)
 
     # get the immediate node neighborhood
-    data["nhood"] = gdf_apply(
-        data, neighborhood, col=id_col, spatial_weights=spatial_weights
-    )
+    func = partial(neighborhood, spatial_weights=spatial_weights)
+    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
 
     # get areas
     area_col = None
     if weight_by_area:
-        area_col = "dist_nhood_areas"
-        data[area_col] = gdf_apply(
-            data, nhood_vals, col="nhood", values=data.geometry.area, parallel=False
+        func = partial(nhood_vals, values=gdf.geometry.area)
+        gdf[area_col] = gdf_apply(
+            gdf, func, columns=["nhood"], axis=1, parallel=parallel
         )
 
     # get distances
-    data["nhood_dists"] = gdf_apply(
-        data,
-        nhood_dists,
-        col="nhood",
-        centroids=gdf.centroid,
+    func = partial(nhood_dists, centroids=gdf.centroid)
+    gdf["nhood_dists"] = gdf_apply(
+        gdf, func, columns=["nhood"], axis=1, parallel=parallel
     )
+
+    col_prefix = "" if col_prefix is None else col_prefix
 
     # loop over the reduction methods
     for r in reductions:
-        data[f"{col_prefix}nhood_dists_{r}"] = gdf_apply(
-            data,
-            reduce,
-            col="nhood_dists",
-            parallel=parallel,
-            how=r,
-            extra_col=area_col,
-        )
+        for r in reductions:
+            columns = ["nhood_dists"]
+            new_col = f"{col_prefix}nhood_dists_{r}"
+            if area_col in gdf.columns:
+                columns.append(area_col)
+                new_col = f"{col_prefix}nhood_dists_{r}_area_weighted"
+
+            func = partial(reduce, how=r)
+            gdf[new_col] = gdf_apply(
+                gdf, func, columns=columns, axis=1, parallel=parallel
+            )
 
     if rm_nhood_cols:
         labs = ["nhood"]
         if weight_by_area:
             labs.append(area_col)
-        data = data.drop(labels=labs, axis=1)
+        gdf = gdf.drop(labels=labs, axis=1)
 
-    return data
+    return gdf
