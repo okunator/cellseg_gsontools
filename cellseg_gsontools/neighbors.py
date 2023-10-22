@@ -18,7 +18,7 @@ __all__ = [
 
 
 def neighborhood(
-    node: int,
+    node: Union[int, pd.Series],
     spatial_weights: W,
     include_self: bool = True,
     ret_n_neighbors: bool = False,
@@ -29,7 +29,7 @@ def neighborhood(
 
     Parameters
     ----------
-        node : int
+        node : int or pd.Series
             Input node uid.
         spatial_weights : libysal.weights.W
             Libpysal spatial weights object.
@@ -74,6 +74,9 @@ def neighborhood(
     Name: uid, Length: 365, dtype: object
 
     """
+    if isinstance(node, pd.Series):
+        node = node.iloc[0]  # assume that the series is a row
+
     nhood = np.nan
     if ret_n_neighbors:
         nhood = spatial_weights.cardinalities[node]
@@ -144,8 +147,11 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
     364         [0.29, 0.31, 0.93, 0.58, 0.26]
     365         [0.25, 0.28, 0.44, 0.59, 0.42]
     """
+    if isinstance(nhood, pd.Series):
+        nhood = nhood.iloc[0]  # assume that the series is a row
+
     nhood_vals = np.array([0])
-    if nhood not in (None, np.nan):
+    if nhood not in (None, np.nan) and isinstance(nhood, (Sequence, np.ndarray)):
         nhood_vals = values.loc[nhood].to_numpy()
 
     return nhood_vals
@@ -216,8 +222,11 @@ def nhood_counts(
     365    [5, 0, 0, 0, 0, 0, 0]
     Name: nhood, Length: 365, dtype: object
     """
+    if isinstance(nhood, pd.Series):
+        nhood = nhood.iloc[0]  # assume that the series is a row
+
     counts = np.array([0])
-    if nhood not in (None, np.nan):
+    if nhood not in (None, np.nan) and isinstance(nhood, (Sequence, np.ndarray)):
         nhood_vals = values.loc[nhood]
 
         if is_categorical(nhood_vals):
@@ -306,18 +315,23 @@ def nhood_type_count(
         14    0.000000
         Name: class_name_nhood_vals, dtype: float64
     """
-    if len(cls_neighbors) > 0:
-        if not isinstance(cls_neighbors[0], (int, str)):
-            raise TypeError("cls_neighbors must contain int of str values.")
+    if isinstance(cls_neighbors, pd.Series):
+        cls_neighbors = cls_neighbors.iloc[0]  # assume that the series is a row
 
-    t, c = np.unique(cls_neighbors, return_counts=True)
+    ret = 0
+    if isinstance(cls_neighbors, (Sequence, np.ndarray)):
+        if len(cls_neighbors) > 0:
+            if not isinstance(cls_neighbors[0], (int, str)):
+                raise TypeError("cls_neighbors must contain int of str values.")
 
-    ret = 0.0
-    if cls in t:
-        ix = np.where(t == cls)
-        ret = c[ix][0]
-        if frac:
-            ret = ret / np.sum(c)
+        t, c = np.unique(cls_neighbors, return_counts=True)
+
+        ret = 0.0
+        if cls in t:
+            ix = np.where(t == cls)
+            ret = c[ix][0]
+            if frac:
+                ret = ret / np.sum(c)
 
     return ret
 
@@ -366,8 +380,11 @@ def nhood_dists(
             centroids=gdf.centroid,
         )
     """
+    if isinstance(nhood, pd.Series):
+        nhood = nhood.iloc[0]  # assume that the series is a row
+
     nhood_dists = np.array([0])
-    if nhood not in (None, np.nan):
+    if nhood not in (None, np.nan) and isinstance(nhood, (Sequence, np.ndarray)):
         if ids is not None:
             nhood = ids[ids.isin(nhood)].index
 
