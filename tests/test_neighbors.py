@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pytest
 from libpysal.weights import Delaunay, DistanceBand
@@ -14,11 +16,10 @@ def test_neighbors(cell_gson, ret_n):
 
     # Get spatial weights
     w_dist = DistanceBand.from_dataframe(data, ids="uid", threshold=55.0, alpha=-1.0)
-    data["neighbors"] = gdf_apply(
-        data, neighborhood, col="uid", spatial_weights=w_dist, ret_n_neighbors=ret_n
-    )
+    func = partial(neighborhood, spatial_weights=w_dist, ret_n_neighbors=ret_n)
+    data["nhood"] = gdf_apply(data, func, columns=["uid"])
 
-    datum = data["neighbors"].loc[1]
+    datum = data["nhood"].loc[1]
     if isinstance(datum, (int, float, np.int64)):
         assert datum >= 0.0
     elif isinstance(datum, (list, np.ndarray)):
@@ -35,24 +36,24 @@ def test_nhood_type_count(cell_gson, frac):
     w_dist = DistanceBand.from_dataframe(data, threshold=55.0, alpha=-1.0)
 
     # Get the neihgboring nodes of the graph
-    data["nhood"] = gdf_apply(data, neighborhood, col="uid", spatial_weights=w_dist)
+    func = partial(neighborhood, spatial_weights=w_dist)
+    data["nhood"] = gdf_apply(data, func, columns=["uid"])
 
     # Define the class name column
     val_col = "class_name"
     values = data.set_index("uid")[val_col]
 
     # get the neighborhood classes
+    func = partial(nhood_vals, values=values)
     data[f"{val_col}_nhood_vals"] = gdf_apply(
         data,
-        nhood_vals,
-        col="nhood",
-        values=values,
+        func,
+        columns=["nhood"],
     )
 
+    func = partial(nhood_type_count, cls="inflammatory", frac=frac)
     data["local_infiltration_fraction"] = gdf_apply(
         data,
-        nhood_type_count,
-        col=f"{val_col}_nhood_vals",
-        cls="inflammatory",
-        frac=frac,
+        func,
+        columns=[f"{val_col}_nhood_vals"],
     )

@@ -19,12 +19,12 @@ def test_instance_summary(cells_and_areas, groups):
 
     cluster_context = PointClusterContext(
         cell_gdf=cells,
-        label="inflammatory",
+        labels="inflammatory",
         cluster_method="optics",
         min_area_size=50000.0,
         min_samples=10,
     )
-    cluster_context.fit(verbose=False)
+    cluster_context.fit(verbose=False, fit_graph=False)
 
     metrics = ["area"]
     if groups is not None:
@@ -46,8 +46,8 @@ def test_instance_summary(cells_and_areas, groups):
 def test_semantic_summary(cells_and_areas):
     cells = cells_and_areas[0]
     areas = cells_and_areas[1]
-    within_context = WithinContext(area_gdf=areas, cell_gdf=cells, label="area_cin")
-    within_context.fit()
+    within_context = WithinContext(area_gdf=areas, cell_gdf=cells, labels="area_cin")
+    within_context.fit(fit_graph=False)
 
     cin_area = within_context.context2gdf("roi_area")
     cin_area_summary = SemanticSummary(
@@ -67,19 +67,19 @@ def test_distance_summary(cells_and_areas):
     areas = cells_and_areas[1]
 
     within_context = WithinContext(
-        area_gdf=areas, cell_gdf=cells, label="area_cin", min_area_size=100000.0
+        area_gdf=areas, cell_gdf=cells, labels="area_cin", min_area_size=100000.0
     )
     within_context.fit()
     lesion_areas = within_context.context2gdf("roi_area")
 
     cluster_context = PointClusterContext(
         cell_gdf=cells,
-        label="inflammatory",
+        labels="inflammatory",
         cluster_method="optics",
         min_area_size=50000.0,
         min_samples=10,
     )
-    cluster_context.fit()
+    cluster_context.fit(fit_graph=False)
 
     immune_cluster_areas = cluster_context.context2gdf("roi_area")
     immune_proximities = DistanceSummary(
@@ -100,8 +100,8 @@ def test_sweight_summary(cells_and_areas):
     iface_context = InterfaceContext(
         area_gdf=areas,
         cell_gdf=cells,
-        label1="area_cin",
-        label2="areastroma",
+        top_labels="area_cin",
+        bottom_labels="areastroma",
         silence_warnings=True,
         min_area_size=100000.0,
     )

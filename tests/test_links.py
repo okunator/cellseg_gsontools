@@ -8,8 +8,8 @@ def test_link_counts(cells_and_areas):
     iface_context = InterfaceContext(
         area_gdf=areas,
         cell_gdf=cells,
-        label1="area_cin",
-        label2="areastroma",
+        top_labels="area_cin",
+        bottom_labels="areastroma",
         silence_warnings=True,
         min_area_size=100000.0,
     )
