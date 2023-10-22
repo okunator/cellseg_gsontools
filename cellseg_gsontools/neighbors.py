@@ -51,15 +51,17 @@ def neighborhood(
     >>> from cellseg_gsontools.apply import gdf_apply
     >>> from cellseg_gsontools.neighbors import neighborhood
     >>> from cellseg_gsontools.utils import set_uid
+    >>> from functools import partial
 
     >>> # Set uid to the gdf
-    >>> data = set_uid(gdf)
+    >>> gdf = set_uid(gdf, id_col="uid")
 
     >>> # Get spatial weights
     >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
     >>> # Get the neihgboring nodes of the graph
-    >>> gdf_apply(data, neighborhood, col="uid", spatial_weights=w_dist)
+    >>> func = partial(neighborhood, spatial_weights=w_dist)
+    >>> gdf_apply(gdf, func, columns=["uid"])
     0                            [0]
     1                     [1, 9, 19]
     2                            [2]
@@ -111,29 +113,28 @@ def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
     >>> from cellseg_gsontools.apply import gdf_apply
     >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
     >>> from cellseg_gsontools.utils import set_uid
+    >>> from functools import partial
 
     >>> # Set uid to the gdf
-    >>> data = set_uid(gdf)
+    >>> gdf = set_uid(gdf, id_col="uid")
 
     >>> # Get spatial weights
     >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
     >>> # Get the neihgboring nodes of the graph
-    >>> data["nhood"] = gdf_apply(
-            data, neighborhood, col="uid", spatial_weights=w_dist
-        )
+    >>> func = partial(neighborhood, spatial_weights=w_dist)
+    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
 
     >>> # Define the gdf column of interest
-    >>> val_col = "eccentricity"
-    >>> values = data.set_index("uid")[val_col]
+    >>> values = gdf["eccentricity"]
 
     >>> # get the neighborhood metric values
+    >>> func = partial(nhood_vals, values=values)
     >>> gdf_apply(
-            data,
-            nhood_vals,
-            col="nhood",
-            values=values,
-        )
+    ...     gdf,
+    ...     func,
+    ...     columns=["nhood"],
+    ... )
 
     0                                   [0.42]
     1                       [0.92, 0.83, 0.68]
@@ -184,30 +185,28 @@ def nhood_counts(
     >>> from cellseg_gsontools.apply import gdf_apply
     >>> from cellseg_gsontools.neighbors import neighborhood, nhood_counts
     >>> from cellseg_gsontools.utils import set_uid
+    >>> from functools import partial
 
     >>> # Set uid to the gdf
-    >>> data = set_uid(gdf)
+    >>> gdf = set_uid(gdf, id_col="uid")
 
     >>> # Get spatial weights
     >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
     >>> # Get the neihgboring nodes of the graph
-    >>> data["nhood"] = gdf_apply(
-            data, neighborhood, col="uid", spatial_weights=w_dist
-        )
+    >>> func = partial(neighborhood, spatial_weights=w_dist)
+    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
 
     >>> # Define the gdf column that will be binned
-    >>> val_col = "eccentricity"
-    >>> values = data.set_index("uid")[val_col]
+    >>> values = gdf["eccentricity"]
 
     >>> # compute the counts of the bins inside the neighborhood
+    >>> func = partial(nhood_counts, values=values, bins=bins)
     >>> gdf_apply(
-            data,
-            nhood_counts,
-            col="nhood",
-            values=values,
-            bins=bins,
-        )
+    ...     gdf,
+    ...     func,
+    ...     columns=["nhood"],
+    ... )
 
     0      [1, 0, 0, 0, 0, 0, 0]
     1      [0, 1, 1, 1, 0, 0, 0]
@@ -263,57 +262,57 @@ def nhood_type_count(
 
     Example
     -------
-        Use `gdf_apply` to get the neihgborhood fractions of immune cells for each node
-        >>> from cellseg_gsontools.apply import gdf_apply
-        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
-        >>> from cellseg_gsontools.utils import set_uid
+    Use `gdf_apply` to get the neihgborhood fractions of immune cells for each node
+    >>> from cellseg_gsontools.apply import gdf_apply
+    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
+    >>> from cellseg_gsontools.utils import set_uid
+    >>> from functools import partial
 
-        >>> # Set uid to the gdf
-        >>> data = set_uid(gdf)
+    >>> # Set uid to the gdf
+    >>> gdf = set_uid(gdf, id_col="uid")
 
-        >>> # Get spatial weights
-        >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
+    >>> # Get spatial weights
+    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
 
-        >>> # Get the neihgboring nodes of the graph
-        >>> data["nhood"] = gdf_apply(
-                data, neighborhood, col="uid", spatial_weights=w_dist
-            )
+    >>> # Get the neihgboring nodes of the graph
+    >>> func = partial(neighborhood, spatial_weights=w_dist)
+    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
 
-        >>> # Define the class name column
-        >>> val_col = "class_name"
-        >>> values = data.set_index("uid")[val_col]
+    >>> # Define the class name column
+    >>> values = gdf["class_name"]
 
-        >>> # get the neighborhood classes
-        >>> data[f"{val_col}_nhood_vals"] = gdf_apply(
-                data,
-                nhood_vals,
-                col="nhood",
-                values=values,
-            )
+    >>> # get the neighborhood classes
+    >>> func = partial(nhood_vals, values=values)
+    >>> gdf[f"{val_col}_nhood_vals"] = gdf_apply(
+    ...     gdf,
+    ...     func,
+    ...     columns=["nhood"],
+    ... )
 
-        >>> data["local_infiltration_fraction"] = gdf_apply(
-                data,
-                nhood_type_count,
-                col=f"{val_col}_nhood_vals",
-                cls="inflammatory",
-                parallel=True
-            ).head(14)
-        uid
-        1     0.000000
-        2     0.500000
-        3     0.000000
-        4     0.250000
-        5     0.000000
-        6     1.000000
-        7     0.000000
-        8     0.250000
-        9     0.333333
-        10    0.333333
-        11    0.000000
-        12    0.250000
-        13    0.333333
-        14    0.000000
-        Name: class_name_nhood_vals, dtype: float64
+    >>> # get the neighborhood fractions of immune cells
+    >>> func = partial(nhood_type_count, cls="inflammatory", frac=True)
+    >>> gdf["local_infiltration_fraction"] = gdf_apply(
+    ...     gdf,
+    ...     func,
+    ...     columns=[f"{val_col}_nhood_vals"],
+    ...     parallel=True
+    ... ).head(14)
+    uid
+    1     0.000000
+    2     0.500000
+    3     0.000000
+    4     0.250000
+    5     0.000000
+    6     1.000000
+    7     0.000000
+    8     0.250000
+    9     0.333333
+    10    0.333333
+    11    0.000000
+    12    0.250000
+    13    0.333333
+    14    0.000000
+    Name: class_name_nhood_vals, dtype: float64
     """
     if isinstance(cls_neighbors, pd.Series):
         cls_neighbors = cls_neighbors.iloc[0]  # assume that the series is a row
@@ -365,20 +364,25 @@ def nhood_dists(
     >>> from libpysal.weights import Delaney
     >>> from cellseg_gsontools.apply import gdf_apply
     >>> from cellseg_gsontools.neighbors import neighborhood
+    >>> from cellseg_gsontools.utils import set_uid
+    >>> from functools import partial
 
-    >>> id_col = "iid"
-    >>> gdf[id_col] = range(len(gdf))
-    >>> gdf = gdf.set_index(id_col, drop=False)
+    >>> # Set uid to the gdf
+    >>> gdf = set_uid(gdf, id_col="uid")
+
+    >>> # Get spatial weights
     >>> w = Delaunay.from_dataframe(gdf.centroid)
 
-    >>> gdf["nhood"] = gdf_apply(gdf, neighborhood, col="iid", spatial_weights=w)
+    >>> # Get the neihgboring nodes of the graph
+    >>> func = partial(neighborhood, spatial_weights=w_dist)
+    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
 
+    >>> func = partial(neighborhood, centroids=gdf.centroid)
     >>> gdf["nhood_dists"] = gdf_apply(
-            gdf,
-            nhood_dists,
-            col="nhood",
-            centroids=gdf.centroid,
-        )
+    ...     gdf,
+    ...     func,
+    ...     columns=["nhood"],
+    ... )
     """
     if isinstance(nhood, pd.Series):
         nhood = nhood.iloc[0]  # assume that the series is a row

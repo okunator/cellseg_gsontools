@@ -52,7 +52,7 @@ class SemanticSummary(Summary):
 
         >>> cluster_context = PointClusterContext(
                 cell_gdf=cell_gdf,
-                label="inflammatory",
+                labels="inflammatory",
                 cluster_method="adbscan",
                 silence_warnings=True,
                 verbose=True,

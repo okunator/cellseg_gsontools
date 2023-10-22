@@ -55,7 +55,7 @@ class DistanceSummary(Summary):
         >>> within_context = WithinContext(
                 area_gdf=area_gdf,
                 cell_gdf=cell_gdf,
-                label="area_neoplastic",
+                labels="area_neoplastic",
                 silence_warnings=True,
                 verbose=True,
                 min_area_size=100000.0
@@ -65,7 +65,7 @@ class DistanceSummary(Summary):
         >>> # Get the immune clusters from the gdf
         >>> cluster_context = PointClusterContext(
                 cell_gdf=cell_gdf,
-                label="inflammatory",
+                labels="inflammatory",
                 cluster_method="adbscan",
                 silence_warnings=True,
                 verbose=True,
