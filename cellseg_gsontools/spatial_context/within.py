@@ -219,12 +219,13 @@ class WithinContext(_SpatialContext):
         context_dict["roi_cells"] = roi_cells
 
         if fit_graph:
-            context_dict["roi_network"] = spatial_context.cell_neighbors(
+            roi_net: W = spatial_context.cell_neighbors(
                 roi_cells=roi_cells,
                 graph_type=spatial_context.graph_type,
                 thresh=spatial_context.dist_thresh,
                 predicate=spatial_context.predicate,
             )
+            context_dict["roi_network"] = roi_net
 
         if fit_grid:
             context_dict["roi_grid"] = grid_overlay(

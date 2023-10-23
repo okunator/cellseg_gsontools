@@ -318,7 +318,7 @@ class InterfaceContext(_SpatialContext):
 
         # context networks
         if fit_graph:
-            union_net, roi_net, inter_net, border_net = spatial_context.cell_neighbors(
+            net_u, net_r, net_i, net_b = spatial_context.cell_neighbors(
                 roi_cells=roi_cells,
                 iface_cells=iface_cells,
                 graph_type=spatial_context.graph_type,
@@ -327,10 +327,10 @@ class InterfaceContext(_SpatialContext):
                 iface_cell_type=spatial_context.interface_cell_type,
                 predicate=spatial_context.predicate,
             )
-            context_dict["roi_network"] = roi_net
-            context_dict["interface_network"] = inter_net
-            context_dict["full_network"] = union_net
-            context_dict["border_network"] = border_net
+            context_dict["roi_network"] = net_r
+            context_dict["interface_network"] = net_i
+            context_dict["full_network"] = net_u
+            context_dict["border_network"] = net_b
 
         if fit_grid:
             context_dict["roi_grid"] = grid_overlay(

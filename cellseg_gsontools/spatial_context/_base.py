@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from libpysal.weights import W, w_subset, w_union
 
+from ..grid import grid_overlay
 from ..links import weights2gdf
 from ..plotting import plot_all
 from ..utils import set_uid
@@ -315,7 +316,13 @@ class _SpatialContext:
 
         grid_gdf = None
         if grid_key is not None:
-            grid_gdf = self.context2gdf(grid_key)
+            grid_gdf = grid_overlay(
+                context_gdf,
+                self.patch_size,
+                self.stride,
+                self.pad,
+                self.predicate,
+            )
 
         network_gdf = None
         if network_key is not None:
