@@ -1,10 +1,13 @@
-from typing import Tuple, Union
+from functools import partial
+from typing import Any, Dict, Tuple, Union
 
 import geopandas as gpd
 from libpysal.weights import W
 from tqdm import tqdm
 
+from ..apply import gdf_apply
 from ..graphs import fit_graph
+from ..grid import grid_overlay
 from ._base import _SpatialContext
 
 __all__ = ["WithinContext"]
@@ -19,6 +22,9 @@ class WithinContext(_SpatialContext):
         min_area_size: Union[float, str] = None,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        patch_size: Tuple[int, int] = (256, 256),
+        stride: Tuple[int, int] = (256, 256),
+        pad: int = None,
         predicate: str = "intersects",
         silence_warnings: bool = True,
     ) -> None:
@@ -48,6 +54,12 @@ class WithinContext(_SpatialContext):
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=100.0
             Distance threshold for the length of the network links.
+        patch_size : Tuple[int, int], default=(256, 256)
+            The size of the grid patches to be fitted on the context.
+        stride : Tuple[int, int], default=(256, 256)
+            The stride of the sliding window for grid patching.
+        pad : int, default=None
+            The padding to add to the bounding box on the grid.
         predicate : str, default="intersects"
             The predicate to use for the spatial join when extracting the ROI cells.
             See `geopandas.tools.sjoin`
@@ -68,6 +80,8 @@ class WithinContext(_SpatialContext):
             - 'roi_network' - libpysal.weights.W spatial weights network of the
                 cells inside the roi area. This can be used to extract graph
                 features inside the roi.
+            - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
+                This can be used to extract grid features inside the roi.
 
         Raises
         ------
@@ -106,12 +120,25 @@ class WithinContext(_SpatialContext):
             dist_thresh=dist_thresh,
             predicate=predicate,
             graph_type=graph_type,
+            patch_size=patch_size,
+            stride=stride,
+            pad=pad,
         )
 
-    def fit(self, verbose: bool = True, fit_graph: bool = True) -> None:
-        """Fit the within regions.
+    def fit(
+        self,
+        verbose: bool = True,
+        fit_graph: bool = True,
+        fit_grid: bool = True,
+        parallel: bool = True,
+        num_processes: int = -1,
+    ) -> None:
+        """Fit the context.
 
-        NOTE: This only sets the `context_dict` attribute.
+        This sets the `self.context` attribute.
+
+        NOTE: parallel=True is recommended for only very large gdfs.
+        For small gdfs, parallel=False is usually faster.
 
         Parameters
         ----------
@@ -119,6 +146,14 @@ class WithinContext(_SpatialContext):
                 Flag, whether to use tqdm pbar when creating the interfaces.
             fit_graph : bool, default=True
                 Flag, whether to fit the spatial weights networks for the context.
+            fit_grid : bool, default=True
+                Flag, whether to fit the a grid on the contextes.
+            parallel : bool, default=True
+                Flag, whether to parallelize the context fitting with pandarallel
+                package.
+            num_processes : int, default=-1
+                The number of processes to use when parallel=True. If -1, this will use
+                all the available cores.
 
         Created Attributes
         ------------------
@@ -135,32 +170,72 @@ class WithinContext(_SpatialContext):
             - 'roi_network' - libpysal.weights.W spatial weights network of the
                 cells inside the roi area. This can be used to extract graph
                 features inside the roi.
+            - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
+                    This can be used to extract grid features inside the roi.
         """
-        context_dict = {}
-        pbar = (
-            tqdm(self.context_area.index, total=self.context_area.shape[0])
-            if verbose
-            else self.context_area.index
-        )
+        if not parallel:
+            context_dict = {}
+            pbar = (
+                tqdm(self.context_area.index, total=self.context_area.shape[0])
+                if verbose
+                else self.context_area.index
+            )
 
-        for ix in pbar:
-            if verbose:
-                pbar.set_description(f"Processing roi area: {ix}")
+            for ix in pbar:
+                if verbose:
+                    pbar.set_description(f"Processing roi area: {ix}")
 
-            roi_area = self.roi(ix)
-            roi_cells = self.roi_cells(ix, roi_area, predicate=self.predicate)
-            context_dict[ix] = {"roi_area": roi_area}
-            context_dict[ix]["roi_cells"] = roi_cells
-
-            if fit_graph:
-                context_dict[ix]["roi_network"] = self.cell_neighbors(
-                    roi_cells=roi_cells,
-                    graph_type=self.graph_type,
-                    thresh=self.dist_thresh,
-                    predicate=self.predicate,
+                context_dict[ix] = WithinContext._get_context(
+                    ix=ix,
+                    spatial_context=self,
+                    fit_graph=fit_graph,
+                    fit_grid=fit_grid,
                 )
+        else:
+            func = partial(WithinContext._get_context, spatial_context=self)
+            context_dict = gdf_apply(
+                self.context_area,
+                func=func,
+                columns=["global_id"],
+                parallel=True,
+                pbar=verbose,
+                num_processes=num_processes,
+            ).to_dict()
 
         self.context = context_dict
+
+    def _get_context(
+        ix: int,
+        spatial_context: _SpatialContext,
+        fit_graph: bool = True,
+        fit_grid: bool = True,
+    ) -> Dict[str, Any]:
+        """Get the context dict of the given index."""
+        roi_area = spatial_context.roi(ix)
+        roi_cells = spatial_context.roi_cells(
+            ix, roi_area, predicate=spatial_context.predicate
+        )
+        context_dict = {"roi_area": roi_area}
+        context_dict["roi_cells"] = roi_cells
+
+        if fit_graph:
+            context_dict["roi_network"] = spatial_context.cell_neighbors(
+                roi_cells=roi_cells,
+                graph_type=spatial_context.graph_type,
+                thresh=spatial_context.dist_thresh,
+                predicate=spatial_context.predicate,
+            )
+
+        if fit_grid:
+            context_dict["roi_grid"] = grid_overlay(
+                gdf=roi_area,
+                patch_size=spatial_context.patch_size,
+                stride=spatial_context.stride,
+                pad=spatial_context.pad,
+                predicate=spatial_context.predicate,
+            )
+
+        return context_dict
 
     def cell_neighbors(
         self,

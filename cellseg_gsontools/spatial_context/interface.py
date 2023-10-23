@@ -1,11 +1,14 @@
-from typing import Optional, Tuple, Union
+from functools import partial
+from typing import Any, Dict, Optional, Tuple, Union
 
 import geopandas as gpd
 import pandas as pd
 from libpysal.weights import W, w_subset
 from tqdm import tqdm
 
+from ..apply import gdf_apply
 from ..graphs import fit_graph, get_border_crosser_links
+from ..grid import grid_overlay
 from ..utils import set_uid
 from ._base import _SpatialContext
 from .ops import get_interface_zones
@@ -24,6 +27,9 @@ class InterfaceContext(_SpatialContext):
         buffer_dist: int = 200,
         graph_type: str = "distband",
         dist_thresh: float = 50.0,
+        patch_size: Tuple[int, int] = (256, 256),
+        stride: Tuple[int, int] = (256, 256),
+        pad: int = None,
         roi_cell_type: Optional[str] = None,
         iface_cell_type: Optional[str] = None,
         predicate: str = "intersects",
@@ -68,6 +74,12 @@ class InterfaceContext(_SpatialContext):
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=50.0
             Distance threshold for the length of the network links.
+        patch_size : Tuple[int, int], default=(256, 256)
+            The size of the grid patches to be fitted on the context.
+        stride : Tuple[int, int], default=(256, 256)
+            The stride of the sliding window for grid patching.
+        pad : int, default=None
+            The padding to add to the bounding box on the grid.
         roi_cell_type : str, optional
             The cell type in the roi area. If None, all cells are returned.
         iface_cell_type : str, optional
@@ -152,6 +164,9 @@ class InterfaceContext(_SpatialContext):
             dist_thresh=dist_thresh,
             graph_type=graph_type,
             predicate=predicate,
+            patch_size=patch_size,
+            stride=stride,
+            pad=pad,
         )
         self.roi_cell_type = roi_cell_type
         self.interface_cell_type = iface_cell_type
@@ -182,10 +197,20 @@ class InterfaceContext(_SpatialContext):
         self.context_area2 = set_uid(self.context_area2, id_col="global_id")
         self.context_area2.set_crs(epsg=4328, inplace=True, allow_override=True)
 
-    def fit(self, verbose: bool = True, fit_graph: bool = True) -> None:
-        """Fit the interfaces.
+    def fit(
+        self,
+        verbose: bool = True,
+        fit_graph: bool = True,
+        fit_grid: bool = True,
+        parallel: bool = True,
+        num_processes: int = -1,
+    ) -> None:
+        """Fit the interface context.
 
-        NOTE: This only sets the `context_dict` attribute.
+        This sets the `self.context` class attribute.
+
+        NOTE: parallel=True is recommended for only very large gdfs.
+        For small gdfs, parallel=False is usually faster.
 
         Parameters
         ----------
@@ -193,6 +218,13 @@ class InterfaceContext(_SpatialContext):
                 Flag, whether to use tqdm pbar when creating the interfaces.
             fit_graph : bool, default=True
                 Flag, whether to fit the spatial weights networks for the context.
+            fit_grid : bool, default=True
+                Flag, whether to fit the a grid on the contextes.
+            parallel : bool, default=True
+                Flag, whether to create the interfaces in parallel.
+            num_processes : int, default=-1
+                The number of processes to use when parallel=True. If -1, this will use
+                all available cores.
 
         Created Attributes
         -------------------
@@ -225,48 +257,98 @@ class InterfaceContext(_SpatialContext):
                     cells inside the union of the roi and interface areas. This can be
                     used to extract graph features inside the union of the roi and
                     interface.
+                - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
+                    This can be used to extract grid features inside the roi.
+                - 'interface_grid' - gpd.GeoDataFrame of the grid fitted on the
+                    interface area. This can be used to extract grid features inside
+                    the interface.
         """
-        context_dict = {}
-        pbar = (
-            tqdm(self.context_area.index, total=self.context_area.shape[0])
-            if verbose
-            else self.context_area.index
-        )
-        for ix in pbar:
-            if verbose:
-                pbar.set_description(f"Processing interface area: {ix}")
-
-            # roi context
-            roi_area = self.roi(ix)
-            roi_cells = self.roi_cells(roi_area=roi_area, predicate=self.predicate)
-            context_dict[ix] = {"roi_area": roi_area}
-            context_dict[ix]["roi_cells"] = roi_cells
-
-            # interface context
-            iface_area = self.interface(roi_area=roi_area)
-            iface_cells = self.interface_cells(
-                iface_area=iface_area, predicate=self.predicate
+        if not parallel:
+            context_dict = {}
+            pbar = (
+                tqdm(self.context_area.index, total=self.context_area.shape[0])
+                if verbose
+                else self.context_area.index
             )
-            context_dict[ix]["interface_area"] = iface_area
-            context_dict[ix]["interface_cells"] = iface_cells
+            for ix in pbar:
+                if verbose:
+                    pbar.set_description(f"Processing interface area: {ix}")
 
-            # context networks
-            if fit_graph:
-                union_net, roi_net, inter_net, border_net = self.cell_neighbors(
-                    roi_cells=roi_cells,
-                    iface_cells=iface_cells,
-                    graph_type=self.graph_type,
-                    thresh=self.dist_thresh,
-                    roi_cell_type=self.roi_cell_type,
-                    iface_cell_type=self.interface_cell_type,
-                    predicate=self.predicate,
+                context_dict[ix] = InterfaceContext._get_context(
+                    ix=ix,
+                    spatial_context=self,
+                    fit_graph=fit_graph,
+                    fit_grid=fit_grid,
                 )
-                context_dict[ix]["roi_network"] = roi_net
-                context_dict[ix]["interface_network"] = inter_net
-                context_dict[ix]["full_network"] = union_net
-                context_dict[ix]["border_network"] = border_net
+        else:
+            func = partial(InterfaceContext._get_context, spatial_context=self)
+            context_dict = gdf_apply(
+                self.context_area,
+                func=func,
+                columns=["global_id"],
+                parallel=True,
+                pbar=verbose,
+                num_processes=num_processes,
+            ).to_dict()
 
         self.context = context_dict
+
+    @staticmethod
+    def _get_context(
+        ix: int,
+        spatial_context: _SpatialContext,
+        fit_graph: bool = True,
+        fit_grid: bool = True,
+    ) -> Dict[int, Any]:
+        """Get the context dict of the given index."""
+        roi_area = spatial_context.roi(ix)
+        roi_cells = spatial_context.roi_cells(
+            roi_area=roi_area, predicate=spatial_context.predicate
+        )
+        context_dict = {"roi_area": roi_area}
+        context_dict["roi_cells"] = roi_cells
+
+        # interface context
+        iface_area = spatial_context.interface(roi_area=roi_area)
+        iface_cells = spatial_context.interface_cells(
+            iface_area=iface_area, predicate=spatial_context.predicate
+        )
+        context_dict["interface_area"] = iface_area
+        context_dict["interface_cells"] = iface_cells
+
+        # context networks
+        if fit_graph:
+            union_net, roi_net, inter_net, border_net = spatial_context.cell_neighbors(
+                roi_cells=roi_cells,
+                iface_cells=iface_cells,
+                graph_type=spatial_context.graph_type,
+                thresh=spatial_context.dist_thresh,
+                roi_cell_type=spatial_context.roi_cell_type,
+                iface_cell_type=spatial_context.interface_cell_type,
+                predicate=spatial_context.predicate,
+            )
+            context_dict["roi_network"] = roi_net
+            context_dict["interface_network"] = inter_net
+            context_dict["full_network"] = union_net
+            context_dict["border_network"] = border_net
+
+        if fit_grid:
+            context_dict["roi_grid"] = grid_overlay(
+                gdf=roi_area,
+                patch_size=spatial_context.patch_size,
+                stride=spatial_context.stride,
+                pad=spatial_context.pad,
+                predicate=spatial_context.predicate,
+            )
+            context_dict["interface_grid"] = grid_overlay(
+                gdf=iface_area,
+                patch_size=spatial_context.patch_size,
+                stride=spatial_context.stride,
+                pad=spatial_context.pad,
+                predicate=spatial_context.predicate,
+            )
+
+        return context_dict
 
     def interface(
         self, ix: int = None, roi_area: gpd.GeoDataFrame = None

@@ -19,6 +19,9 @@ class PointClusterContext(WithinContext):
         min_area_size: Union[float, str] = None,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        patch_size: Tuple[int, int] = (256, 256),
+        stride: Tuple[int, int] = (256, 256),
+        pad: int = None,
         predicate: str = "intersects",
         silence_warnings: bool = True,
         n_jobs: int = -1,
@@ -73,6 +76,8 @@ class PointClusterContext(WithinContext):
             - 'roi_network' - libpysal.weights.W spatial weights network of the
                 cells inside the cluster areas. This can be used to extract graph
                 features inside the clusters.
+            - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
+                This can be used to extract grid features inside the roi.
 
         Raises
         ------
@@ -120,6 +125,9 @@ class PointClusterContext(WithinContext):
             min_area_size=min_area_size,
             dist_thresh=dist_thresh,
             graph_type=graph_type,
+            patch_size=patch_size,
+            stride=stride,
+            pad=pad,
             predicate=predicate,
             silence_warnings=silence_warnings,
         )
