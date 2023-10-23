@@ -6,6 +6,7 @@ import pandas as pd
 from libpysal.weights import W, w_subset, w_union
 
 from ..links import weights2gdf
+from ..plotting import plot_all
 from ..utils import set_uid
 from .ops import get_objs
 
@@ -256,8 +257,6 @@ class _SpatialContext:
         key: str,
         network_key: str = None,
         grid_key: str = None,
-        show_area: bool = True,
-        show_cells: bool = True,
         show_legends: bool = True,
         color: str = None,
         figsize: Tuple[int, int] = (12, 12),
@@ -270,7 +269,7 @@ class _SpatialContext:
         ----------
             key : str
                 The key of the context dictionary that contains the data to be plotted.
-                One of "roi_area", "roi_cells",
+                One of "roi_area", "interface_area",
             network_key : str, optional
                 The key of the context dictionary that contains the spatial weights to
                 be plotted. One of "roi_network", "full_network", "interface_network",
@@ -278,11 +277,6 @@ class _SpatialContext:
             grid_key : str, optional
                 The key of the context dictionary that contains the grid to be plotted.
                 One of "roi_grid", "interface_grid"
-            show_area : bool, default=True
-                Flag, whether to include the tissue areas in the plot.
-            show_cells : bool, default=True
-                Flag, whether to include the cells in the plot.
-
             show_legends : bool, default=True
                 Flag, whether to include legends for each in the plot.
             color : str, optional
@@ -317,81 +311,27 @@ class _SpatialContext:
         if key not in allowed:
             raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
-        _, ax = plt.subplots(figsize=figsize)
+        context_gdf = self.context2gdf(key)
 
-        if show_area:
-            ax = self.area_gdf.plot(
-                ax=ax,
-                column="class_name",
-                categorical=True,
-                legend=show_legends,
-                alpha=0.1,
-                legend_kwds={
-                    "loc": "upper center",
-                },
-                aspect=None,
-                **kwargs,
-            )
-            leg1 = ax.legend_
-
-        if show_cells:
-            ax = self.cell_gdf.plot(
-                ax=ax,
-                column="class_name",
-                categorical=True,
-                legend=show_legends,
-                legend_kwds={
-                    "loc": "upper right",
-                },
-                aspect=None,
-                **kwargs,
-            )
-            leg2 = ax.legend_
-
-        context = self.context2gdf(key)
-        ax = context.plot(
-            ax=ax,
-            color=color,
-            column="label",
-            alpha=0.7,
-            legend=False,
-            categorical=True,
-            aspect=None,
-            **kwargs,
-        )
-
+        grid_gdf = None
         if grid_key is not None:
             grid_gdf = self.context2gdf(grid_key)
-            grid_gdf.geometry = grid_gdf.boundary
-            ax = grid_gdf.plot(
-                ax=ax,
-                color=color,
-                alpha=0.7,
-                # column="class_name",
-                # cmap="jet",
-            )
 
+        network_gdf = None
         if network_key is not None:
             edge_kws = edge_kws or {}
             w = self.context2weights(network_key)
-            link_gdf = weights2gdf(self.cell_gdf, w)
-            ax = link_gdf.plot(
-                ax=ax,
-                column="class_name",
-                categorical=True,
-                legend=show_legends,
-                legend_kwds={"loc": "upper left"},
-                cmap="Paired",
-                **edge_kws,
-            )
-            leg3 = ax.legend_
+            network_gdf = weights2gdf(self.cell_gdf, w)
 
-        if show_legends:
-            if show_area:
-                ax.add_artist(leg1)
-            if show_cells:
-                ax.add_artist(leg2)
-            if network_key is not None:
-                ax.add_artist(leg3)
-
-        return ax
+        return plot_all(
+            cell_gdf=self.cell_gdf,
+            area_gdf=self.area_gdf,
+            context_gdf=context_gdf,
+            grid_gdf=grid_gdf,
+            network_gdf=network_gdf,
+            show_legends=show_legends,
+            color=color,
+            figsize=figsize,
+            edge_kws=edge_kws,
+            **kwargs,
+        )
