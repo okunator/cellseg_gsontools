@@ -116,7 +116,7 @@ def test_sweight_summary(cells_and_areas):
     ]
 
     s = SpatialWeightSummary(
-        iface_context.merge_weights("border_network"),
+        iface_context.context2weights("border_network"),
         iface_context.cell_gdf,
         classes=classes,
         prefix="n-",
