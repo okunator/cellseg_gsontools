@@ -1,10 +1,14 @@
+from functools import partial
 from itertools import combinations_with_replacement
 from typing import Dict, List, Tuple
 
 import geopandas as gpd
 from libpysal.weights import W
+from shapely.geometry import LineString, Point
 
-__all__ = ["link_counts", "get_link_combinations"]
+from .apply import gdf_apply
+
+__all__ = ["weights2gdf", "link_counts", "get_link_combinations"]
 
 
 def get_link_combinations(classes: Tuple[str, ...]) -> List[str]:
@@ -12,6 +16,122 @@ def get_link_combinations(classes: Tuple[str, ...]) -> List[str]:
     combos = ["-".join(t) for t in list(combinations_with_replacement(classes, 2))]
 
     return combos
+
+
+def _create_link(focal: Point, neighbor: Point) -> LineString:
+    """Create a LineString between two centroids.
+
+    Parameters
+    ----------
+    focal : Point
+        Focal centroid.
+    neighbor : Point
+        Neighbor centroid.
+
+    Returns
+    -------
+    LineString
+        LineString between the two centroids.
+    """
+    return LineString([focal, neighbor])
+
+
+def _get_link_class(
+    focal_class: str, neighbor_class: str, link_combos: List[str]
+) -> str:
+    """Get link class based on focal and neighbor class.
+
+    Parameters
+    ----------
+    focal_class : str
+        Focal class name.
+    neighbor_class : str
+        Neighbor class name.
+    link_combos : List[str]
+        List of all possible link class combinations.
+
+    Returns
+    -------
+    str
+        Link class name.
+    """
+    for link_class in link_combos:
+        class1, class2 = link_class.split("-")
+        if (focal_class == class1 and neighbor_class == class2) or (
+            focal_class == class2 and neighbor_class == class1
+        ):
+            return link_class
+    return None
+
+
+def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
+    """Convert a pysal weights object to a geopandas dataframe.
+
+    Add class names and node centroids to the dataframe.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        GeoDataFrame of the nodes.
+    w : W
+        PySAL weights object.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame of the links.
+
+    Example
+    -------
+    Convert a pysal weights object from InterfaceContext to a geopandas dataframe.
+    >>> from cellseg_gsontools.spatial_context import InterfaceContext
+    >>> from cellseg_gsontools.links import weights2gdf
+
+    >>> iface_context = InterfaceContext(
+            area_gdf=areas,
+            cell_gdf=cells,
+            top_labels="area_cin",
+            bottom_labels="areastroma",
+            silence_warnings=True,
+            verbose=True,
+            min_area_size=100000.0
+        )
+
+    >>> w = iface_context.context2weights("border_network")
+    >>> link_gdf = weights2gdf(cells, w)
+    """
+    # get all possible link class combinations
+    classes = gdf.class_name.unique().tolist()
+    link_combos = get_link_combinations(classes)
+
+    # init link gdf
+    link_gdf = w.to_adjlist(remove_symmetric=True, drop_islands=True).reset_index()
+
+    # add centroids and class names
+    link_gdf.loc[:, "focal_centroid"] = gdf.loc[link_gdf.focal].centroid.to_list()
+    link_gdf.loc[:, "neighbor_centroid"] = gdf.loc[link_gdf.neighbor].centroid.to_list()
+    link_gdf.loc[:, "focal_class_name"] = gdf.loc[link_gdf.focal].class_name.to_list()
+    link_gdf.loc[:, "neighbor_class_name"] = gdf.loc[
+        link_gdf.neighbor
+    ].class_name.to_list()
+
+    func = partial(_get_link_class, link_combos=link_combos)
+    link_gdf["class_name"] = gdf_apply(
+        link_gdf,
+        func=func,
+        columns=["focal_class_name", "neighbor_class_name"],
+        axis=1,
+    )
+
+    link_gdf["geometry"] = gdf_apply(
+        link_gdf,
+        func=_create_link,
+        columns=["focal_centroid", "neighbor_centroid"],
+        axis=1,
+    )
+    link_gdf = link_gdf.set_geometry("geometry")
+
+    return link_gdf
 
 
 def link_counts(
