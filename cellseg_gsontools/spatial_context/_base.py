@@ -168,6 +168,8 @@ class _SpatialContext:
     def context2gdf(self, key: str) -> gpd.GeoDataFrame:
         """Merge the GeoDataFrames of type `key` in the context into one geodataframe.
 
+        NOTE: Returns None if no data is found.
+
         Parameters
         ----------
             key : str
@@ -199,6 +201,9 @@ class _SpatialContext:
                     con.append(self.context[i][key][0])
                 else:
                     con.append(self.context[i][key])
+
+        if not con:
+            return
 
         gdf = pd.concat(
             con,
@@ -323,6 +328,8 @@ class _SpatialContext:
                 self.pad,
                 self.predicate,
             )
+            if grid_gdf is not None:
+                grid_gdf = grid_gdf.drop_duplicates("geometry")
 
         network_gdf = None
         if network_key is not None:
