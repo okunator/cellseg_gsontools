@@ -29,11 +29,6 @@ To add some extra capabilities, like, support for arrow files or abdscan cluster
 pip install cellseg-gsontools[all]
 ```
 
-For latest pre-release, use
-```shell
-pip install cellseg-gsontools==0.1.0a2
-```
-
 ## Usage
 
 The idea of `cellseg_gsontools` is to provide an easy-to-use API to extract features from `GeoJSON`-formatted cell/nuclei/tissue segmentation maps. This can be done via different spatial-analysis methods including:
@@ -174,152 +169,125 @@ local_diversity(
 
 Spatial Context classes combine cell segmentation maps with tissue area segmentation maps which helps to extract cells under different spatial contexts. The specific Spatial Context classes are the `InterfaceContext` `WithinContext`, and `PointClusterContext`. All the context-classes include a `.fit()`-method that builds the context. The `.plot()`-method can be used to plot figures where the different spatial context areas are highlighted.
 
+**Good to know:** The `.fit()`-method can be parallelized through pandarallel by passing in the argument `.fit(parallel=True)`.
 
-**WithinContext**
+**Context class methods**
+- `.fit()` - fits the contexts
+- `.plot()` - plots the contexts
+- `.context2gdf(key="some_context")` - converts the distinct contexts in to one single `gdf`.
+- `.context2weights(key="some_network")` - converts the distinct spatial weights objects of the context-class into one graph.
 
-Extracts cells from the `cell_gdf` within areas in `area_gdf`. Call `context2gdf`-method to retrieve the cells in a gdf. The different context that can be accessed with the `WithinContext`-class are `["roi_area", "roi_cells", "roi_network"]`.
+#### WithinContext
+
+The `WithinContext` extracts the cells from the `cell_gdf` within the areas in `area_gdf` that have the types specified in the `labels` argument.
+
+`context2gdf` accepts the following values for the `key`-argument:
+- `'roi_area'` - returns the roi areas of type `labels`
+- `'roi_cells'` - returns the cells inside the roi areas.
+- `'roi_grid'` - returns the grids fitted on top of the roi areas of type `labels`.
+
+`context2weights` accepts the following values for the `key`-argument
+- `'roi_network'` - returns the network fitted on the `roi_cells`.
+
+**Example**
+Extract the cells within the tumor areas. and plot the tumor regions and grids fitted over of them.
 
 ```python
 from cellseg_gsontools.spatial_context import WithinContext
+from cellseg_gsontools.utils import read_gdf
+
+area_gdf = read_gdf("area.feather")
+cell_gdf = read_gdf("cells.feather")
 
 within_context = WithinContext(
     area_gdf = area_gdf,
     cell_gdf = cell_gdf,
-    label = "area_cin", # Extract the cells that are within tissue areas of this type
+    labels = "area_cin", # Extract the cells that are within tissue areas of this type
     min_area_size = 100000.0 # discard areas smaller than this
 )
 
-within_context.fit()
-within_context.context2gdf("roi_cells")
+within_context.fit(parallel=False, fit_graph=False)
+within_context.plot(key="roi_area", grid_key="roi_grid")
 ```
+Processing roi area: 3: 100%|██████████| 4/4 [00:17<00:00,  4.48s/it]
+![border_network.png](/images/within_context.png)
 
-**InterfaceContext**
+#### InterfaceContext
 
-Returns border region between two types of area given. The different context that can be accessed with the `InterfaceContext`-class are:  `["roi_area", "roi_cells", "roi_network", "interface_cells", "interface_area", "interface_network", "border_network", "full_network"]`.
+The `InterfaceContext` returns the border regions between given areas. It works by buffering regions of type `top_labels` on top of regions of type `bottom_labels` and taking the intersection.
+
+`context2gdf` accepts the following values for the `key`-argument:
+- `'roi_area'` - returns the roi areas of type `top_labels`
+- `'roi_cells'` - returns the cells inside the roi areas.
+- `'roi_grid'` - returns the grids fitted on top of the roi areas of type `top_labels`.
+- `'interface_area'` - returns the interface areas between `top_labels` and `bottom_labels` areas.
+- `'interface_cells'` - returns the cells inside the interface areas.
+- `'interface_grid'` - returns the grids fitted on top of the interface areas.
+
+`context2weights` accepts the following values for the `key`-argument
+- `'roi_network'` - returns the network fitted on the `roi_cells`.
+- `'interface_network'` - returns the network fitted on top of the `interface_cells`
+- `'border_network'` - returns the network fitted on top of the cells that cross the interface border
+
+**Example**
+Extract and plot the tumor-stroma interface and the grid fitted on top of it and the links of the `border_network`.
 
 ```python
 from cellseg_gsontools.spatial_context import InterfaceContext
+from cellseg_gsontools.utils import read_gdf
+
+area_gdf = read_gdf("area.feather")
+cell_gdf = read_gdf("cells.feather")
 
 interface_context = InterfaceContext(
     area_gdf = area_gdf,
     cell_gdf = cell_gdf,
-    label1 = "area_cin",
-    label2 = "areastroma",
+    top_labels = "area_cin",
+    bottom_labels = "areastroma",
+    buffer_dist = 250.0, # breadth of the interface (in pixels)
     min_area_size = 100000.0 # discard areas smaller than this
 )
-interface_context.fit()
-interface_context.plot(key = "interface_area")
+interface_context.fit(parallel=False, fit_grid=True)
+interface_context.plot(key="interface_area", grid_key="interface_grid")
 ```
-![border_network.png](/images/border_network.png)
+Processing interface area: 3: 100%|██████████| 4/4 [00:01<00:00,  2.76it/s]
 
-Here we pick the border area between the neoplastic lesion and the stroma to study for example the immune cells on the border.
+![border_network.png](/images/interface_context.png)
+
 
 **PointClusterContext**
 
-Uses a given clustering algorithm to cluster cells of the given type. This can help to extract spatial clusters of cells.
+The `PointClusterContext` clusters the cells of type `labels` from the `cell_gdf` and draws a border around the spatial point clusters.
+
+`context2gdf` accepts the following values for the `key`-argument:
+- `'roi_area'` - returns the clustered areas that contains clusters of cells of type `labels`
+- `'roi_cells'` - returns the cells inside the clustered areas.
+- `'roi_grid'` - returns the grids fitted on top of the clustered areas.
+
+`context2weights` accepts the following values for the `key`-argument
+- `'roi_network'` - returns the network fitted on the `roi_cells`.
+
+**Example**
+Cluster the immune cells and plot the cluster regions and the different links between the cells.
 
 ```python
 from cellseg_gsontools.spatial_context import PointClusterContext
+from cellseg_gsontools.utils import read_gdf
+
+cell_gdf = read_gdf("cells.feather")
 
 cluster_context = PointClusterContext(
     cell_gdf = cell_gdf,
-    label = "inflammatory", # cells of this type will be clustered
-    cluster_method = "dbscan",
+    labels = "inflammatory", # cells of this type will be clustered
+    cluster_method = "dbscan", # clustering algorithm. One of: dbscan, adbscan, hbdscan, optics
     min_area_size = 5000.0, # dbscan param
-    min_samples = 70 # dbscan param
+    min_samples = 70, # dbscan param
+    graph_type="delaunay", # fit a delaunay graph over the clustered cellsm
+    dist_thresh=75.0, # drop links over 75 pixels long
 )
 
-cluster_context.fit()
-cluster_context.plot_weights("roi_network")
+cluster_context.fit(parallel=False, fit_graph=True, fit_grid=False)
+cluster_context.plot(key="roi_area", network_key="roi_network")
 ```
-![cluster_network.png](/images/inf_network.png)
-
-Here we clustered the immune cells on the slide and fitted a network on the cells that were within the alpha shape of the cluster.
-
-### Summary
-
-Summarize cells, areas, contexts, and intermediates of a slide into a tabular format for further analysis. `Summarise`-method must be called before using summary. The summaries can be grouped by any metadata or annotation column in the gdf. You can also use `filter_pattern` argument to choose the statistics (`mean`, `count` etc.) or groups used in summary output.
-
-**InstanceSummary**
-
-Easy way to calculate nuclei and area `metrics` for different classes of cells over the neoplastic areas of the tissue.
-
-```python
-neoplastic_areas = within_context.context2gdf("roi_cells")
-spatial_weights =  within_context.context2weights("interface_cells", threshold=75.0)
-
-lesion_summary = InstanceSummary(
-    neoplastic_areas,
-    metrics = ["area"],
-    groups = ["class_name"],
-    spatial_weights = spatial_weights,
-    prefix = "lesion-cells-"
-)
-lesion_summary.summarize()
-```
-
-|                                         | **sample_cells** |
-|----------------------------------------:|-----------------:|
-|     **lesion-cells-inflammatory-count** |           118.00 |
-|       **lesion-cells-neoplastic-count** |          4536.00 |
-|            **lesion-cells-total-count** |          4787.00 |
-| **lesion-cells-inflammatory-area-mean** |           241.17 |
-|   **lesion-cells-neoplastic-area-mean** |           532.79 |
-
-
-**SemanticSummary**
-
-Summarizes tissues areas. Here we summarize the areas of immune clusters in the while tissue.
-
-```python
-immune_cluster_areas = cluster_context.context2gdf("roi_area")
-immune_areas = SemanticSummary(
-    immune_cluster_areas,
-    metrics = ["area"],
-    prefix = "immune-clusters-"
-)
-immune_areas.summarize()
-```
-|                                                 | **sample_cells** |
-|------------------------------------------------:|-----------------:|
-| **immune-clusters-immune-clusters-total-count** |            42.00 |
-|                   **immune-clusters-area-mean** |       2558514.25 |
-
-
-**SpatialWeightSummary**
-
-Summarizes cell networks by counting edges between neighboring cells. Here we compute the cell-cell connections over the tumor-stroma interface. The cell-cell connections are defined by the spatial weights graph.
-
-```python
-interface_summary = SpatialWeightSummary(
-    iface_context.merge_weights("border_network"),
-    iface_context.cell_gdf,
-    classes= ["inflammatory", "neoplastic"],
-    prefix = "interface-"
-)
-interface_summary.summarize()
-```
-|                                         | **sample_cells** |
-|----------------------------------------:|-----------------:|
-| **interface-inflammatory-inflammatory** |               19 |
-|   **interface-inflammatory-neoplastic** |              153 |
-|     **interface-neoplastic-neoplastic** |              363 |
-
-
-**DistanceSummary**
-
-Summarizes distances between different areas. For example how many immune clusters are close to a neoplastic lesion.
-
-```python
-immune_proximities = DistanceSummary(
-    immune_cluster_areas,
-    neoplastic_areas,
-    groups = None,
-    prefix = "icc-close2lesion-",
-)
-immune_proximities.summarize()
-```
-|                              | **sample_cells** |
-|-----------------------------:|-----------------:|
-| **icc-close2lesion-0-count** |               34 |
-| **icc-close2lesion-1-count** |                8 |
+Processing roi area: 2: 100%|██████████| 3/3 [00:21<00:00,  7.14s/it]
+![border_network.png](/images/cluster_context.png)
