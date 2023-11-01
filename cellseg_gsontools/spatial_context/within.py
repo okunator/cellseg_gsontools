@@ -102,13 +102,8 @@ class WithinContext(_SpatialContext):
                 silence_warnings=True,
                 min_area_size=100000.0
             )
-        >>> within_context.fit()
-
-        >>> ix = 1
-        >>> ax = within_context.context_area.plot(figsize=(10, 10), alpha=0.5)
-        >>> within_context.context[ix]["roi_cells"].plot(
-                ax=ax, column="class_name", categorical=True, legend=True
-            )
+        >>> within_context.fit(parallel=False)
+        >>> >>> within_context.plot("roi_area", show_legends=True)
         <AxesSubplot: >
         """
         super().__init__(
@@ -130,7 +125,7 @@ class WithinContext(_SpatialContext):
         verbose: bool = True,
         fit_graph: bool = True,
         fit_grid: bool = True,
-        parallel: bool = True,
+        parallel: bool = False,
         num_processes: int = -1,
     ) -> None:
         """Fit the context.
@@ -148,7 +143,7 @@ class WithinContext(_SpatialContext):
                 Flag, whether to fit the spatial weights networks for the context.
             fit_grid : bool, default=True
                 Flag, whether to fit the a grid on the contextes.
-            parallel : bool, default=True
+            parallel : bool, default=False
                 Flag, whether to parallelize the context fitting with pandarallel
                 package.
             num_processes : int, default=-1

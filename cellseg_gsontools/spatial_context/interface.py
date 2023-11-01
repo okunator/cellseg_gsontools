@@ -133,7 +133,7 @@ class InterfaceContext(_SpatialContext):
         >>> from cellseg_gsontools.spatial_context import InterfaceContext
 
         >>> area_gdf = read_gdf("area.json")
-        >>> cell_gdf = pre_proc_gdf(read_gdf("cells.json"))
+        >>> cell_gdf = read_gdf("cells.json")
         >>> interface_context = InterfaceContext(
                 area_gdf=area_gdf,
                 cell_gdf=cell_gdf,
@@ -144,15 +144,8 @@ class InterfaceContext(_SpatialContext):
                 silence_warnings=True,
                 min_area_size=100000.0
             )
-        >>> interface_context.fit()
-
-        >>> ix = 1
-        >>> ax = interface_context.context[ix]["interface_area"].plot(
-                figsize=(10, 10), alpha=0.5
-            )
-        >>> interface_context.context[ix]["interface_cells"].plot(
-                ax=ax, column="class_name", categorical=True, legend=True
-            )
+        >>> interface_context.fit(parallel=False)
+        >>> interface_context.plot("interface_area", show_legends=True)
         <AxesSubplot: >
         """
         super().__init__(
@@ -202,7 +195,7 @@ class InterfaceContext(_SpatialContext):
         verbose: bool = True,
         fit_graph: bool = True,
         fit_grid: bool = True,
-        parallel: bool = True,
+        parallel: bool = False,
         num_processes: int = -1,
     ) -> None:
         """Fit the interface context.
@@ -220,7 +213,7 @@ class InterfaceContext(_SpatialContext):
                 Flag, whether to fit the spatial weights networks for the context.
             fit_grid : bool, default=True
                 Flag, whether to fit the a grid on the contextes.
-            parallel : bool, default=True
+            parallel : bool, default=False
                 Flag, whether to create the interfaces in parallel.
             num_processes : int, default=-1
                 The number of processes to use when parallel=True. If -1, this will use

@@ -96,15 +96,8 @@ class PointClusterContext(WithinContext):
                 cluster_method="adbscan",
                 silence_warnings=True,
             )
-        >>> cluster_context.fit()
-
-        >>> ix = 1
-        >>> ax = cluster_context.context[ix]["roi_area"].plot(
-                figsize=(10, 10), alpha=0.5
-            )
-        >>> cluster_context.context[ix]["roi_cells"].plot(
-                ax=ax, column="class_name", categorical=True, legend=True
-            )
+        >>> cluster_context.fit(parallel=False, fit_graph=False)
+        >>> cluster_context.plot("roi_area", show_legends=True)
         <AxesSubplot: >
         """
         cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
