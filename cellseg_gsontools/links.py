@@ -64,10 +64,14 @@ def _get_link_class(
     return None
 
 
-def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
+def weights2gdf(
+    gdf: gpd.GeoDataFrame, w: W, parallel: bool = False
+) -> gpd.GeoDataFrame:
     """Convert a pysal weights object to a geopandas dataframe.
 
     Add class names and node centroids to the dataframe.
+
+    NOTE: if w.neighbors is empty, this will return None.
 
     Parameters
     ----------
@@ -75,6 +79,8 @@ def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
         GeoDataFrame of the nodes.
     w : W
         PySAL weights object.
+    parallel : bool, default=False
+        Whether to use parallel processing.
 
     Returns
     -------
@@ -100,8 +106,11 @@ def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
     >>> w = iface_context.context2weights("border_network")
     >>> link_gdf = weights2gdf(cells, w)
     """
+    if not w.neighbors:
+        return
+
     # get all possible link class combinations
-    classes = gdf.class_name.unique().tolist()
+    classes = sorted(gdf.class_name.unique().tolist())
     link_combos = get_link_combinations(classes)
 
     # init link gdf
@@ -121,6 +130,7 @@ def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
         func=func,
         columns=["focal_class_name", "neighbor_class_name"],
         axis=1,
+        parallel=parallel,
     )
 
     link_gdf["geometry"] = gdf_apply(
@@ -128,6 +138,7 @@ def weights2gdf(gdf: gpd.GeoDataFrame, w: W) -> gpd.GeoDataFrame:
         func=_create_link,
         columns=["focal_centroid", "neighbor_centroid"],
         axis=1,
+        parallel=parallel,
     )
     link_gdf = link_gdf.set_geometry("geometry")
 

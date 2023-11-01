@@ -60,6 +60,20 @@ def set_uid(
     return gdf
 
 
+def _set_cols(property_dict: Dict):
+    return property_dict["properties"]
+
+
+def _set_geom(property_dict: Dict):
+    return property_dict["geometry"]
+
+
+def _set_gdf(gdf):
+    gdf["geometry"] = gdf_apply(gdf, _set_geom, columns=["features"], parallel=False)
+    gdf["properties"] = gdf_apply(gdf, _set_cols, columns=["features"], parallel=False)
+    return gdf
+
+
 def _get_class(property_dict: Dict) -> str:
     """Return the class of the gdf."""
     if "classification" in property_dict.keys():
@@ -116,7 +130,11 @@ def read_gdf(
     if format == ".json":
         df = pd.read_json(fname)
     elif format == ".geojson":
-        df = gpd.read_file(fname)
+        try:
+            df = gpd.read_file(fname)
+        except Exception:
+            df = pd.read_json(fname)
+            df = _set_gdf(df)
     elif format == ".feather":
         df = gpd.read_feather(fname)
     elif format == ".parquet":
