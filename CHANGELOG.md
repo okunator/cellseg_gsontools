@@ -1,4 +1,30 @@
 
+<a id='changelog-0.1.2'></a>
+# 0.1.2 — 2023-11-01
+
+## Deprecated
+
+- the `Pipeline` class was removed.
+
+## Features
+
+- Add `local_distances` function to compute the mean/median/sum of the distances between nodes in local neighborhoods
+
+- Add `weights2gdf` function to convert `libpysal.weights.W` into a `gpd.GeoDataFrame` with `geometry` column consisting of `shapely.geometry.LineStrings`
+- Add grid fitting to `_SpatialContext` classes. Allows a grid of patches to be overlayed on top of different context areas. The patch sizes and strides can be user defined.
+- Better looking links in `_SpatialContext.plot()`. Different link classes now represented with different colors.
+- Add `grid_classify` method to classify grids based on heuristics.
+
+## Performance
+- Support for parallel spatial context fitting: `_SpatialContext.fit(parallel=True)`
+
+## Fixes
+
+- Drop duplicates in `context2gdf`-class method
+
+- clarify the `apply_gdf` function api.
+- clarify the `_SpatialContext` api.
+
 <a id='changelog-0.1.1'></a>
 # 0.1.1 — 2023-10-13
 
