@@ -139,13 +139,13 @@ from cellseg_gsontools.diversity import local_diversity
 
 path = "/path/to/cells.json"
 gdf = read_gdf(path)
-gdf = set_uid(gdf, id_col="cell_id") # set a running index id column 'cell_id'
+gdf = set_uid(gdf, id_col="uid") # set a running index id column 'uid'
 
 # compute the eccentricity of the cells
 gdf = shape_metric(gdf, metrics = ["area"], parallel=True)
 
 # fit a spatial weights object
-w = fit_graph(gdf, type="delaunay", thresh=150, id_col="cell_id")
+w = fit_graph(gdf, type="delaunay", thresh=150, id_col="uid")
 
 # compute the heterogeneity of the neighborhood areas
 local_diversity(
