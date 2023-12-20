@@ -43,8 +43,9 @@ def fit_graph(
 
     Returns
     -------
-        libpysal.weights.W:
+        libpysal.weights.W or None:
             A libpysal spatial weights object, containing the neighbor graph data.
+            Returns None if the input gdf is empty.
 
     Examples
     --------
@@ -64,6 +65,9 @@ def fit_graph(
     )
     if type not in allowed:
         raise ValueError(f"Illegal graph type given. Got: {type}. Allowed: {allowed}.")
+
+    if gdf is None or gdf.empty:
+        return
 
     # warn if id_col is not provided
     _graph_warn(type, id_col)
