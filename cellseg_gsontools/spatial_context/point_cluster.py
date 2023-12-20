@@ -25,6 +25,9 @@ class PointClusterContext(WithinContext):
         predicate: str = "intersects",
         silence_warnings: bool = True,
         n_jobs: int = -1,
+        parallel: bool = False,
+        num_processes: int = -1,
+        backend: str = "geopandas",
         **kwargs,
     ) -> None:
         """Handle & extract dense point clusters from `cell_gdf`.
@@ -60,6 +63,17 @@ class PointClusterContext(WithinContext):
             Flag, whether to silence all the warnings.
         n_jobs : int,default=-1
             Number of jobs used when clustering. None=1, and -1 means all available.
+        parallel : bool, default=False
+            Flag, whether to parallelize the context fitting. If backend == "geopandas",
+            the parallelization is implemented with pandarallel package.
+            If backend == "spatialpandas", the parallelization is implemented with Dask
+        num_processes : int, default=-1
+            The number of processes to use when parallel=True. If -1, this will use
+            all the available cores.
+        backend : str, default="geopandas"
+            The backend to use for the spatial context. One of "geopandas",
+            "spatialpandas" "dask-geopandas". "spatialpandas" or "dask-geopandas" is
+            recommended for large gdfs.
         **kwargs:
             Arbitrary key-word arguments passed to the clustering methods.
 
@@ -123,6 +137,9 @@ class PointClusterContext(WithinContext):
             pad=pad,
             predicate=predicate,
             silence_warnings=silence_warnings,
+            parallel=parallel,
+            num_processes=num_processes,
+            backend=backend,
         )
 
     def run_clustering(

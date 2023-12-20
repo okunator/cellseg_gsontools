@@ -1,22 +1,29 @@
 from functools import partial
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import pandas as pd
-from libpysal.weights import W, w_subset
+import psutil
+from libpysal.weights import W, w_subset, w_union
 from tqdm import tqdm
 
-from ..apply import gdf_apply
-from ..graphs import fit_graph, get_border_crosser_links
-from ..grid import grid_overlay
-from ..utils import set_uid
-from ._base import _SpatialContext
-from .ops import get_interface_zones
+from cellseg_gsontools.apply import gdf_apply
+from cellseg_gsontools.graphs import fit_graph, get_border_crosser_links
+from cellseg_gsontools.grid import grid_overlay
+from cellseg_gsontools.links import weights2gdf
+from cellseg_gsontools.plotting import plot_all
+from cellseg_gsontools.spatial_context.backend import (
+    _SpatialContextDGP,
+    _SpatialContextGP,
+    _SpatialContextSP,
+)
+from cellseg_gsontools.utils import set_uid
 
 __all__ = ["InterfaceContext"]
 
 
-class InterfaceContext(_SpatialContext):
+class InterfaceContext:
     def __init__(
         self,
         area_gdf: gpd.GeoDataFrame,
@@ -30,10 +37,11 @@ class InterfaceContext(_SpatialContext):
         patch_size: Tuple[int, int] = (256, 256),
         stride: Tuple[int, int] = (256, 256),
         pad: int = None,
-        roi_cell_type: Optional[str] = None,
-        iface_cell_type: Optional[str] = None,
         predicate: str = "intersects",
         silence_warnings: bool = True,
+        parallel: bool = False,
+        num_processes: int = -1,
+        backend: str = "geopandas",
     ) -> None:
         """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
 
@@ -80,15 +88,22 @@ class InterfaceContext(_SpatialContext):
             The stride of the sliding window for grid patching.
         pad : int, default=None
             The padding to add to the bounding box on the grid.
-        roi_cell_type : str, optional
-            The cell type in the roi area. If None, all cells are returned.
-        iface_cell_type : str, optional
-            The cell type in the interface area. If None, all cells are returned.
         predicate : str, default="intersects"
             The predicate to use for the spatial join when extracting the ROI cells.
             See `geopandas.tools.sjoin`
         silence_warnings : bool, default=True
             Flag, whether to silence all the warnings related to creating the graphs.
+        parallel : bool, default=False
+            Flag, whether to parallelize the context fitting. If backend == "geopandas",
+            the parallelization is implemented with pandarallel package.
+            If backend == "spatialpandas", the parallelization is implemented with Dask
+        num_processes : int, default=-1
+            The number of processes to use when parallel=True. If -1, this will use
+            all the available cores.
+        backend : str, default="geopandas"
+            The backend to use for the spatial context. One of "geopandas",
+            "spatialpandas" "dask-geopandas". "spatialpandas" or "dask-geopandas" is
+            recommended for large gdfs.
 
         Attributes
         ----------
@@ -130,7 +145,7 @@ class InterfaceContext(_SpatialContext):
         --------
         Define an tumor-stroma interface context and plot the cells inside the
         interface area.
-        >>> from cellseg_gsontools.spatial_context import InterfaceContext
+        >>> from cellseg_gsontools.backend import InterfaceContext
 
         >>> area_gdf = read_gdf("area.json")
         >>> cell_gdf = read_gdf("cells.json")
@@ -148,62 +163,88 @@ class InterfaceContext(_SpatialContext):
         >>> interface_context.plot("interface_area", show_legends=True)
         <AxesSubplot: >
         """
-        super().__init__(
-            area_gdf=area_gdf,
-            cell_gdf=cell_gdf,
-            labels=top_labels,
-            min_area_size=min_area_size,
-            silence_warnings=silence_warnings,
-            dist_thresh=dist_thresh,
-            graph_type=graph_type,
-            predicate=predicate,
-            patch_size=patch_size,
-            stride=stride,
-            pad=pad,
-        )
-        self.roi_cell_type = roi_cell_type
-        self.interface_cell_type = iface_cell_type
-        self.buffer_dist = buffer_dist
-
-        # Get the bottom_label areas
-        # (top label areas are in base-class self.context_area)
-        if isinstance(bottom_labels, str):
-            # a little faster than .isin
-            self.context_area2 = area_gdf[area_gdf["class_name"] == bottom_labels]
+        self.backend_name = backend
+        if backend == "spatialpandas":
+            self.backend = _SpatialContextSP()
+        elif backend == "geopandas":
+            self.backend = _SpatialContextGP()
+        elif backend == "dask-geopandas":
+            self.backend = _SpatialContextDGP()
         else:
-            if len(bottom_labels) == 1:
-                self.context_area2 = area_gdf[
-                    area_gdf["class_name"] == bottom_labels[0]
-                ]
-            else:
-                self.context_area2 = area_gdf[
-                    area_gdf["class_name"].isin(bottom_labels)
-                ]
+            raise ValueError(
+                f"Unknown backend: {backend}. "
+                "Allowed: 'spatialpandas', 'geopandas', 'dask-geopandas'"
+            )
 
-        # drop areas smaller than min_area_size
-        if min_area_size is not None:
-            self.context_area2 = self.context_area2.loc[
-                self.context_area2.area >= min_area_size
-            ]
+        # check if the 'class_name' column is present
+        self.backend.check_columns(area_gdf, cell_gdf)
 
-        # set global_id and crs
+        # set up the attributes
+        self.buffer_dist = buffer_dist
+        self.min_area_size = min_area_size
+        self.dist_thresh = dist_thresh
+        self.graph_type = graph_type
+        self.patch_size = patch_size
+        self.stride = stride
+        self.pad = pad
+        self.silence_warnings = silence_warnings
+        self.top_labels = top_labels
+        self.bottom_labels = bottom_labels
+        self.predicate = predicate
+        self.parallel = parallel
+        self.num_processes = num_processes
+
+        # set to geocentric cartesian crs. (unit is metre not degree as by default)
+        # helps to avoid warning flooding
+        self.cell_gdf = set_uid(cell_gdf, id_col="global_id")
+        self.cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
+
+        # cache the full area gdf for plotting
+        self.area_gdf = area_gdf
+        self.area_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
+
+        # filter small areas and tissue types for the top and bottom labels
+        self.context_area = self.backend.filter_areas(
+            self.area_gdf, top_labels, min_area_size
+        )
+        self.context_area = set_uid(self.context_area, id_col="global_id")
+
+        self.context_area2 = self.backend.filter_areas(
+            self.area_gdf, bottom_labels, min_area_size
+        )
         self.context_area2 = set_uid(self.context_area2, id_col="global_id")
-        self.context_area2.set_crs(epsg=4328, inplace=True, allow_override=True)
+
+        # set up cpu count
+        if parallel:
+            self.cpus = (
+                psutil.cpu_count(logical=False)
+                if self.num_processes == -1 or self.num_processes is None
+                else self.num_processes
+            )
+        else:
+            self.cpus = 1
+
+        # convert the gdfs to the backend format
+        self.context_area = self.backend.convert_area_gdf(self.context_area)
+        self.context_area2 = self.backend.convert_area_gdf(self.context_area2)
+
+        self.cell_gdf = self.backend.convert_cell_gdf(
+            self.cell_gdf, parallel=parallel, n_partitions=self.cpus
+        )
+
+    def __getattr__(self, name):
+        """Get attribute."""
+        return self.backend.__getattribute__(name)
 
     def fit(
         self,
         verbose: bool = True,
         fit_graph: bool = True,
         fit_grid: bool = True,
-        parallel: bool = False,
-        num_processes: int = -1,
     ) -> None:
         """Fit the interface context.
 
         This sets the `self.context` class attribute.
-
-        NOTE: parallel=True is recommended for only very large gdfs.
-        For small gdfs, parallel=False is usually faster.
 
         Parameters
         ----------
@@ -213,11 +254,6 @@ class InterfaceContext(_SpatialContext):
                 Flag, whether to fit the spatial weights networks for the context.
             fit_grid : bool, default=True
                 Flag, whether to fit the a grid on the contextes.
-            parallel : bool, default=False
-                Flag, whether to create the interfaces in parallel.
-            num_processes : int, default=-1
-                The number of processes to use when parallel=True. If -1, this will use
-                all available cores.
 
         Created Attributes
         -------------------
@@ -256,252 +292,339 @@ class InterfaceContext(_SpatialContext):
                     interface area. This can be used to extract grid features inside
                     the interface.
         """
-        if not parallel:
+        get_context_func = partial(
+            InterfaceContext._get_context,
+            backend=self.backend,
+            context_area=self.context_area,
+            context_area2=self.context_area2,
+            cell_gdf=self.cell_gdf,
+            fit_network=fit_graph,
+            fit_grid=fit_grid,
+            predicate=self.predicate,
+            silence_warnings=self.silence_warnings,
+            graph_type=self.graph_type,
+            dist_thresh=self.dist_thresh,
+            patch_size=self.patch_size,
+            stride=self.stride,
+            pad=self.pad,
+            parallel=self.parallel,
+            num_processes=self.cpus,
+        )
+
+        if self.backend_name == "geopandas" and self.parallel:
+            # run in parallel
+            context_dict = gdf_apply(
+                self.context_area,
+                func=get_context_func,
+                columns=["global_id"],
+                parallel=True,
+                pbar=verbose,
+                num_processes=self.cpus,
+            ).to_dict()
+        else:
             context_dict = {}
             pbar = (
                 tqdm(self.context_area.index, total=self.context_area.shape[0])
                 if verbose
                 else self.context_area.index
             )
+
             for ix in pbar:
                 if verbose:
-                    pbar.set_description(f"Processing interface area: {ix}")
+                    pbar.set_description(f"Processing roi area: {ix}")
 
-                context_dict[ix] = InterfaceContext._get_context(
-                    ix=ix,
-                    spatial_context=self,
-                    fit_graph=fit_graph,
-                    fit_grid=fit_grid,
-                )
-        else:
-            func = partial(InterfaceContext._get_context, spatial_context=self)
-            context_dict = gdf_apply(
-                self.context_area,
-                func=func,
-                columns=["global_id"],
-                parallel=True,
-                pbar=verbose,
-                num_processes=num_processes,
-            ).to_dict()
+                if self.backend_name == "dask-geopandas" and self.parallel:
+                    get_context_func = partial(
+                        get_context_func, cell_gdf_dgp=self.backend.cell_gdf_dgp
+                    )
+
+                context_dict[ix] = get_context_func(ix=ix)
 
         self.context = context_dict
 
     @staticmethod
     def _get_context(
         ix: int,
-        spatial_context: _SpatialContext,
-        fit_graph: bool = True,
+        backend,
+        context_area: gpd.GeoDataFrame,
+        context_area2: gpd.GeoDataFrame,
+        cell_gdf: gpd.GeoDataFrame,
+        buffer_dist: int = 200,
+        fit_network: bool = True,
         fit_grid: bool = True,
+        predicate: str = "intersects",
+        silence_warnings: bool = True,
+        graph_type: str = "distband",
+        dist_thresh: float = 75.0,
+        patch_size: Tuple[int, int] = (256, 256),
+        stride: Tuple[int, int] = (256, 256),
+        pad: int = None,
+        parallel: bool = False,
+        num_processes: int = None,
+        **kwargs,
     ) -> Dict[int, Any]:
         """Get the context dict of the given index."""
-        roi_area = spatial_context.roi(ix)
-        roi_cells = spatial_context.roi_cells(
-            roi_area=roi_area, predicate=spatial_context.predicate
+        roi_area: gpd.GeoDataFrame = backend.roi(ix=ix, context_area=context_area)
+        roi_cells: gpd.GeoDataFrame = backend.roi_cells(
+            roi_area=roi_area,
+            cell_gdf=cell_gdf,
+            predicate=predicate,
+            silence_warnings=silence_warnings,
+            parallel=parallel,
+            num_processes=num_processes,
+            **kwargs,
         )
         context_dict = {"roi_area": roi_area}
         context_dict["roi_cells"] = roi_cells
 
         # interface context
-        iface_area = spatial_context.interface(roi_area=roi_area)
-        iface_cells = spatial_context.interface_cells(
-            iface_area=iface_area, predicate=spatial_context.predicate
+        iface_area: gpd.GeoDataFrame = backend.interface(
+            top_roi_area=roi_area, bottom_gdf=context_area2, buffer_dist=buffer_dist
+        )
+        iface_cells: gpd.GeoDataFrame = backend.roi_cells(
+            roi_area=iface_area,
+            cell_gdf=cell_gdf,
+            predicate=predicate,
+            silence_warnings=silence_warnings,
+            parallel=parallel,
+            num_processes=num_processes,
+            **kwargs,
         )
         context_dict["interface_area"] = iface_area
         context_dict["interface_cells"] = iface_cells
 
         # context networks
-        if fit_graph:
-            net_u, net_r, net_i, net_b = spatial_context.cell_neighbors(
-                roi_cells=roi_cells,
-                iface_cells=iface_cells,
-                graph_type=spatial_context.graph_type,
-                thresh=spatial_context.dist_thresh,
-                roi_cell_type=spatial_context.roi_cell_type,
-                iface_cell_type=spatial_context.interface_cell_type,
-                predicate=spatial_context.predicate,
-            )
-            context_dict["roi_network"] = net_r
-            context_dict["interface_network"] = net_i
-            context_dict["full_network"] = net_u
-            context_dict["border_network"] = net_b
+        if fit_network:
+            if (iface_cells is None or iface_cells.empty) or (
+                roi_cells is None or roi_cells.empty
+            ):
+                context_dict["full_network"] = None
+                context_dict["roi_network"] = None
+                context_dict["interface_network"] = None
+                context_dict["border_network"] = None
+            else:
+                # merge the gdfs to compute union weights
+                cells = pd.concat([roi_cells, iface_cells], sort=False)
+
+                # fit the union graph
+                context_dict["full_network"] = fit_graph(
+                    cells,
+                    type=graph_type,
+                    id_col="global_id",
+                    thresh=dist_thresh,
+                    use_index=False,
+                )
+
+                # Get the weight subsets
+                context_dict["roi_network"] = w_subset(
+                    context_dict["full_network"],
+                    sorted(set(roi_cells.global_id)),
+                    silence_warnings=silence_warnings,
+                )
+                context_dict["interface_network"] = w_subset(
+                    context_dict["full_network"],
+                    sorted(set(iface_cells.global_id)),
+                    silence_warnings=silence_warnings,
+                )
+
+                # get the weights 4 the nodes that have links crossing the iface border
+                context_dict["border_network"] = get_border_crosser_links(
+                    union_weights=context_dict["full_network"],
+                    roi_weights=context_dict["roi_network"],
+                    iface_weights=context_dict["interface_network"],
+                    only_border_crossers=True,
+                )
 
         if fit_grid:
             context_dict["roi_grid"] = grid_overlay(
                 gdf=roi_area,
-                patch_size=spatial_context.patch_size,
-                stride=spatial_context.stride,
-                pad=spatial_context.pad,
-                predicate=spatial_context.predicate,
+                patch_size=patch_size,
+                stride=stride,
+                pad=pad,
+                predicate=predicate,
             )
             context_dict["interface_grid"] = grid_overlay(
                 gdf=iface_area,
-                patch_size=spatial_context.patch_size,
-                stride=spatial_context.stride,
-                pad=spatial_context.pad,
-                predicate=spatial_context.predicate,
+                patch_size=patch_size,
+                stride=stride,
+                pad=pad,
+                predicate=predicate,
             )
 
         return context_dict
 
-    def interface(
-        self, ix: int = None, roi_area: gpd.GeoDataFrame = None
-    ) -> gpd.GeoDataFrame:
-        """Get an interface area of index `ix`.
+    def context2weights(self, key: str) -> W:
+        """Merge the networks of type `key` in the context into one spatial weights obj.
 
         Parameters
         ----------
-            ix : int, default=None
-                The index of the interface area. I.e., the ith interface area.
-                If None, `roi_area` must be given.
-            roi_area : gpd.GeoDataFrame, default=None
-                The roi area. If None, `ix` must be given.
+            key : str
+                The key of the context dictionary that contains the spatial
+                weights to be merged. One of "roi_network", "full_network",
+                "interface_network", "border_network"
+
+        Returns
+        -------
+            libpysal.weights.W:
+                A spatial weights object containing all the distinct networks
+                in the context.
         """
-        # check to not compute the roi area twice
-        if not isinstance(roi_area, gpd.GeoDataFrame):
-            if (roi_area, ix) == (None, None):
-                raise ValueError("Either `ix` or `roi_area` must be given.")
-            roi_area: gpd.GeoDataFrame = self.roi(ix)
+        allowed = ("roi_network", "full_network", "interface_network", "border_network")
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
-        # Get the intersection of the roi and the area of type `label2`
-        iface = get_interface_zones(
-            buffer_area=roi_area,
-            areas=self.context_area2,
-            buffer_dist=self.buffer_dist,
-        )
+        cxs = list(self.context.items())
+        wout = W({0: [0]})
+        for _, c in cxs:
+            w = c[key]
+            if isinstance(w, W):
+                wout = w_union(wout, w, silence_warnings=True)
 
-        # If there are many interfaces, dissolve them into one
-        if len(iface) > 1:
-            iface = iface.dissolve().set_geometry("geometry")
+        # remove self loops
+        wout = w_subset(wout, list(wout.neighbors.keys())[1:], silence_warnings=True)
 
-        return iface
+        return wout
 
-    def interface_cells(
-        self,
-        ix: int = None,
-        iface_area: gpd.GeoDataFrame = None,
-        predicate: str = "intersects",
-    ) -> gpd.GeoDataFrame:
-        """Get the cells within the interface area.
+    def context2gdf(self, key: str) -> gpd.GeoDataFrame:
+        """Merge the GeoDataFrames of type `key` in the context into one geodataframe.
+
+        NOTE: Returns None if no data is found.
 
         Parameters
         ----------
-            ix : int, default=None
-                The index of the interface area. I.e., the ith interface area.
-                If None, `iface_area` must be given.
-            iface_area : gpd.GeoDataFrame, default=None
-                The interface area. If None, `ix` must be given.
-            predicate : str, default="within"
-                The predicate to use for the spatial join when extracting the ROI cells.
+            key : str
+                The key of the context dictionary that contains the data to be converted
+                to gdf. One of "roi_area", "roi_cells", "interface_area", "roi_grid",
+                "interface_grid", "interface_cells", "roi_interface_cells"
 
         Returns
         -------
             gpd.GeoDataFrame:
-                The cells within the interface area.
+                Geo dataframe containing all the objects
         """
-        # check to not compute the iface area twice
-        if not isinstance(iface_area, gpd.GeoDataFrame):
-            if (iface_area, ix) == (None, None):
-                raise ValueError("Either `ix` or `iface_area` must be given.")
-            iface_area: gpd.GeoDataFrame = self.interface(ix)
+        allowed = (
+            "roi_area",
+            "roi_cells",
+            "interface_area",
+            "roi_grid",
+            "interface_grid",
+            "interface_cells",
+            "roi_interface_cells",
+        )
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
-        if iface_area is None or iface_area.empty:
+        con = []
+        for i in self.context.keys():
+            if self.context[i][key] is not None:
+                if isinstance(self.context[i][key], tuple):
+                    con.append(self.context[i][key][0])
+                else:
+                    con.append(self.context[i][key])
+
+        if not con:
             return
 
-        return self.get_objs_within(iface_area, self.cell_gdf, predicate=predicate)
+        gdf = pd.concat(
+            con,
+            keys=[i for i in self.context.keys() if self.context[i][key] is not None],
+        )
+        gdf = gdf.explode(ignore_index=True)
 
-    def cell_neighbors(
+        return (
+            gdf.reset_index(level=0, names="label")
+            .drop_duplicates("geometry")
+            .set_geometry("geometry")
+        )
+
+    def plot(
         self,
-        ix: int = None,
-        roi_cells: gpd.GeoDataFrame = None,
-        iface_cells: gpd.GeoDataFrame = None,
-        thresh: float = 100.0,
-        graph_type: str = "delaunay",
-        roi_cell_type: Optional[str] = None,
-        iface_cell_type: Optional[str] = None,
-        only_border_crossers: bool = True,
-        predicate: str = "intersects",
-    ) -> Tuple[W, W, W, W]:
-        """Get the spatial weight objects of the cells for different spatial contexts.
-
-        Gets the spatial weights of the cells:
-            - inside the roi
-            - inside the interface areas.
-            - inside the union of the roi and interface areas.
-            - crossing the border of the roi and interface areas.
+        key: str,
+        network_key: str = None,
+        grid_key: str = None,
+        show_legends: bool = True,
+        color: str = None,
+        figsize: Tuple[int, int] = (12, 12),
+        edge_kws: Dict[str, Any] = None,
+        **kwargs,
+    ) -> plt.Axes:
+        """Plot the slide with areas, cells, and interface areas highlighted.
 
         Parameters
         ----------
-            ix : int
-                The index of the interface area. I.e., the ith interface area.
-            thresh : float, default=75.0
-                The distance threshold for the spatial weights.
-            graph_type : str, default="delaunay"
-                The type of the graph used to get the spatial weights.
-            roi_cell_type : str, optional
-                The cell type in the roi area. If None, all cells are returned.
-            iface_cell_type : str, optional
-                The cell type in the interface area. If None, all cells are returned.
-            only_border_crossers : bool, default=True
-                Whether to return only the links that cross the border between the ROI
-                and interface areas.
-            predicate : str, default="intersects"
-                The predicate to use for the spatial join when extracting the ROI and
-                interface cells.
+            key : str
+                The key of the context dictionary that contains the data to be plotted.
+                One of "roi_area", "interface_area",
+            network_key : str, optional
+                The key of the context dictionary that contains the spatial weights to
+                be plotted. One of "roi_network", "full_network", "interface_network",
+                "border_network"
+            grid_key : str, optional
+                The key of the context dictionary that contains the grid to be plotted.
+                One of "roi_grid", "interface_grid"
+            show_legends : bool, default=True
+                Flag, whether to include legends for each in the plot.
+            color : str, optional
+                A color for the interfaces or rois, Ignored if `show_legends=True`.
+            figsize : Tuple[int, int], default=(12, 12)
+                Size of the figure.
+            **kwargs
+                Extra keyword arguments passed to the `plot` method of the
+                geodataframes.
 
         Returns
         -------
-            Tuple[W, W, W, W]:
-            The spatial weights of the cells:
-            - inside the union of the roi and interface areas.
-            - inside the roi
-            - inside the interface areas.
-            - crossing the border of the roi and interface areas.
+            AxesSubplot
+
+        Examples
+        --------
+        Plot the slide with cluster areas and cells highlighted
+        >>> from cellseg_gsontools.spatial_context import PointClusterContext
+
+        >>> cells = read_gdf("cells.feather")
+        >>> clusters = PointClusterContext(
+        ...     cell_gdf=cells,
+        ...     label="inflammatory",
+        ...     cluster_method="optics",
+        ... )
+
+        >>> clusters.fit(verbose=False)
+        >>> clusters.plot("roi_area", show_legends=True, aspect=1)
+        <AxesSubplot: >
         """
-        # get roi cells
-        rcells = roi_cells
-        if not isinstance(roi_cells, gpd.GeoDataFrame):
-            if ix is not None:
-                rcells = self.roi_cells(ix, predicate=predicate)
+        allowed = ("roi_area", "interface_area")
+        if key not in allowed:
+            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
-        # get interface cells
-        icells = iface_cells
-        if not isinstance(iface_cells, gpd.GeoDataFrame):
-            if ix is not None:
-                icells = self.interface_cells(ix, predicate=predicate)
+        context_gdf = self.context2gdf(key)
 
-        # return None if neither roi or iface gdf has no cells
-        if (icells is None or icells.empty) or (rcells is None or rcells.empty):
-            return None, None, None, None
+        grid_gdf = None
+        if grid_key is not None:
+            grid_gdf = grid_overlay(
+                context_gdf,
+                self.patch_size,
+                self.stride,
+                self.pad,
+                self.predicate,
+            )
+            if grid_gdf is not None:
+                grid_gdf = grid_gdf.drop_duplicates("geometry")
 
-        # subset only specific cell types if needed
-        if roi_cell_type is not None:
-            rcells = rcells[rcells["class_name"] == roi_cell_type]
-        if iface_cell_type is not None:
-            icells = icells[icells["class_name"] == iface_cell_type]
+        network_gdf = None
+        if network_key is not None:
+            edge_kws = edge_kws or {}
+            w = self.context2weights(network_key)
+            network_gdf = weights2gdf(self.cell_gdf, w)
 
-        # merge the gdfs to compute union weights
-        cells = pd.concat([rcells, icells], sort=False)
-
-        # fit the union graph
-        union_weights = fit_graph(
-            cells,
-            type=graph_type,
-            id_col="global_id",
-            thresh=thresh,
-            use_index=False,
+        return plot_all(
+            cell_gdf=self.cell_gdf.set_geometry("geometry"),
+            area_gdf=self.area_gdf.set_geometry("geometry"),
+            context_gdf=context_gdf,
+            grid_gdf=grid_gdf,
+            network_gdf=network_gdf,
+            show_legends=show_legends,
+            color=color,
+            figsize=figsize,
+            edge_kws=edge_kws,
+            **kwargs,
         )
-
-        # Get the weight subsets
-        roi_weights = w_subset(
-            union_weights, sorted(set(rcells.global_id)), silence_warnings=True
-        )
-        iface_weights = w_subset(
-            union_weights, sorted(set(icells.global_id)), silence_warnings=True
-        )
-
-        # get the weights for the nodes that have links crossing the interface border
-        border_weights = get_border_crosser_links(
-            union_weights, roi_weights, iface_weights, only_border_crossers
-        )
-
-        return union_weights, roi_weights, iface_weights, border_weights
