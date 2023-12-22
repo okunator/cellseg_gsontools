@@ -1,4 +1,20 @@
 
+<a id='changelog-0.1.3'></a>
+# 0.1.3 — 2023-12-22
+
+## Breaking changes
+
+- The SpatialContext API now takes params: `parallel` and `num_processes` in the class constructor instead of the `fit()`-method.
+
+## Features
+
+- Added support for new backends (python libraries) to compute the spatial joins in the `SpatialContext`-classes. This allows for more efficient computation of the spatial joins especially for very large tissue areas.
+- Backends:
+    - dask-geopandas
+    - spatialpandas
+
+- Add `h3` hexgrid support in grid fitting for spatial context classes
+
 <a id='changelog-0.1.2'></a>
 # 0.1.2 — 2023-11-01
 
