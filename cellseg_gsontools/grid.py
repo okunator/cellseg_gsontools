@@ -2,18 +2,106 @@ from functools import partial
 from typing import Any, Callable, Tuple, Union
 
 import geopandas as gpd
-from shapely.geometry import Polygon, box
+import pandas as pd
+import shapely
+from shapely.geometry import Polygon, box, mapping
 
 from cellseg_gsontools.apply import gdf_apply
+from cellseg_gsontools.utils import get_holes, lonlat_to_xy, xy_to_lonlat
 
-__all__ = ["bounding_box", "get_grid", "grid_overlay"]
+try:
+    import h3
+
+    _has_h3 = True
+except ImportError:
+    _has_h3 = False
+
+__all__ = [
+    "bounding_box",
+    "get_grid",
+    "grid_overlay",
+    "hexgrid_overlay",
+    "fit_spatial_grid",
+]
+
+
+def fit_spatial_grid(
+    gdf: gpd.GeoDataFrame, grid_type: str = "square", **kwargs
+) -> gpd.GeoDataFrame:
+    """Quick wrapper to fit either a hex or square grid to a GeoDataFrame.
+
+    NOTE: Hex grid only works for a gdf containing single polygon.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        GeoDataFrame to fit grid to.
+    grid_type : str, optional
+        Type of grid to fit, by default "square".
+    **kwargs
+        Keyword arguments to pass to grid fitting functions.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Fitted grid.
+    """
+    allowed = ["square", "hex"]
+    if grid_type not in allowed:
+        raise ValueError(f"grid_type must be one of {allowed}, got {grid_type}")
+
+    if grid_type == "square":
+        grid = grid_overlay(gdf, **kwargs)
+    else:
+        if not _has_h3:
+            raise ImportError("h3 package not installed. Install with `pip install h3`")
+        grid = hexgrid_overlay(gdf, **kwargs)
+
+    return grid
+
+
+def hexgrid_overlay(
+    gdf: gpd.GeoDataFrame, resolution: int = 9, to_lonlat: bool = True
+) -> gpd.GeoDataFrame:
+    """Fit a h grid on top of a gdf.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        GeoDataFrame to fit grid to.
+    resolution : int, optional
+        H3 resolution, by default 9.
+    to_lonlat : bool, optional
+        Whether to convert to lonlat coordinates, by default True.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Fitted h3 hex grid.
+    """
+    if gdf.empty or gdf is None:
+        return
+
+    orig_crs = gdf.crs
+
+    poly = shapely.force_2d(gdf.unary_union)
+    if isinstance(poly, Polygon):
+        hexagons = poly2hexgrid(poly, resolution=resolution, to_lonlat=to_lonlat)
+    else:
+        output = []
+        for geom in poly.geoms:
+            hexes = poly2hexgrid(geom, resolution=resolution, to_lonlat=to_lonlat)
+            output.append(hexes)
+        hexagons = pd.concat(output)
+
+    return hexagons.set_crs(orig_crs, inplace=True, allow_override=True)
 
 
 def grid_overlay(
     gdf: gpd.GeoDataFrame,
-    patch_size: Tuple[int, int],
-    stride: Tuple[int, int],
-    pad: int = None,
+    patch_size: Tuple[int, int] = (256, 256),
+    stride: Tuple[int, int] = (256, 256),
+    pad: int = 20,
     predicate: str = "intersects",
 ) -> gpd.GeoDataFrame:
     """Overlay a grid to the given areas of a GeoDataFrame.
@@ -51,6 +139,65 @@ def grid_overlay(
     grid = grid.sjoin(gdf, predicate=predicate)
 
     return grid.drop_duplicates("geometry")
+
+
+def poly2hexgrid(
+    poly: Polygon, resolution: int = 9, to_lonlat: bool = True
+) -> gpd.GeoDataFrame:
+    """Convert a shapely Polygon to a h3 hexagon grid.
+
+    Parameters
+    ----------
+    poly : Polygon
+        Polygon to convert.
+    resolution : int, optional
+        H3 resolution, by default 9.
+    to_lonlat : bool, optional
+        Whether to convert to lonlat coordinates, by default True.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame of h3 hexagons.
+    """
+    x, y = poly.exterior.coords.xy
+    if to_lonlat:
+        x, y = xy_to_lonlat(x, y)
+    holes = get_holes(poly, to_lonlat=to_lonlat)
+
+    poly = Polygon(list(zip(x, y)), holes=holes)
+    hexs = h3.polyfill(mapping(poly), resolution, geo_json_conformant=True)
+
+    # to gdf
+    hex_polys = gpd.GeoSeries(list(map(polygonise, hexs)), index=hexs, crs=4326)
+    hex_polys = gpd.GeoDataFrame(geometry=hex_polys)
+
+    return hex_polys
+
+
+def polygonise(hex_id: str, to_cartesian: bool = True) -> Polygon:
+    """Polygonise a h3 hexagon.
+
+    Parameters
+    ----------
+    hex_id : str
+        H3 hexagon id.
+    to_cartesian : bool, optional
+        Whether to convert to cartesian coordinates, by default True.
+
+    Returns
+    -------
+    Polygon
+        Polygonised h3 hexagon.
+    """
+    poly = Polygon(h3.h3_to_geo_boundary(hex_id, geo_json=True))
+
+    if to_cartesian:
+        lon, lat = poly.exterior.coords.xy
+        x, y = lonlat_to_xy(lon, lat)
+        poly = Polygon(list(zip(x, y)))
+
+    return poly
 
 
 def bounding_box(gdf: gpd.GeoDataFrame, pad: int = 0) -> gpd.GeoDataFrame:
@@ -120,9 +267,9 @@ def _get_margins(
 
 def get_grid(
     gdf: gpd.GeoDataFrame,
-    patch_size: Tuple[int, int],
-    stride: Tuple[int, int],
-    pad: int = None,
+    patch_size: Tuple[int, int] = (256, 256),
+    stride: Tuple[int, int] = (256, 256),
+    pad: int = 20,
 ) -> gpd.GeoDataFrame:
     """Get a grid of patches from a GeoDataFrame.
 
