@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from cellseg_gsontools.apply import gdf_apply
 from cellseg_gsontools.graphs import fit_graph, get_border_crosser_links
-from cellseg_gsontools.grid import grid_overlay
+from cellseg_gsontools.grid import fit_spatial_grid
 from cellseg_gsontools.links import weights2gdf
 from cellseg_gsontools.plotting import plot_all
 from cellseg_gsontools.spatial_context.backend import (
@@ -34,9 +34,11 @@ class InterfaceContext:
         buffer_dist: int = 200,
         graph_type: str = "distband",
         dist_thresh: float = 50.0,
+        grid_type: str = "square",
         patch_size: Tuple[int, int] = (256, 256),
         stride: Tuple[int, int] = (256, 256),
         pad: int = None,
+        resolution: int = 9,
         predicate: str = "intersects",
         silence_warnings: bool = True,
         parallel: bool = False,
@@ -82,12 +84,20 @@ class InterfaceContext:
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=50.0
             Distance threshold for the length of the network links.
+        grid_type : str, default="square"
+            The type of the grid to be fitted on the interfaces. One of "square",
+            "hex".
         patch_size : Tuple[int, int], default=(256, 256)
-            The size of the grid patches to be fitted on the context.
+            The size of the grid patches to be fitted on the context. This is used when
+            `grid_type='square'`.
         stride : Tuple[int, int], default=(256, 256)
-            The stride of the sliding window for grid patching.
+            The stride of the sliding window for grid patching. This is used when
+            `grid_type='square'`.
         pad : int, default=None
-            The padding to add to the bounding box on the grid.
+            The padding to add to the bounding box on the grid. This is used when
+            `grid_type='square'`.
+        resolution : int, default=9
+            The resolution of the h3 hex grid. This is used when `grid_type='hex'`.
         predicate : str, default="intersects"
             The predicate to use for the spatial join when extracting the ROI cells.
             See `geopandas.tools.sjoin`
@@ -193,6 +203,8 @@ class InterfaceContext:
         self.predicate = predicate
         self.parallel = parallel
         self.num_processes = num_processes
+        self.grid_type = grid_type
+        self.resolution = resolution
 
         # set to geocentric cartesian crs. (unit is metre not degree as by default)
         # helps to avoid warning flooding
@@ -300,6 +312,8 @@ class InterfaceContext:
             cell_gdf=self.cell_gdf,
             fit_network=fit_graph,
             fit_grid=fit_grid,
+            grid_type=self.grid_type,
+            resolution=self.resolution,
             predicate=self.predicate,
             silence_warnings=self.silence_warnings,
             graph_type=self.graph_type,
@@ -352,6 +366,8 @@ class InterfaceContext:
         buffer_dist: int = 200,
         fit_network: bool = True,
         fit_grid: bool = True,
+        grid_type: str = "square",
+        resolution: int = 9,
         predicate: str = "intersects",
         silence_warnings: bool = True,
         graph_type: str = "distband",
@@ -436,19 +452,21 @@ class InterfaceContext:
                 )
 
         if fit_grid:
-            context_dict["roi_grid"] = grid_overlay(
-                gdf=roi_area,
-                patch_size=patch_size,
-                stride=stride,
-                pad=pad,
-                predicate=predicate,
+            if grid_type == "hex":
+                kwargs = {"resolution": resolution}
+            else:
+                kwargs = {
+                    "patch_size": patch_size,
+                    "stride": stride,
+                    "pad": pad,
+                    "predicate": predicate,
+                }
+
+            context_dict["roi_grid"] = fit_spatial_grid(
+                gdf=roi_area, grid_type=grid_type, **kwargs
             )
-            context_dict["interface_grid"] = grid_overlay(
-                gdf=iface_area,
-                patch_size=patch_size,
-                stride=stride,
-                pad=pad,
-                predicate=predicate,
+            context_dict["interface_grid"] = fit_spatial_grid(
+                gdf=iface_area, grid_type=grid_type, **kwargs
             )
 
         return context_dict
@@ -600,15 +618,7 @@ class InterfaceContext:
 
         grid_gdf = None
         if grid_key is not None:
-            grid_gdf = grid_overlay(
-                context_gdf,
-                self.patch_size,
-                self.stride,
-                self.pad,
-                self.predicate,
-            )
-            if grid_gdf is not None:
-                grid_gdf = grid_gdf.drop_duplicates("geometry")
+            grid_gdf = self.context2gdf(grid_key)
 
         network_gdf = None
         if network_key is not None:

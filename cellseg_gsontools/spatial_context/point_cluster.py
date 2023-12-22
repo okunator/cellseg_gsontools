@@ -19,9 +19,11 @@ class PointClusterContext(WithinContext):
         min_area_size: Union[float, str] = None,
         graph_type: str = "delaunay",
         dist_thresh: float = 100.0,
+        grid_type: str = "square",
         patch_size: Tuple[int, int] = (256, 256),
         stride: Tuple[int, int] = (256, 256),
         pad: int = None,
+        resolution: int = 9,
         predicate: str = "intersects",
         silence_warnings: bool = True,
         n_jobs: int = -1,
@@ -56,6 +58,20 @@ class PointClusterContext(WithinContext):
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=100.0
             Distance threshold for the length of the network links.
+        grid_type : str, default="square"
+            The type of the grid to be fitted on the clusters. One of "square",
+            "hex".
+        patch_size : Tuple[int, int], default=(256, 256)
+            The size of the grid patches to be fitted on the context. This is used when
+            `grid_type='square'`.
+        stride : Tuple[int, int], default=(256, 256)
+            The stride of the sliding window for grid patching. This is used when
+            `grid_type='square'`.
+        pad : int, default=None
+            The padding to add to the bounding box on the grid. This is used when
+            `grid_type='square'`.
+        resolution : int, default=9
+            The resolution of the h3 hex grid. This is used when `grid_type='hex'`.
         predicate : str, default="within"
             The predicate to use for the spatial join when extracting the ROI cells.
             See `geopandas.tools.sjoin`
@@ -140,6 +156,8 @@ class PointClusterContext(WithinContext):
             parallel=parallel,
             num_processes=num_processes,
             backend=backend,
+            grid_type=grid_type,
+            resolution=resolution,
         )
 
     def run_clustering(
