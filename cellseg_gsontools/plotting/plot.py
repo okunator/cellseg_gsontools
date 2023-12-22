@@ -90,7 +90,6 @@ def plot_all(
     color: str = None,
     figsize: Tuple[int, int] = (12, 12),
     grid_cmap: str = None,
-    grid_col: str = "class_name",
     grid_n_bins: int = None,
     edge_kws: Dict[str, Any] = None,
     **kwargs,
@@ -117,8 +116,6 @@ def plot_all(
         Size of the figure.
     grid_cmap : str, default="jet"
         The colormap to use for the grid. If `grid_gdf` is None, this is ignored.
-    grid_col : str, default="class_name"
-        The column to use for the grid. If `grid_gdf` is None, this is ignored.
     grid_n_bins : int, default=None
         The number of bins to use for the grid. If `grid_gdf` is None, this is ignored.
     **kwargs
@@ -190,8 +187,6 @@ def plot_all(
             ax.add_artist(leg3)
 
     if grid_gdf is not None:
-        grid_gdf.geometry = grid_gdf.boundary
-
         cmap = None
         if color is not None or grid_cmap is not None:
             if grid_n_bins is not None:
@@ -199,15 +194,11 @@ def plot_all(
             else:
                 cmap = get_cmap(grid_cmap)
 
-        ax = grid_gdf.plot(
+        ax = grid_gdf.boundary.plot(
             ax=ax,
-            column=grid_col,
             color=color,
             alpha=0.7,
             cmap=cmap,
-            categorical=True,
-            legend=show_legends,
-            legend_kwds={"loc": "lower left"},
         )
         if show_legends:
             leg4 = ax.legend_
