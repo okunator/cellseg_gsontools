@@ -239,8 +239,8 @@ def eccentricity(polygon: Polygon, **kwargs) -> float:
     """
     mrr = polygon.minimum_rotated_rectangle.exterior.coords
     major_ax, minor_ax = axis_len(mrr)
-
-    return minor_ax / major_ax
+    eccentricity = np.sqrt(1 - (minor_ax) ** 2 / (major_ax**2))
+    return eccentricity
 
 
 def fractal_dimension(polygon: Polygon, **kwargs) -> float:
