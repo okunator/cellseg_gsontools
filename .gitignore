@@ -3,6 +3,7 @@ tests_cuda.yml
 ignore
 .DS_store
 slides
+.ruff_cache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
