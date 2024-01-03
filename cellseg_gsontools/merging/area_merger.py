@@ -106,8 +106,10 @@ class AreaMerger(BaseGSONMerger):
         # merge the tiles
         self.annots = self._merge(verbose=verbose, parallel=parallel)
 
-        msg = f"{format}-format" if out_fn is not None else "`self.annots`"
-        print(f"Saving the merged geojson file: {out_fn} to {msg}")
+        if verbose:
+            msg = f"{format}-format" if out_fn is not None else "`self.annots`"
+            print(f"Saving the merged geojson file: {out_fn} to {msg}")
+
         if out_fn is not None:
             # save the merged geojson
             gdf_to_file(self.annots, out_fn, format)
@@ -151,12 +153,7 @@ class AreaMerger(BaseGSONMerger):
 
             # loop over the nodes/polygons in the subgraph
             polygons_to_merge = []
-            for i, (node, neighs) in enumerate(sub_w.neighbors.items()):
-                if verbose:
-                    pbar.set_postfix_str(
-                        f"merging polygon: {i}/{len(sub_w.neighbors)}."
-                    )
-
+            for node, neighs in sub_w.neighbors.items():
                 # if an island, buffer the polygon
                 if not neighs:
                     poly = gdf.loc[node].geometry.buffer(2)
@@ -198,9 +195,6 @@ class AreaMerger(BaseGSONMerger):
         """Merge the polygons in one class."""
         in_gdf = set_uid(in_gdf)
 
-        if verbose:
-            print(f"fit contiguity graph to {cl} polygons")
-
         w = fuzzy_contiguity(
             in_gdf,
             buffering=True,
@@ -216,8 +210,6 @@ class AreaMerger(BaseGSONMerger):
 
     def _merge(self, verbose: bool = True, parallel: bool = True) -> gpd.GeoDataFrame:
         """Merge the polygons in by class."""
-        if verbose:
-            print(f"read input files from {self.in_dir.as_posix()}:")
         gdf = self._read_files_to_gdf(self.files)
         classes = gdf["class_name"].unique()
 

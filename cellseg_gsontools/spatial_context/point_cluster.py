@@ -17,7 +17,7 @@ class PointClusterContext(WithinContext):
         labels: Union[Tuple[str, ...], str],
         cluster_method: str = "dbscan",
         min_area_size: Union[float, str] = None,
-        graph_type: str = "delaunay",
+        graph_type: str = "distband",
         dist_thresh: float = 100.0,
         grid_type: str = "square",
         patch_size: Tuple[int, int] = (256, 256),
@@ -53,7 +53,7 @@ class PointClusterContext(WithinContext):
             The minimum area of the clusters that are kept. All the clusters in the
             `area_gdf` that are larger are kept than `min_area_size`. If None, all the
             cluster areas are kept.
-        graph_type : str, default="delaunay"
+        graph_type : str, default="distband"
             The type of the graph to be fitted to the cells inside interfaces. One of:
             "delaunay", "distband", "relative_nhood", "knn"
         dist_thresh : float, default=100.0

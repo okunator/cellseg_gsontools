@@ -31,7 +31,7 @@ __all__ = ["_SpatialContextSP"]
 
 class _SpatialContextSP(_SpatialBackend):
     def __init__(self) -> None:
-        """Create a spatialpandas spatial context class.."""
+        """Create a spatialpandas spatial context class."""
         if not _has_spatialpandas:
             raise ImportError(
                 "spatialpandas is required to use the spatial context backend."

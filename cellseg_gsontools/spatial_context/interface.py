@@ -315,6 +315,7 @@ class InterfaceContext:
             grid_type=self.grid_type,
             resolution=self.resolution,
             predicate=self.predicate,
+            buffer_dist=self.buffer_dist,
             silence_warnings=self.silence_warnings,
             graph_type=self.graph_type,
             dist_thresh=self.dist_thresh,

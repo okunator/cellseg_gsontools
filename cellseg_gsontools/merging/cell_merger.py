@@ -133,9 +133,9 @@ class CellMerger(BaseGSONMerger):
 
         # merge the tiles
         self.annots = self._merge(verbose=verbose)
-
-        msg = f"{format}-format" if out_fn is not None else "`self.annots`"
-        print(f"Saving the merged geojson file: {out_fn} to {msg}")
+        if verbose:
+            msg = f"{format}-format" if out_fn is not None else "`self.annots`"
+            print(f"Saving the merged geojson file: {out_fn} to {msg}")
 
         if out_fn is not None:
             # save the merged geojson

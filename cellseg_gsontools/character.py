@@ -115,7 +115,7 @@ def local_character(
     >>> local_character(
     ...     gdf,
     ...     spatial_weights=w_dist,
-    ...     val_col="[eccentricity", "area"],
+    ...     val_col=["eccentricity", "area"],
     ...     reduction=["mean", "median"],
     ...     weight_by_area=True
     ... )

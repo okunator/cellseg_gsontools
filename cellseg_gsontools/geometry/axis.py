@@ -24,7 +24,7 @@ def axis_len(
 
     Parameters
     ----------
-        polygon : Polygon
+        mrr : Polygon
             Input minimum rotated rectangle of a shapely polygon object.
         which : str, default="both"
             One of ("both", "major", "minor").
