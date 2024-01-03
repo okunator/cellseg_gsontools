@@ -141,3 +141,5 @@ launch.json
 
 # other
 lightning_logs
+
+/.quarto/
