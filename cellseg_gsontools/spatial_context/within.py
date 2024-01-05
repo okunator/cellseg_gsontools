@@ -24,6 +24,86 @@ __all__ = ["WithinContext"]
 
 
 class WithinContext:
+    """Handle & extract cells from `cell_gdf` within the ROIs of `area_gdf`.
+
+    Note:
+        `area_gdf` and `cell_gdf` have to contain a column named 'class_name'
+
+    Parameters:
+        area_gdf (gpd.GeoDataFrame):
+            A geo dataframe that contains large tissue area polygons enclosing
+            the smaller cellular objects in `cell_gdf`.
+        cell_gdf (gpd.GeoDataFrame):
+            A geo dataframe that contains small cellular objects that are
+            enclosed by larger tissue areas in `area_gdf`.
+        labels (Union[Tuple[str, ...], str]):
+            The class name(s) of the areas of interest. The objects within
+            these areas are extracted. E.g. "cancer" or "stroma".
+        min_area_size (float or str, optional):
+            The minimum area of the objects that are kept. All the objects in
+            the `area_gdf` that are larger are kept than `min_area_size`. If
+            None, all the areas are kept. Defaults to None.
+        graph_type (str):
+            The type of the graph to be fitted to the cells inside interfaces.
+            One of: "delaunay", "distband", "relative_nhood", "knn".
+        dist_thresh (float):
+            Distance threshold for the length of the network links.
+        grid_type (str):
+            The type of the grid to be fitted on the roi areas. One of:
+            "square", "hex".
+        patch_size (Tuple[int, int]):
+            The size of the grid patches to be fitted on the context. This is
+            used when `grid_type='square'`.
+        stride (Tuple[int, int]):
+            The stride of the sliding window for grid patching. This is used
+            when `grid_type='square'`.
+        pad (int):
+            The padding to add to the bounding box on the grid. This is used
+            when `grid_type='square'`.
+        resolution (int):
+            The resolution of the h3 hex grid. This is used when
+            `grid_type='hex'`.
+        predicate (str):
+            The predicate to use for the spatial join when extracting the ROI
+            cells. See `geopandas.tools.sjoin`
+        silence_warnings (bool):
+            Flag, whether to silence all the warnings.
+        parallel (bool):
+            Flag, whether to parallelize the context fitting. If
+            `backend == "geopandas"`, the parallelization is implemented with
+            `pandarallel` package. If `backend == "spatialpandas"`, or
+            `backend == "dask-geopandas"` the parallelization is implemented
+             with Dask library.
+        num_processes (int):
+            The number of processes to use when parallel=True. If -1, this
+            will use all the available cores.
+        backend (str):
+            The backend to use for the spatial context. One of "geopandas",
+            "spatialpandas" "dask-geopandas". "spatialpandas" or
+            "dask-geopandas" is recommended for gdfs that may contain huge
+            polygons.
+
+    Attributes:
+        context (Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]):
+            A nested dict that contains dicts for each of the distinct ROIs
+            of type `label`. The keys of the outer dict are the indices of
+            these areas. The inner dicts contain the keys:
+
+            - `roi_area`- `gpd.GeoDataFrame`: the roi area. Roi area is the
+                    tissue area of type `label`.
+            - `roi_cells` - `gpd.GeoDataFrame`: the cells that are contained
+                    inside the `roi_area`.
+            - `roi_network` - `libpysal.weights.W`: spatial weights network of
+                    the cells inside the `roi_area`. This can be used to extract
+                    graph features inside the roi_.
+            - `roi_grid` - `gpd.GeoDataFrame`: of the grid fitted on the `roi_area`.
+                    This can be used to extract grid features inside the `roi_area`.
+
+    Raises:
+        ValueError:
+            if `area_gdf` or `cell_gdf` don't contain 'class_name' column.
+    """
+
     def __init__(
         self,
         area_gdf: gpd.GeoDataFrame,
@@ -43,103 +123,6 @@ class WithinContext:
         num_processes: int = -1,
         backend: str = "geopandas",
     ) -> None:
-        """Handle & extract cells from the `cell_gdf` within areas in `area_gdf`.
-
-        Within context is simply a spatial context where the cells are within the areas
-        of type `label`. I.e. You can manage objects easily within distinct areas of
-        type `label`.
-
-        Parameters
-        ----------
-        area_gdf : gpd.GeoDataFrame
-            A geo dataframe that contains large tissue area polygons enclosing
-            smaller cellular objects in `cell_gdf`.
-        cell_gdf : gpd.GeoDataFrame
-            A geo dataframe that contains small cellular objectss that are enclosed
-            by larger tissue areas in `area_gdf`.
-        labels : Union[Tuple[str, ...], str]
-            The class name(s) of the areas of interest. The objects within these areas
-            are extracted. E.g. "cancer" or "stroma".
-        min_area_size : float or str, optional
-            The minimum area of the objects that are kept. All the objects in the
-            `area_gdf` that are larger are kept than `min_area_size`. If None, all the
-            areas are kept.
-        graph_type : str, default="distband"
-            The type of the graph to be fitted to the cells inside interfaces. One of:
-            "delaunay", "distband", "relative_nhood", "knn"
-        dist_thresh : float, default=100.0
-            Distance threshold for the length of the network links.
-        grid_type : str, default="square"
-            The type of the grid to be fitted on the roi areas. One of "square",
-            "hex".
-        patch_size : Tuple[int, int], default=(256, 256)
-            The size of the grid patches to be fitted on the context. This is used when
-            `grid_type='square'`.
-        stride : Tuple[int, int], default=(256, 256)
-            The stride of the sliding window for grid patching. This is used when
-            `grid_type='square'`.
-        pad : int, default=None
-            The padding to add to the bounding box on the grid. This is used when
-            `grid_type='square'`.
-        resolution : int, default=9
-            The resolution of the h3 hex grid. This is used when `grid_type='hex'`.
-        predicate : str, default="intersects"
-            The predicate to use for the spatial join when extracting the ROI cells.
-            See `geopandas.tools.sjoin`
-        silence_warnings : bool, default=True
-            Flag, whether to silence all the warnings.
-        parallel : bool, default=False
-            Flag, whether to parallelize the context fitting. If backend == "geopandas",
-            the parallelization is implemented with pandarallel package.
-            If backend == "spatialpandas", the parallelization is implemented with Dask
-        num_processes : int, default=-1
-            The number of processes to use when parallel=True. If -1, this will use
-            all the available cores.
-        backend : str, default="geopandas"
-            The backend to use for the spatial context. One of "geopandas",
-            "spatialpandas" "dask-geopandas". "spatialpandas" or "dask-geopandas" is
-            recommended for large gdfs.
-
-        Attributes
-        ----------
-        context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, DistanceBand]]]
-            A nested dict that contains dicts for each of the distinct areas of type
-            `label`. The keys of the outer dict are the indices of these areas.
-
-            The inner dicts contain the unique areas of type `label` and have the keys:
-            - 'roi_area' - gpd.GeoDataFrame of the roi area. Roi area is the tissue
-                area of type `label`.
-            - 'roi_cells' - gpd.GeoDataFrame of the cells that are contained inside
-                the roi area.
-            - 'roi_network' - libpysal.weights.W spatial weights network of the
-                cells inside the roi area. This can be used to extract graph
-                features inside the roi.
-            - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
-                This can be used to extract grid features inside the roi.
-
-        Raises
-        ------
-            ValueError if `area_gdf` or `cell_gdf` don't contain 'class_name' column.
-
-        Examples
-        --------
-        Define a within context and plot the cells inside a specific roi area.
-
-        >>> from cellseg_gsontools.spatial_context import WithinContextSP
-
-        >>> area_gdf = read_gdf("area.json")
-        >>> cell_gdf = read_gdf("cells.json")
-        >>> within_context = WithinContextSP(
-                area_gdf=area_gdf,
-                cell_gdf=cell_gdf,
-                labels=["area_cin"],
-                silence_warnings=True,
-                min_area_size=100000.0
-            )
-        >>> within_context.fit(parallel=False)
-        >>> >>> within_context.plot("roi_area", show_legends=True)
-        <AxesSubplot: >
-        """
         self.backend_name = backend
         if backend == "spatialpandas":
             self.backend = _SpatialContextSP()
@@ -171,7 +154,7 @@ class WithinContext:
         self.grid_type = grid_type
         self.resolution = resolution
 
-        # set to geocentric cartesian crs. (unit is metre not degree as by default)
+        # set to geocentric cartesian crs. (unit is metre by default)
         # helps to avoid warning flooding
         self.cell_gdf = set_uid(cell_gdf, id_col="global_id")
         self.cell_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
@@ -180,7 +163,7 @@ class WithinContext:
         self.area_gdf = area_gdf
         self.area_gdf.set_crs(epsg=4328, inplace=True, allow_override=True)
 
-        # filter small areas and tissue types of interest for the tissue context gdf
+        # filter small areas and tissue types of interest for the tissue gdf
         self.context_area = self.backend.filter_areas(
             self.area_gdf, labels, min_area_size
         )
@@ -217,32 +200,31 @@ class WithinContext:
 
         This sets the `self.context` attribute.
 
-        Parameters
-        ----------
-        verbose : bool, default=True
-            Flag, whether to use tqdm pbar when creating the interfaces.
-        fit_graph : bool, default=True
-            Flag, whether to fit the spatial weights networks for the context.
-        fit_grid : bool, default=True
-            Flag, whether to fit the a grid on the contextes.
+        Parameters:
+            verbose (bool):
+                Flag, whether to use tqdm pbar when creating the interfaces.
+            fit_graph (bool):
+                Flag, whether to fit the spatial weights networks for the
+                context.
+            fit_grid (bool):
+                Flag, whether to fit the a grid on the contextes.
 
-        Created Attributes
-        ------------------
-        context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]
-        A nested dict that contains dicts for each of the distinct regions of
-        interest areas. The keys of the outer dict are the indices of these
-        areas.
+        Examples:
+            Define a within context and plot the cells inside a specific ROI.
 
-        The inner dicts contain the unique interfaces and have the keys:
-        - 'roi_area' - gpd.GeoDataFrame of the roi area. Roi area is the tissue
-            area of type `label`
-        - 'roi_cells' - gpd.GeoDataFrame of the cells that are contained inside
-            the roi area.
-        - 'roi_network' - libpysal.weights.W spatial weights network of the
-            cells inside the roi area. This can be used to extract graph
-            features inside the roi.
-        - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
-                This can be used to extract grid features inside the roi.
+            >>> from cellseg_gsontools.spatial_context import WithinContext
+            >>> area_gdf = read_gdf("area.json")
+            >>> cell_gdf = read_gdf("cells.json")
+            >>> within_context = WithinContext(
+            ...     area_gdf=area_gdf,
+            ...     cell_gdf=cell_gdf,
+            ...     labels=["area_cin"],
+            ...     silence_warnings=True,
+            ...     min_area_size=100000.0,
+            ... )
+            >>> within_context.fit()
+            >>> within_context.plot("roi_area", show_legends=True)
+            <AxesSubplot: >
         """
         get_context_func = partial(
             WithinContext._get_context,
@@ -358,22 +340,19 @@ class WithinContext:
         return context_dict
 
     def context2weights(self, key: str) -> W:
-        """Merge the networks of type `key` in the context into one spatial weights obj.
+        """Merge the networks of type `key` into one spatial weights obj.
 
-        Parameters
-        ----------
-            key : str
+        Parameters:
+            key (str):
                 The key of the context dictionary that contains the spatial
-                weights to be merged. One of "roi_network", "full_network",
-                "interface_network", "border_network"
+                weights to be merged. One of "roi_network"
 
-        Returns
-        -------
+        Returns:
             libpysal.weights.W:
                 A spatial weights object containing all the distinct networks
                 in the context.
         """
-        allowed = ("roi_network", "full_network", "interface_network", "border_network")
+        allowed = ("roi_network",)
         if key not in allowed:
             raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
 
@@ -385,35 +364,33 @@ class WithinContext:
                 wout = w_union(wout, w, silence_warnings=True)
 
         # remove self loops
-        wout = w_subset(wout, list(wout.neighbors.keys())[1:], silence_warnings=True)
+        wout = w_subset(
+            wout,
+            list(wout.neighbors.keys())[1:],
+            silence_warnings=True,
+        )
 
         return wout
 
     def context2gdf(self, key: str) -> gpd.GeoDataFrame:
-        """Merge the GeoDataFrames of type `key` in the context into one geodataframe.
+        """Merge the GeoDataFrames of type `key` into one geodataframe.
 
-        NOTE: Returns None if no data is found.
+        Note:
+            Returns None if no data is found.
 
-        Parameters
-        ----------
-            key : str
-                The key of the context dictionary that contains the data to be converted
-                to gdf. One of "roi_area", "roi_cells", "interface_area", "roi_grid",
-                "interface_grid", "interface_cells", "roi_interface_cells"
+        Parameters:
+            key (str):
+                The key of the context dictionary that contains the data to be
+                converted to gdf. One of "roi_area", "roi_cells", "roi_grid",
 
-        Returns
-        -------
+        Returns:
             gpd.GeoDataFrame:
                 Geo dataframe containing all the objects
         """
         allowed = (
             "roi_area",
             "roi_cells",
-            "interface_area",
             "roi_grid",
-            "interface_grid",
-            "interface_cells",
-            "roi_interface_cells",
         )
         if key not in allowed:
             raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
@@ -452,48 +429,45 @@ class WithinContext:
         edge_kws: Dict[str, Any] = None,
         **kwargs,
     ) -> plt.Axes:
-        """Plot the slide with areas, cells, and interface areas highlighted.
+        """Plot the context with areas, cells, and ROIs highlighted.
 
-        Parameters
-        ----------
-            key : str
+        Parameters:
+            key (str):
                 The key of the context dictionary that contains the data to be plotted.
                 One of "roi_area",
-            network_key : str, optional
+            network_key (str):
                 The key of the context dictionary that contains the spatial weights to
                 be plotted. One of "roi_network"
-            grid_key : str, optional
+            grid_key (str):
                 The key of the context dictionary that contains the grid to be plotted.
                 One of "roi_grid"
-            show_legends : bool, default=True
+            show_legends (bool):
                 Flag, whether to include legends for each in the plot.
-            color : str, optional
+            color (str):
                 A color for the interfaces or rois, Ignored if `show_legends=True`.
-            figsize : Tuple[int, int], default=(12, 12)
+            figsize (Tuple[int, int]):
                 Size of the figure.
-            **kwargs
+            **kwargs (Dict[str, Any])]):
                 Extra keyword arguments passed to the `plot` method of the
                 geodataframes.
 
-        Returns
-        -------
+        Returns:
             AxesSubplot
 
-        Examples
-        --------
-        Plot the slide with cluster areas and cells highlighted
-        >>> from cellseg_gsontools.spatial_context import PointClusterContext
+        Examples:
+            Plot the context with stromal areas highlighted.
 
-        >>> cells = read_gdf("cells.feather")
-        >>> clusters = PointClusterContext(
-        ...     cell_gdf=cells,
-        ...     label="inflammatory",
-        ...     cluster_method="optics",
-        ... )
-
-        >>> clusters.fit(verbose=False)
-        >>> clusters.plot("roi_area", show_legends=True, aspect=1)
-        <AxesSubplot: >
+            >>> from cellseg_gsontools.spatial_context import WithinContext
+            >>> cells = read_gdf("cells.feather")
+            >>> areas = read_gdf("areas.feather")
+            >>> stroma = WithinContext(
+            ...     cell_gdf=cells,
+            ...     area_gdf=areas,
+            ...     labels="stroma",
+            ... )
+            >>> stroma.fit(verbose=False)
+            >>> stroma.plot("roi_area", show_legends=True)
+            <AxesSubplot: >
         """
         allowed = "roi_area"
         if key != allowed:

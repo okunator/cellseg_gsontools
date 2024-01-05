@@ -40,24 +40,24 @@ def get_objs_sp(
 ) -> GeoDataFrame:
     """Get objects within the given area.
 
-    NOTE: This function is a wrapper around the spatialpandas sjoin function.
-    NOTE: Optionally parallel execution with Dask.
+    Note:
+        This function is a wrapper around the spatialpandas sjoin function.
+    Note:
+        Optionally parallel execution with Dask.
 
-    Parameters
-    ----------
-    area : gpd.GeoDataFrame
-        The area of interest.
-    objects : gpd.GeoDataFrame
-        The objects to filter.
-    silence_warnings : bool, default=False
-        Whether to silence warnings.
-    predicate : str, default="intersects"
-        The spatial predicate to use for the spatial join. One of "intersects"
+    Parameters:
+        area (gpd.GeoDataFrame):
+            The area of interest.
+        objects (gpd.GeoDataFrame):
+            The objects to filter.
+        silence_warnings (bool):
+            Whether to silence warnings.
+        predicate (str):
+            The spatial predicate to use for the spatial join. One of "intersects"
 
-    Returns
-    -------
-    GeoDataFrame
-        The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
+    Returns:
+        spatialpandas.GeoDataFrame:
+            The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
     """
     if not _has_spatialpandas:
         raise ImportError(
@@ -98,23 +98,22 @@ def get_objs_dgp(
 ) -> GeoDataFrame:
     """Get objects within the given area.
 
-    NOTE: This function is a wrapper around the dask_geopandass sjoin function.
+    Note:
+        This function is a wrapper around the dask_geopandas sjoin function.
 
-    Parameters
-    ----------
-    area : gpd.GeoDataFrame
-        The area of interest.
-    objects : dask_geopandas.core.GeoDataFrame
-        The objects to filter.
-    silence_warnings : bool, default=False
-        Whether to silence warnings.
-    predicate : str, default="intersects"
-        The spatial predicate to use for the spatial join. One of "intersects"
+    Parameters:
+        area (gpd.GeoDataFrame):
+            The area of interest.
+        objects (dask_geopandas.core.GeoDataFrame):
+            The objects to filter.
+        silence_warnings (bool):
+            Whether to silence warnings.
+        predicate (str):
+            The spatial predicate to use for the spatial join. One of "intersects"
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
+    Returns:
+        gpd.GeoDataFrame:
+            The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
     """
     if not _has_dask_geopandas:
         raise ImportError(
@@ -146,19 +145,17 @@ def get_objs(
 ) -> Union[gpd.GeoDataFrame, None]:
     """Get the objects within the area.
 
-    Parameters
-    ----------
-        area : gpd.GeoDataFrame
+    Parameters:
+        area (gpd.GeoDataFrame):
             The area of interest in GeoDataFrame.
-        objects : gpd.GeoDataFrame
+        objects (gpd.GeoDataFrame):
             The objects (cells) of interest.
-        silence_warnings : bool, default=True
+        silence_warnings (bool):
             Flag, whether to suppress warnings.
-        predicate : str, default="within"
+        predicate (str):
             The predicate to use for the spatial join. See `geopandas.tools.sjoin`
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The objects (cells) within the area gdf.
     """
@@ -193,18 +190,16 @@ def get_interface_zones(
     Useful for example, when you want to extract the interface of two distinct tissues
     like stroma and cancer.
 
-    Parameters
-    ----------
-        buffer_area : gpd.GeoDataFrame
+    Parameters:
+        buffer_area (gpd.GeoDataFrame):
             The area or region of interest that is buffered on top of polygons in gdf.
-        areas : gpd.GeoDataFrame
+        areas (gpd.GeoDataFrame):
             A geodataframe containing polygons (tissue areas) that might intersect
             with the `buffer_area`.
-        buffer_dist : int, default=200
+        buffer_dist (int):
             The radius of the buffer.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             A geodataframe containing the intersecting polygons including the buffer.
     """

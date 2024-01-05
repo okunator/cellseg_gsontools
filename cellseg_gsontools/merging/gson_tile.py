@@ -20,21 +20,19 @@ class GSONTile:
 
         Allows easy extraction of border and non-border annotations.
 
-        Parameters
-        ----------
-            filename : Union[Path, str]
+        Parameters:
+            filename (Union[Path, str]):
                 Name of the input geojson file.
-            tile_size : Tuple[int, int], default=(1000, 1000)
+            tile_size (Tuple[int, int]):
                 Height and width of the tile in pixels.
-            min_size : int, default=30
+            min_size (int):
                 Minimum size of the annotations in pixels.
 
-        Examples
-        --------
-        Get non-border annotaitons of the tile.
-        >>> from cellseg_gsontools.tile import GSONTile
-        >>> tile = GSONTile("path/to/tile.json")
-        >>> tile.non_border_annots
+        Examples:
+            Get non-border annotations of the tile.
+            >>> from cellseg_gsontools.tile import GSONTile
+            >>> tile = GSONTile("path/to/tile.json")
+            >>> tile.non_border_annots
         """
         self.filename = Path(filename)
         self.min_size = min_size
@@ -56,8 +54,8 @@ class GSONTile:
     def non_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that do not touch any edges of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         not_r = self.gdf["xmax"] != self.xmax
@@ -72,8 +70,8 @@ class GSONTile:
     def right_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the right edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         r_border_anns = self.gdf[self.gdf["xmax"] == self.xmax].copy()
@@ -89,8 +87,8 @@ class GSONTile:
     def left_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the left edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         l_border_anns = self.gdf[self.gdf["xmin"] == self.xmin].copy()
@@ -102,8 +100,8 @@ class GSONTile:
     def bottom_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the bottom edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         b_border_anns = self.gdf[self.gdf["ymax"] == self.ymax].copy()
@@ -119,8 +117,8 @@ class GSONTile:
     def bottom_left_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the bottom edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         b = (self.gdf["ymax"] == self.ymax) & (self.gdf["xmin"] == self.xmin)
@@ -150,8 +148,8 @@ class GSONTile:
     def top_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the top edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         t_border_anns = self.gdf[self.gdf["ymin"] == self.ymin].copy()
@@ -163,8 +161,8 @@ class GSONTile:
     def top_right_border_annots(self) -> gpd.GeoDataFrame:
         """Get all the annotations/polygons that touch the top edge of the tile.
 
-        NOTE: Resets the index of the returned gdf.
-        NOTE: Origin in the top-left corner of the image/tile. In geoformat, the origin
+        Note: Resets the index of the returned gdf.
+        Note: Origin in the top-left corner of the image/tile. In geoformat, the origin
                 is in the bottom-left corner.
         """
         b = (self.gdf["ymin"] == self.ymin) & (self.gdf["xmax"] == self.xmax)

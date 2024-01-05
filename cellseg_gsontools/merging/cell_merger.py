@@ -17,39 +17,34 @@ __all__ = ["CellMerger"]
 
 
 class CellMerger(BaseGSONMerger):
+    """Merge adjascent cell annotation files to one file.
+
+    Note:
+        Assumes:
+
+        - Input files contain nuclei/cell instance segmentation annotations.
+        - Input Tiles have x- and y- coord embedded in filename e.g. `x-[coord]_y-[coord]`
+        - Input Tiles are the same size.
+        - Allowed input file-formats `.json`, `.geojson`, `.feather`, `.parquet`
+
+    Parameters:
+        in_dir (Union[Path, str]):
+            Path to the directory containing the annotation files of tiles.
+        tile_size (Tuple[int, int]):
+            Height and width of the tiles in pixels.
+
+    Attributes:
+        border_annots (gpd.GeoDataFrame):
+            A gdf of the merged border annotations. Available after merging.
+        non_border_annots (gpd.GeoDataFrame):
+            A gdf of the merged non-border annotations. Available after merging.
+        annots (gpd.GeoDataFrame):
+            A gdf of the resulting annotations. Available after merging.
+    """
+
     def __init__(
         self, in_dir: Union[Path, str], tile_size: Tuple[int, int] = (1000, 1000)
     ) -> None:
-        """Merge the cell annotation files of the tiles to one file.
-
-        NOTE: Assumes
-        - The input files contain nuclei/cell instance segmentation annotations.
-        - the tiles are named as "x-[coord]_y-[coord](.json|.geojson|.feather|.parquet)"
-        - the tiles are the same size.
-
-        Parameters
-        ----------
-            in_dir : Union[Path, str]
-                Path to the directory containing the annotation files of tiles.
-            tile_size : Tuple[int, int], default=(1000, 1000)
-                Height and width of the tiles in pixels.
-
-        Attributes
-        ----------
-            border_annots : gpd.GeoDataFrame
-                A gdf of the merged border annotations. Available after merging.
-            non_border_annots : gpd.GeoDataFrame
-                A gdf of the merged non-border annotations. Available after merging.
-            annots : gpd.GeoDataFrame
-                A gdf of the merged annotations. Available after merging.
-
-        Examples
-        --------
-        Merge the annotations of the tiles in a directory.
-        >>> from cellseg_gsontools.merging import CellMerger
-        >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir(out.geojson, format="geojson")
-        """
         super().__init__(in_dir, tile_size)
 
         # Lookup to manage the relations between the main and adjacent tiles
@@ -85,43 +80,31 @@ class CellMerger(BaseGSONMerger):
     ) -> None:
         """Merge all the instance segmentation files in the input directory.
 
-        NOTE Assumes:
-        - The input files contain nuclei/cell instance segmentation annotations.
-        - the tiles are named as "x-[coord]_y-[coord](.json|.geojson|.feather|.parquet)"
-        - the tiles are the same size.
+        Parameters:
+            out_fn (Union[Path, str]):
+                Filename for the output file. If None, the merged gdf is saved to the
+                class attribute `self.annots` only.
+            format (str):
+                The format of the output geojson file. One of: "feather", "parquet",
+                "geojson", None. This is ignored if `out_fn` is None.
+            verbose (bool):
+                Whether to show a progress bar or not.
 
-        Parameters
-        ----------
-        out_fn : Union[Path, str], optional
-            Filename for the output file. If None, the merged gdf is saved to the
-            class attribute `self.annots` only.
-        format : str, optional
-            The format of the output geojson file. One of: "feather", "parquet",
-            "geojson", None. This is ignored if `out_fn` is None.
-        verbose : bool, default=True
-            Whether to show a progress bar or not.
+        Examples:
+            Write geojson files to a standard '.geojson' file.
+            >>> from cellseg_gsontools.merging import CellMerger
+            >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
+            >>> merger.merge_dir("/path/to/output.json", format="geojson")
 
-        Attributes
-        ----------
-        self.annots : gpd.GeoDataFrame
-            A gdf of the merged annotations. Available after merging.
+            Write input geojson files to feather file.
+            >>> from cellseg_gsontools.merging import CellMerger
+            >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
+            >>> merger.merge_dir("/path/to/output.feather", format="feather")
 
-        Examples
-        --------
-        Write geojson files to a standard '.geojson' file.
-        >>> from cellseg_gsontools.merging import CellMerger
-        >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir("/path/to/output.json", format="geojson")
-
-        Write input geojson files to feather file.
-        >>> from cellseg_gsontools.merging import CellMerger
-        >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir("/path/to/output.feather", format="feather")
-
-        Write input geojson files to parquet file.
-        >>> from cellseg_gsontools.merging import CellMerger
-        >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
+            Write input geojson files to parquet file.
+            >>> from cellseg_gsontools.merging import CellMerger
+            >>> merger = CellMerger("/path/to/geojsons/", tile_size=(1000, 1000))
+            >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
         """
         if out_fn is not None:
             out_fn = Path(out_fn)

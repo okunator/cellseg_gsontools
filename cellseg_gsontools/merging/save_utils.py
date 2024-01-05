@@ -28,17 +28,15 @@ def gdf_to_file(
 ) -> None:
     """Write a geojson/feather/parquet file from a gdf.
 
-    Parameters
-    ----------
-    out_fn : Union[str, Path]
-        The output filename.
-    features : List[Dict[str, Any]]
-        The list of geojson features.
-    format : str, default="feather"
-        The output format. One of ".feather", ".parquet", ".geojson".
+    Parameters:
+        out_fn (Union[str, Path])
+            The output filename.
+        features (List[Dict[str, Any]]):
+            The list of geojson features.
+        format (str):
+            The output format. One of ".feather", ".parquet", ".geojson".
 
-    Raises
-    ------
+    Raises:
         ValueError: If `format` is not one of ".feather", ".geojson", ".parquet".
         ValueError: If the input gdf does not have a "class_name" column.
     """
@@ -73,12 +71,10 @@ def check_format(fname: Union[Path, str]) -> None:
     """Check if the input file has the correct format.
 
     Parameters
-    ----------
-        fname : str
+        fname (str):
             The filename.
 
-    Raises
-    ------
+    Raises:
         ValueError: If not all coordinates were found in filename.
         ValueError: If both x and y coordinates are not present in filename.
     """
@@ -120,20 +116,18 @@ def check_format(fname: Union[Path, str]) -> None:
 def get_xy_coords(fname: Union[Path, str]) -> Tuple[int, int]:
     """Get the x and y-coordinates from a filename.
 
-    NOTE: The filename needs to contain x & y-coordinates in
+    Note:
+        The filename needs to contain x & y-coordinates in
         "x-[coord1]_y-[coord2]"-format
 
-    Parameters
-    ----------
-        fname : str
+    Parameters:
+        fname (str):
             The filename. Has to contain x & y-coordinates
 
-    Raises
-    ------
+    Raises:
         ValueError: If not the delimeter of x and y- coord is not '_' or '-'.
 
-    Returns
-    -------
+    Returns:
         Tuple[int, int]: The x and y-coordinates in this order.
     """
     check_format(fname)
@@ -177,21 +171,16 @@ def get_file_from_coords(
 ) -> Union[str, None]:
     """Get the correct file name from a list of filenames given x and y-coords.
 
-    NOTE: fname needs to contain x & y-coordinates in  "x-[coord1]_y-[coord2]"-format.
+    Note:
+        fname needs to contain x & y-coordinates in  "x-[coord1]_y-[coord2]"-format.
 
-    Parameters
-    ----------
-        files : List[Union[Path, str]]
-            A list of paths to the files.
-        x : int
-            x-coord in pixels.
-        y : int
-            y-coord in pixels.
+    Parameters:
+        files (List[Union[Path, str]]): A list of paths to the files.
+        x (int): x-coord in pixels.
+        y (int): y-coord in pixels.
 
-    Returns
-    -------
-        str or None:
-            returns the file name if it exists in the given input dir, else None.
+    Returns:
+        str or None: returns the file name if it exists in the given input dir, else None.
     """
     for f in files:
         if get_xy_coords(f) == (x, y):

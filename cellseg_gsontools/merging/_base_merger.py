@@ -14,11 +14,10 @@ class BaseGSONMerger:
 
         Implements methods to access the adjascent tiles of a given tile.
 
-        Parameters
-        ----------
-            in_dir : Union[Path, str]
+        Parameters:
+            in_dir (Union[Path, str]):
                 Path to the directory containing the geojson files.
-            tile_size : Tuple[int, int], default=(1000, 1000)
+            tile_size (Tuple[int, int]):
                 Height and width of the tile in pixels.
         """
         self.in_dir = Path(in_dir)

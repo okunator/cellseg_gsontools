@@ -24,6 +24,108 @@ __all__ = ["InterfaceContext"]
 
 
 class InterfaceContext:
+    """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
+
+    Interfaces are created by buffering areas of type `top_label` on top of the
+    areas of type `bottom_labels` and taking the intersection of the buffered area
+    and the `top_label` area. The result interface is a band-like area b/w
+    `top_label` and `bottom_label` areas. The bredth of the interface is given by
+    the `buffer_dist` param.
+
+    Note:
+        `area_gdf` and `cell_gdf` have to contain a column named 'class_name'
+
+    Parameters:
+        area_gdf (gpd.GeoDataFrame):
+            A geo dataframe that contains large tissue area polygons enclosing
+            the smaller cellular objects in `cell_gdf`.
+        cell_gdf (gpd.GeoDataFrame):
+            A geo dataframe that contains small cellular objects that are
+            enclosed by larger tissue areas in `area_gdf`.
+        top_labels (Union[Tuple[str, ...], str]):
+            The class name(s) of the areas of interest. E.g. "tumor". These areas
+            are buffered on top of the areas that have type in `bottom_labels`. For
+            example, buffering the tumor area on top of the stroma will get the
+            tumor-stroma interface.
+        bottom_labels (Union[Tuple[str, ...], str]):
+            The class name of the area on top of which the buffering is applied.
+            Typically you want to buffer at least on top of the stromal area to get
+            e.g. tumor-stroma interface. Other options are ofc possible.
+        min_area_size (float or str, optional):
+            The minimum area of the objects that are kept. All the objects in
+            the `area_gdf` that are larger are kept than `min_area_size`. If
+            None, all the areas are kept. Defaults to None.
+        graph_type (str):
+            The type of the graph to be fitted to the cells inside interfaces.
+            One of: "delaunay", "distband", "relative_nhood", "knn".
+        dist_thresh (float):
+            Distance threshold for the length of the network links.
+        grid_type (str):
+            The type of the grid to be fitted on the roi areas. One of:
+            "square", "hex".
+        patch_size (Tuple[int, int]):
+            The size of the grid patches to be fitted on the context. This is
+            used when `grid_type='square'`.
+        stride (Tuple[int, int]):
+            The stride of the sliding window for grid patching. This is used
+            when `grid_type='square'`.
+        pad (int):
+            The padding to add to the bounding box on the grid. This is used
+            when `grid_type='square'`.
+        resolution (int):
+            The resolution of the h3 hex grid. This is used when
+            `grid_type='hex'`.
+        predicate (str):
+            The predicate to use for the spatial join when extracting the ROI
+            cells. See `geopandas.tools.sjoin`
+        silence_warnings (bool):
+            Flag, whether to silence all the warnings.
+        parallel (bool):
+            Flag, whether to parallelize the context fitting. If
+            `backend == "geopandas"`, the parallelization is implemented with
+            `pandarallel` package. If `backend == "spatialpandas"`, or
+            `backend == "dask-geopandas"` the parallelization is implemented
+            with Dask library.
+        num_processes (int):
+            The number of processes to use when parallel=True. If -1, this
+            will use all the available cores.
+        backend (str):
+            The backend to use for the spatial context. One of "geopandas",
+            "spatialpandas" "dask-geopandas". "spatialpandas" or
+            "dask-geopandas" is recommended for gdfs that may contain huge
+            polygons.
+
+    Attributes:
+        context (Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]):
+            A nested dict that contains dicts for each of the distinct ROIs
+            of type `top_labels` and the interfaces b/w areas of type `bottom_labels`.
+            The keys of the outer dict are the indices of these areas.
+            The inner dicts contain the keys:
+
+            - `roi_area`- `gpd.GeoDataFrame`: of the roi area. Roi area is the tissue
+                    area(s) of type `top_labels` that is buffered on top of the area
+                    of type `bottom_labels` to get the interface.
+            - `roi_cells` - `gpd.GeoDataFrame`: of the cells that are contained
+                    inside the `roi_area`.
+            - `roi_network` - `libpysal.weights.W`: spatial weights network of
+                    the cells inside the `roi_area`. This can be used to extract
+                    graph features inside the `roi_area`.
+            - `roi_grid` - `gpd.GeoDataFrame`: of the grid fitted on the `roi_area`.
+                    This can be used to extract grid features inside the `roi_area`.
+            - `interface_area` - `gpd.GeoDataFrame`:the interface area. Interface
+                    area is the area that is the intersection of the buffered
+                    `roi_area` (`top_labels`) and the area of type `bottom_labels`.
+            - `interface_network` - `libpysal.weights.W`: spatial weights network of
+                    the cells inside the `interface_area`.
+            - `border_network` - `libpysal.weights.W`: spatial weights network of the
+                    cells at the border of the roi and interface areas.
+            - `full_network` - `libpysal.weights.W`: spatial weights network of the
+                    cells inside the union of the roi and interface areas.
+
+    Raises:
+        ValueError: if `area_gdf` or `cell_gdf` don't contain 'class_name' column.
+    """
+
     def __init__(
         self,
         area_gdf: gpd.GeoDataFrame,
@@ -45,134 +147,6 @@ class InterfaceContext:
         num_processes: int = -1,
         backend: str = "geopandas",
     ) -> None:
-        """Handle & extract interface regions from the `cell_gdf` and `area_gdf`.
-
-        Interfaces are created by buffering areas of type `top_label` on top of the
-        areas of type `bottom_labels` and taking the intersection of the buffered area
-        and the `top_label` area. The result interface is a band-like area b/w
-        `top_label` and `bottom_label` areas. The bredth of the interface is given by
-        the `buffer_dist` param.
-
-        NOTE: `area_gdf` and `cell_gdf` have to contain a column named 'class_name'
-            specifying the class of the area/cell.
-
-        Parameters
-        ----------
-        area_gdf : gpd.GeoDataFrame
-            A geo dataframe that contains large tissue area polygons enclosing
-            smaller cellular objects in `cell_gdf`.
-        cell_gdf : gpd.GeoDataFrame
-            A geo dataframe that contains small cellular objectss that are enclosed
-            by larger tissue areas in `area_gdf`.
-        top_labels : Union[Tuple[str, ...], str]
-            The class name(s) of the areas of interest. E.g. "tumor". These areas are
-            buffered on top of the areas that have type in `bottom_labels`.For example,
-            buffering the tumor area on top of the stroma will get the tumor-stroma
-            interface.
-        bottom_labels : Union[Tuple[str, ...], str]
-            The class name(s) of the area(s) on top of which the buffering is applied.
-            Typically you want to buffer at least on top of the stromal area to get e.g.
-            tumor-stroma interface. Other options are ofc possible.
-        min_area_size : float, optional
-            The minimum area of the objects that are kept. All the objects in the
-            `area_gdf` that are larger are kept than `min_area_size`. If None, all
-            areas are kept.
-        buffer_dist : int, default=200
-            The radius of the buffer.
-        graph_type : str, default="distband"
-            The type of the graph to be fitted to the cells inside interfaces. One of:
-            "delaunay", "distband", "relative_nhood", "knn"
-        dist_thresh : float, default=50.0
-            Distance threshold for the length of the network links.
-        grid_type : str, default="square"
-            The type of the grid to be fitted on the interfaces. One of "square",
-            "hex".
-        patch_size : Tuple[int, int], default=(256, 256)
-            The size of the grid patches to be fitted on the context. This is used when
-            `grid_type='square'`.
-        stride : Tuple[int, int], default=(256, 256)
-            The stride of the sliding window for grid patching. This is used when
-            `grid_type='square'`.
-        pad : int, default=None
-            The padding to add to the bounding box on the grid. This is used when
-            `grid_type='square'`.
-        resolution : int, default=9
-            The resolution of the h3 hex grid. This is used when `grid_type='hex'`.
-        predicate : str, default="intersects"
-            The predicate to use for the spatial join when extracting the ROI cells.
-            See `geopandas.tools.sjoin`
-        silence_warnings : bool, default=True
-            Flag, whether to silence all the warnings related to creating the graphs.
-        parallel : bool, default=False
-            Flag, whether to parallelize the context fitting. If backend == "geopandas",
-            the parallelization is implemented with pandarallel package.
-            If backend == "spatialpandas", the parallelization is implemented with Dask
-        num_processes : int, default=-1
-            The number of processes to use when parallel=True. If -1, this will use
-            all the available cores.
-        backend : str, default="geopandas"
-            The backend to use for the spatial context. One of "geopandas",
-            "spatialpandas" "dask-geopandas". "spatialpandas" or "dask-geopandas" is
-            recommended for large gdfs.
-
-        Attributes
-        ----------
-        context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]
-            A nested dict that contains dicts for each of the distinct interface
-            area. The keys of the outer dict are the indices of these areas.
-
-            The inner dicts contain the unique interfaces and have the keys:
-            - 'roi_area' - gpd.GeoDataFrame of the roi area. Roi area is the tissue
-                area of type `label1` that is buffered on top of the area of type
-                `label2` to get the interface.
-            - 'interface_area', gpd.GeoDataFrame of the interface area. Interface
-                area is the area that is the intersection of the roi (`label1`) and
-                the area of `label2`.
-            - 'roi_cells' - gpd.GeoDataFrame of the cells that are contained inside
-                the roi area.
-            - 'interface_cells' - gpd.GeoDataFrame of the cells that are contained
-                inside the interface area.
-            - 'roi_network' - libpysal.weights.W spatial weights network of the
-                cells inside the roi area. This can be used to extract graph
-                features inside the roi.
-            - 'interface_network' - libpysal.weights.W spatial weights network of
-                the cells inside the interface area. This can be used to extract
-                graph features inside the interface.
-            - 'border_network' - libpysal.weights.W spatial weights network of the
-                cells at the border of the roi and interface areas. This can be
-                used to extract graph features at the border of the roi and
-                interface.
-            - 'full_network' - libpysal.weights.W spatial weights network of the
-                cells inside the union of the roi and interface areas. This can be
-                used to extract graph features inside the union of the roi and
-                interface.
-
-        Raises
-        ------
-            ValueError if `area_gdf` or `cell_gdf` don't contain 'class_name' column.
-
-        Examples
-        --------
-        Define an tumor-stroma interface context and plot the cells inside the
-        interface area.
-        >>> from cellseg_gsontools.backend import InterfaceContext
-
-        >>> area_gdf = read_gdf("area.json")
-        >>> cell_gdf = read_gdf("cells.json")
-        >>> interface_context = InterfaceContext(
-                area_gdf=area_gdf,
-                cell_gdf=cell_gdf,
-                top_labels=["area_cin"],
-                bottom_labels=["area_stroma"],
-                buffer_dist=250.0,
-                graph_type="delaunay",
-                silence_warnings=True,
-                min_area_size=100000.0
-            )
-        >>> interface_context.fit(parallel=False)
-        >>> interface_context.plot("interface_area", show_legends=True)
-        <AxesSubplot: >
-        """
         self.backend_name = backend
         if backend == "spatialpandas":
             self.backend = _SpatialContextSP()
@@ -258,51 +232,35 @@ class InterfaceContext:
 
         This sets the `self.context` class attribute.
 
-        Parameters
-        ----------
-            verbose : bool, default=True
+        Parameters:
+            verbose (bool):
                 Flag, whether to use tqdm pbar when creating the interfaces.
-            fit_graph : bool, default=True
-                Flag, whether to fit the spatial weights networks for the context.
-            fit_grid : bool, default=True
+            fit_graph (bool):
+                Flag, whether to fit the spatial weights networks for the
+                context.
+            fit_grid (bool):
                 Flag, whether to fit the a grid on the contextes.
 
-        Created Attributes
-        -------------------
-            context : Dict[int, Dict[str, Union[gpd.GeoDataFrame, libpysal.weights.W]]]
-                A nested dict that contains dicts for each of the distinct interface
-                area. The keys of the outer dict are the indices of these areas.
+        Examples:
+            Define an tumor-stroma interface context and plot the cells inside the
+            interface area.
 
-                The inner dicts contain the unique interfaces and have the keys:
-                - 'roi_area' - gpd.GeoDataFrame of the roi area. Roi area is the tissue
-                    area of type `label1` that is buffered on top of the area of type
-                    `label2` to get the interface.
-                - 'interface_area', gpd.GeoDataFrame of the interface area. Interface
-                    area is the area that is the intersection of the roi (`label1`) and
-                    the area of `label2`.
-                - 'roi_cells' - gpd.GeoDataFrame of the cells that are contained inside
-                    the roi area.
-                - 'interface_cells' - gpd.GeoDataFrame of the cells that are contained
-                    inside the interface area.
-                - 'roi_network' - libpysal.weights.W spatial weights network of the
-                    cells inside the roi area. This can be used to extract graph
-                    features inside the roi.
-                - 'interface_network' - libpysal.weights.W spatial weights network of
-                    the cells inside the interface area. This can be used to extract
-                    graph features inside the interface.
-                - 'border_network' - libpysal.weights.W spatial weights network of the
-                    cells at the border of the roi and interface areas. This can be
-                    used to extract graph features at the border of the roi and
-                    interface.
-                - 'full_network' - libpysal.weights.W spatial weights network of the
-                    cells inside the union of the roi and interface areas. This can be
-                    used to extract graph features inside the union of the roi and
-                    interface.
-                - 'roi_grid' - gpd.GeoDataFrame of the grid fitted on the roi area.
-                    This can be used to extract grid features inside the roi.
-                - 'interface_grid' - gpd.GeoDataFrame of the grid fitted on the
-                    interface area. This can be used to extract grid features inside
-                    the interface.
+            >>> from cellseg_gsontools.backend import InterfaceContext
+            >>> area_gdf = read_gdf("area.json")
+            >>> cell_gdf = read_gdf("cells.json")
+            >>> interface_context = InterfaceContext(
+            ...     area_gdf=area_gdf,
+            ...     cell_gdf=cell_gdf,
+            ...     top_labels=["area_cin"],
+            ...     bottom_labels=["area_stroma"],
+            ...     buffer_dist=250.0,
+            ...     graph_type="delaunay",
+            ...     silence_warnings=True,
+            ...     min_area_size=100000.0,
+            ... )
+            >>> interface_context.fit(parallel=False)
+            >>> interface_context.plot("interface_area", show_legends=True)
+            <AxesSubplot: >
         """
         get_context_func = partial(
             InterfaceContext._get_context,
@@ -473,17 +431,15 @@ class InterfaceContext:
         return context_dict
 
     def context2weights(self, key: str) -> W:
-        """Merge the networks of type `key` in the context into one spatial weights obj.
+        """Merge the networks of type `key` into one spatial weights obj.
 
-        Parameters
-        ----------
-            key : str
+        Parameters:
+            key (str):
                 The key of the context dictionary that contains the spatial
                 weights to be merged. One of "roi_network", "full_network",
                 "interface_network", "border_network"
 
-        Returns
-        -------
+        Returns:
             libpysal.weights.W:
                 A spatial weights object containing all the distinct networks
                 in the context.
@@ -505,19 +461,18 @@ class InterfaceContext:
         return wout
 
     def context2gdf(self, key: str) -> gpd.GeoDataFrame:
-        """Merge the GeoDataFrames of type `key` in the context into one geodataframe.
+        """Merge the GeoDataFrames of type `key` into one geodataframe.
 
-        NOTE: Returns None if no data is found.
+        Note:
+            Returns None if no data is found.
 
-        Parameters
-        ----------
-            key : str
+        Parameters:
+            key (str):
                 The key of the context dictionary that contains the data to be converted
                 to gdf. One of "roi_area", "roi_cells", "interface_area", "roi_grid",
                 "interface_grid", "interface_cells", "roi_interface_cells"
 
-        Returns
-        -------
+        Returns:
             gpd.GeoDataFrame:
                 Geo dataframe containing all the objects
         """
@@ -567,49 +522,46 @@ class InterfaceContext:
         edge_kws: Dict[str, Any] = None,
         **kwargs,
     ) -> plt.Axes:
-        """Plot the slide with areas, cells, and interface areas highlighted.
+        """Plot the context with areas, cells, and interface areas highlighted.
 
-        Parameters
-        ----------
-            key : str
+        Parameters:
+            key (str):
                 The key of the context dictionary that contains the data to be plotted.
-                One of "roi_area", "interface_area",
-            network_key : str, optional
+                One of "roi_area",
+            network_key (str):
                 The key of the context dictionary that contains the spatial weights to
-                be plotted. One of "roi_network", "full_network", "interface_network",
-                "border_network"
-            grid_key : str, optional
+                be plotted. One of "roi_network"
+            grid_key (str):
                 The key of the context dictionary that contains the grid to be plotted.
-                One of "roi_grid", "interface_grid"
-            show_legends : bool, default=True
+                One of "roi_grid"
+            show_legends (bool):
                 Flag, whether to include legends for each in the plot.
-            color : str, optional
+            color (str):
                 A color for the interfaces or rois, Ignored if `show_legends=True`.
-            figsize : Tuple[int, int], default=(12, 12)
+            figsize (Tuple[int, int]):
                 Size of the figure.
-            **kwargs
+            **kwargs (Dict[str, Any])]):
                 Extra keyword arguments passed to the `plot` method of the
                 geodataframes.
 
-        Returns
-        -------
+        Returns:
             AxesSubplot
 
-        Examples
-        --------
-        Plot the slide with cluster areas and cells highlighted
-        >>> from cellseg_gsontools.spatial_context import PointClusterContext
+        Examples:
+            Plot the tumor-stroma areas.
 
-        >>> cells = read_gdf("cells.feather")
-        >>> clusters = PointClusterContext(
-        ...     cell_gdf=cells,
-        ...     label="inflammatory",
-        ...     cluster_method="optics",
-        ... )
-
-        >>> clusters.fit(verbose=False)
-        >>> clusters.plot("roi_area", show_legends=True, aspect=1)
-        <AxesSubplot: >
+            >>> from cellseg_gsontools.spatial_context import InterfaceContext
+            >>> cells = read_gdf("cells.feather")
+            >>> areas = read_gdf("areas.feather")
+            >>> ts_iface = InterfaceContext(
+            ...     area_gdf=areas,
+            ...     cell_gdf=cells,
+            ...     top_labels="tumor",
+            ...     bottom_labels="stroma",
+            ... )
+            >>> ts_iface.fit(verbose=False)
+            >>> ts_iface.plot("interface_area", show_legends=True)
+            <AxesSubplot: >
         """
         allowed = ("roi_area", "interface_area")
         if key not in allowed:

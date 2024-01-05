@@ -13,19 +13,17 @@ def validate_and_simplify(
 ) -> Polygon:
     """Validate and simplify a shapely polygon.
 
-    Parameters
-    ----------
-        poly : Polygon
+    Parameters:
+        poly (Polygon):
             The polygon to validate and simplify.
-        buffer : float, default=1.0
+        buffer (float):
             The size of the buffer.
-        simplify : bool, default=False
+        simplify (bool):
             Whether to simplify the polygon or not.
-        level : float, default=0.3
+        level (float):
             The simplification level.
 
-    Returns
-    -------
+    Returns:
         Polygon: The validated and simplified polygon.
     """
     # workaround to handle invalid polygons
@@ -46,22 +44,20 @@ def validate_and_simplify(
 def get_overlapping_objects(gdf: gpd.GeoDataFrame) -> List[Tuple[int, int]]:
     """Get index pairs of overlapping objects in a gdf.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The gdf to check for overlapping objects.
 
-    Returns
-    -------
-        List[Tuple[int, int]]: A list of index pairs of overlapping objects.
+    Returns:
+        (List[Tuple[int, int]]):
+            A list of index pairs of overlapping objects.
 
-    Examples
-    --------
+    Examples:
         >>> import geopandas as gpd
         >>> from cellseg_gsontools.utils import read_gdf
         >>> gdf = read_gdf("/path/to/cells.json")
         >>> get_overlapping_objects(gdf)
-        ... [(9, 34), (9, 7), (38, 39), (9, 34, 7), (32, 29, 31)]
+        [(9, 34), (9, 7), (38, 39), (9, 34, 7), (32, 29, 31)]
     """
     overlap_inds = []
     for i in range(len(gdf)):
@@ -79,17 +75,15 @@ def get_overlapping_objects(gdf: gpd.GeoDataFrame) -> List[Tuple[int, int]]:
 def merge_overlaps(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Merge overlapping objects in a gdf.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The gdf containing overlapping objects.
 
-    Returns
-    -------
-        gpd.GeoDataFrame: A gdf with merged overlapping objects.
+    Returns:
+        (gpd.GeoDataFrame):
+            A gdf with merged overlapping objects.
 
-    Examples
-    --------
+    Examples:
         >>> import geopandas as gpd
         >>> from cellseg_gsontools.utils import read_gdf
         >>> gdf = read_gdf("/path/to/cells.json")

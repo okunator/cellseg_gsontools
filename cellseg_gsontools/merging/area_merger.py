@@ -19,31 +19,26 @@ __all__ = ["AreaMerger"]
 
 
 class AreaMerger(BaseGSONMerger):
+    """Merge the area/tissue annotation files of the tiles to one file.
+
+    Note:
+        Assumes:
+
+        - Input files contain area/tissue semantic segmentation annotations.
+        - Input Tiles have x- and y- coord embedded in filename e.g. `x-[coord]_y-[coord]`
+        - Input Tiles are the same size.
+        - Allowed input file-formats `.json`, `.geojson`, `.feather`, `.parquet`
+
+    Parameters:
+        in_dir (Union[Path, str]):
+            Path to the directory containing the annotation files of tiles.
+
+    Attributes:
+        annots (gpd.GeoDataFrame):
+            A gdf of the resulting annotations. Available after merging.
+    """
+
     def __init__(self, in_dir: Union[Path, str]) -> None:
-        """Merge the area/tissue annotation files of the tiles to one file.
-
-        NOTE: Assumes
-        - The input files contain area/tissue semantic segmentation annotations.
-        - the tiles are named as "x-[coord]_y-[coord](.json|.geojson|.feather|.parquet)"
-        - the tiles are the same size.
-
-        Parameters
-        ----------
-            in_dir : Union[Path, str]
-                Path to the directory containing the annotation files of tiles.
-
-        Attributes
-        ----------
-            annots : gpd.GeoDataFrame
-                A gdf of the merged annotations. Available after merging.
-
-        Examples
-        --------
-        Merge the annotations of the QuPath-formatted tiles in a directory.
-        >>> from cellseg_gsontools.merging import AreaMerger
-        >>> merger = AreaMerger("/path/to/geojsons/", tile_size=(1000, 1000))
-        >>> merger.merge_dir(out.geojson, format="geojson", in_qupath_format="latest")
-        """
         super().__init__(in_dir, None)
 
     def merge_dir(
@@ -55,45 +50,37 @@ class AreaMerger(BaseGSONMerger):
     ) -> None:
         """Merge all the semantic segmentation files in the input directory into one.
 
-        NOTE Assumes:
-        - The input files contain nuclei/cell instance segmentation annotations.
-        - the tiles are named as "x-[coord]_y-[coord](.json|.geojson|.feather|.parquet)"
-        - the tiles are the same size.
+        Note:
+            Unlike the CellMerger.merge_dir() -method, this can be parallelized with
+            `parallel=True` -argument.
 
-        Parameters
-        ----------
-        out_fn : Union[Path, str], optional
-            Filename for the output file. If None, the merged gdf is saved to the
-            class attribute `self.annots` only.
-        format : str, optional
-            The format of the output geojson file. One of: "feather", "parquet",
-            "geojson", None. This is ignored if `out_fn` is None.
-        verbose : bool, default=True
-            Whether to show a progress bar or not.
-        parallel: bool, default=True
-            Whether to use parallel processing or not.
+        Parameters:
+            out_fn (Union[Path, str]):
+                Filename for the output file. If None, the merged gdf is saved to the
+                class attribute `self.annots` only.
+            format (str):
+                The format of the output geojson file. One of: "feather", "parquet",
+                "geojson", None. This is ignored if `out_fn` is None.
+            verbose (bool):
+                Whether to show a progress bar or not.
+            parallel (bool):
+                Whether to use parallel processing or not.
 
-        Attributes
-        ----------
-        self.annots : gpd.GeoDataFrame
-            A gdf of the merged annotations. Available after merging.
+        Examples:
+            Write feather files to a '.geojson' file.
+            >>> from cellseg_gsontools.merging import AreaMerger
+            >>> merger = AreaMerger("/path/to/feather_files/")
+            >>> merger.merge_dir("/path/to/output.json", format="geojson")
 
-        Examples
-        --------
-        Write feather files to a '.geojson' file.
-        >>> from cellseg_gsontools.merging import AreaMerger
-        >>> merger = AreaMerger("/path/to/feather_files/")
-        >>> merger.merge_dir("/path/to/output.json", format="geojson")
+            Write input geojson files to feather file.
+            >>> from cellseg_gsontools.merging import AreaMerger
+            >>> merger = AreaMerger("/path/to/geojsons/")
+            >>> merger.merge_dir("/path/to/output.feather", format="feather")
 
-        Write input geojson files to feather file.
-        >>> from cellseg_gsontools.merging import AreaMerger
-        >>> merger = AreaMerger("/path/to/geojsons/")
-        >>> merger.merge_dir("/path/to/output.feather", format="feather")
-
-        Write input parquet files to parquet file.
-        >>> from cellseg_gsontools.merging import AreaMerger
-        >>> merger = AreaMerger("/path/to/parquet_files/")
-        >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
+            Write input parquet files to parquet file.
+            >>> from cellseg_gsontools.merging import AreaMerger
+            >>> merger = AreaMerger("/path/to/parquet_files/")
+            >>> merger.merge_dir("/path/to/output.parquet", format="parquet")
         """
         if out_fn is not None:
             out_fn = Path(out_fn)
