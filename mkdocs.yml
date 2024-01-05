@@ -1,0 +1,59 @@
+site_name: cellseg_gsontools
+
+theme:
+  name: "material"
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - navigation.indexes
+
+plugins:
+  - search
+  - social
+  - autorefs
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_source: true
+  - mkdocs-jupyter:
+      include: ["*.ipynb"]
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - codehilite
+  - markdown.extensions.def_list
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji
+  - pymdownx.superfences
+  - pymdownx.magiclink
+  - pymdownx.keys
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+        permalink: true
+
+nav:
+  - User Guide:
+    - Merging:
+      - "user_guide/merging/index.ipynb"
+      - Merging WSI-level Segmenation: "user_guide/merging/WSI_merge.ipynb"
+    - Spatial Contexts:
+      - "user_guide/spatial_contexts/index.md"
+      - Within Context: "user_guide/spatial_contexts/within_context.ipynb"
+      - Interface Context: "user_guide/spatial_contexts/interface_context.ipynb"
+      - Point Cluster Context: "user_guide/spatial_contexts/point_cluster_context.ipynb"
+  - API Reference:
+    - "reference/index.md"
+    - Spatial Contexts:
+      - WithinContext: "reference/spatial_contexts/within_context_ref.md"
+      - InterfaceContext: "reference/spatial_contexts/iface_context_ref.md"
+      - PointClusterContext: "reference/spatial_contexts/point_cluster_context_ref.md"
+    - Merging:
+      - CellMerger: "reference/merging/cell_merger_ref.md"
+      - AreaMerger: "reference/merging/area_merger_ref.md"

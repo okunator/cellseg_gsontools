@@ -48,7 +48,10 @@ pytest-xdist = "^3.5.0"
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.5.3"
 mkdocstrings = {extras = ["python"], version = "^0.24.0"}
-mkdocs-material = "^9.5.3"
+mkdocs-material = {extras = ["imaging"], version = "^9.5.3"}
+mkdocs-jupyter = "^0.24.6"
+mkdocs-gen-files = "^0.5.0"
+pytkdocs = {version = ">=0.5.0", extras = ["numpy-style"]}
 
 [tool.scriv]
 format = "md"
@@ -115,6 +118,7 @@ select = [
 ]
 
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
+extend-include = ["*.ipynb"]
 # Exclude a variety of commonly ignored directories.
 exclude = [
     ".bzr",
@@ -162,16 +166,16 @@ target-version = "py310"
 
 [tool.ruff.pydocstyle]
  # Use numpy-style docstrings.
-convention = "numpy"
+convention = "google"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 select = ["E4", "E7", "E9", "F"]
-ignore = ["E203", "D103", "D104"]
+ignore = ["E203", "D103", "D104", "E501"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
-unfixable = []
+unfixable = ["B"]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -188,6 +192,17 @@ skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+# format docs
+docstring-code-format = true
+
+# docstr code line length
+# docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"**/{tests,docs,tools}/*" = ["E402"]
+
 
 [tool.coverage.run]
 source = ["cellseg_gsontools"]
