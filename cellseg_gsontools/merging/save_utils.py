@@ -28,17 +28,25 @@ def gdf_to_file(
 ) -> None:
     """Write a geojson/feather/parquet file from a gdf.
 
+    This is wrapper around `geopandas.GeoDataFrame` I/O methods
+    that adds some extra functionality.
+
     Parameters:
-        out_fn (Union[str, Path])
+        gdf (gpd.GeoDataFrame):
+            The input gdf.
+        out_fn (Union[str, Path]):
             The output filename.
-        features (List[Dict[str, Any]]):
-            The list of geojson features.
         format (str):
             The output format. One of ".feather", ".parquet", ".geojson".
 
     Raises:
         ValueError: If `format` is not one of ".feather", ".geojson", ".parquet".
         ValueError: If the input gdf does not have a "class_name" column.
+
+    Examples:
+        Write a geojson file.
+        >>> from cellseg_gsontools import gdf_to_file
+        >>> gdf_to_file(gdf, "out.geojson")
     """
     out_fn = Path(out_fn)
     if format not in (".feather", ".parquet", ".geojson", None):

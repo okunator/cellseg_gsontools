@@ -43,23 +43,26 @@ def set_uid(
 ) -> gpd.GeoDataFrame:
     """Set a unique identifier column to gdf.
 
-    NOTE: by default sets a running index column to gdf as the uid.
+    Note:
+        by default sets a running index column to gdf as the uid.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             Input Geodataframe.
-        start_ix : int, default=0
+        start_ix (int, default=0):
             The starting index of the id column.
-        id_col : str, default="uid"
+        id_col (str, default="uid"):
             The name of the column that will be used or set to the id.
-        drop : bool, default=False
+        drop (bool, default=False):
             Drop the column after it is added to index.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
-            The inputr gdf with a "uid" column added to it
+            The input gdf with a "uid" column added to it.
+
+    Examples:
+        >>> from cellseg_gsontools import set_uid
+        >>> gdf = set_uid(gdf, drop=True)
     """
     gdf = gdf.copy()
     if id_col not in gdf.columns:
@@ -102,30 +105,35 @@ def read_gdf(
     fname: Union[Path, str],
     silence_warnigns: bool = True,
 ) -> gpd.GeoDataFrame:
-    """Read a file into geodataframe.
+    """Read a file into a geodataframe.
 
-    Allowed formats:
-    ".json", ".geojson", ".feather", ".parquet"
+    This is a wrapper around `geopandas` I/O that adds some extra
+    functionality.
 
-    Parameters
-    ----------
-        fname : Union[Path, str]
+    Note:
+        Allowed formats:
+
+        - `.json`,
+        - `.geojson`,
+        - `.feather`,
+        - `.parquet`
+
+    Parameters:
+        fname (Union[Path, str]):
             The filename of the gson file.
-        silence_warnings : bool, optional
+        silence_warnings (bool, optional):
             Whether to silence warnings, by default True.
 
-    Raises
-    ------
-        ValueError: If suffix is not one of ".json", ".geojson", ".feather", ".parquet".
+    Raises:
+        ValueError:
+            If suffix is not one of ".json", ".geojson", ".feather", ".parquet".
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The geodataframe.
 
-    Examples
-    --------
-    Read a geojson file that is QuPath-readable.
+    Examples:
+        Read a geojson file that is QuPath-readable.
         >>> from cellseg_gsontools.utils import read_gdf
         >>> gdf = read_gdf("path/to/file.json")
     """
@@ -188,17 +196,19 @@ def pre_proc_gdf(
 
     Namely, remove invalid polygons, empty geometries and add bounds to the gdf.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             Input geodataframe.
-        min_size : int, optional
+        min_size (int, optional):
             The minimum size of the polygons in pixels.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The pre-processed gdf or None if input gdf is empty or None.
+
+    Examples:
+        >>> from cellseg_gsontools import pre_proc_gdf
+        >>> gdf = pre_proc_gdf(gdf, min_size=100)
     """
     if gdf.empty or gdf is None:
         return gdf
@@ -239,17 +249,19 @@ def clip_gdf(
 ) -> gpd.GeoDataFrame:
     """Clip a gdf to a bounding box.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             Input geodataframe.
-        bbox : Tuple[int, int, int, int]
+        bbox (Tuple[int, int, int, int]):
             Bounding box to clip to. Format: (xmin, ymin, xmax, ymax).
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
-            Clipped gdf.
+            The Clipped gdf.
+
+    Examples:
+        >>> from cellseg_gsontools import clip_gdf
+        >>> gdf = clip_gdf(gdf, bbox=(0, 0, 100, 100))
     """
     xmin = bbox[0]
     ymin = bbox[1]
@@ -268,17 +280,25 @@ def xy_to_lonlat(
 ) -> Tuple[Union[float, Sequence], Union[float, Sequence]]:
     """Converts x, y coordinates to lon, lat coordinates.
 
-    Parameters
-    ----------
-    x : Union[float, Sequence]
-        x coordinate(s).
-    y : Union[float, Sequence]
-        y coordinate(s).
+    Parameters:
+        x (Union[float, Sequence]):
+            x coordinate(s).
+        y (Union[float, Sequence]):
+            y coordinate(s).
 
-    Returns
-    -------
-    Tuple[Union[float, Sequence], Union[float, Sequence]]
-        lon, lat coordinates.
+    Returns:
+        Tuple[Union[float, Sequence], Union[float, Sequence]]:
+            lon, lat coordinates.
+
+    Examples:
+        >>> from cellseg_gsontools import xy_to_lonlat
+        >>> from shapely.geometry import Polygon
+        >>> poly = Polygon([(0, 0), (0, 1), (1, 1)])
+        >>> x, y = poly.exterior.coords.xy
+        >>> lon, lat = xy_to_lonlat(x, y)
+        >>> lon, lat
+        (array('d', [10.511, 10.511, 10.511, 10.511]),
+         array('d', [0.0, 9.019e-06, 9.019e-06, 0.0]))
     """
     crs_utm = CRS(proj="utm", zone=33, ellps="WGS84")
     crs_latlon = CRS(proj="latlong", zone=33, ellps="WGS84")
@@ -293,17 +313,25 @@ def lonlat_to_xy(
 ) -> Tuple[Union[float, Sequence], Union[float, Sequence]]:
     """Converts lon, lat coordinates to x, y coordinates.
 
-    Parameters
-    ----------
-    lon : Union[float, Sequence]
-        Longitude coordinate(s).
-    lat : Union[float, Sequence]
-        Latitude coordinate(s).
+    Parameters:
+        lon (Union[float, Sequence]):
+            Longitude coordinate(s).
+        lat (Union[float, Sequence]):
+            Latitude coordinate(s).
 
-    Returns
-    -------
-    Tuple[Union[float, Sequence], Union[float, Sequence]]
-        x, y coordinates.
+    Returns:
+        Tuple[Union[float, Sequence], Union[float, Sequence]]:
+            x, y coordinates.
+
+    Examples:
+        >>> from shapely.geometry import Polygon
+        >>> from cellseg_gsontools import lonlat_to_xy
+        >>> poly = Polygon([(10, 10), (10, 0), (20, 10)])
+        >>> lon, lat = poly.exterior.coords.xy
+        >>> x, y = lonlat_to_xy(lon, lat)
+        >>> x, y
+        (array('d', [-48636.648, -57087.120, 1048636.648, -48636.648]),
+         array('d', [1109577.311, 0.0, 1109577.311, 1109577.311]))
     """
     crs_utm = CRS(proj="utm", zone=33, ellps="WGS84")
     crs_latlon = CRS(proj="latlong", zone=33, ellps="WGS84")
@@ -316,17 +344,19 @@ def lonlat_to_xy(
 def get_holes(poly: Polygon, to_lonlat: bool = True) -> Sequence[Sequence[float]]:
     """Get holes from a shapely Polygon.
 
-    Parameters
-    ----------
-    poly : Polygon
-        Polygon to get holes from.
-    to_lonlat : bool, optional
-        Whether to convert to lonlat coordinates, by default True.
+    Parameters:
+        poly (Polygon):
+            Polygon to get holes from.
+        to_lonlat (bool, optional):
+            Whether to convert to lonlat coordinates, by default True.
 
-    Returns
-    -------
-    Sequence[Sequence[float]]
-        A list of xy coordinate tuples.
+    Returns:
+        Sequence[Sequence[float]]:
+            A list of xy coordinate tuples.
+
+    Examples:
+        >>> from cellseg_gsontools import get_holes
+        >>> holes = get_holes(poly)
     """
     holes = []
     for interior in poly.interiors:
