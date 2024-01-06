@@ -23,7 +23,7 @@ class CellMerger(BaseGSONMerger):
         Assumes:
 
         - Input files contain nuclei/cell instance segmentation annotations.
-        - Input Tiles have x- and y- coord embedded in filename e.g. `x-[coord]_y-[coord]`
+        - Files have start x and y coords embedded in filename e.g. `x-[coord]_y-[coord]`
         - Input Tiles are the same size.
         - Allowed input file-formats `.json`, `.geojson`, `.feather`, `.parquet`
 

@@ -28,33 +28,31 @@ def plot_gdf(
 ) -> plt.Axes:
     """Plot one gdf wrapper.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        The gdf to plot.
-    col : str
-        The column to highlight.
-    ax : plt.Axes, optional
-        The axes to plot on, by default None
-    cmap : str, optional
-        The colormap to use, by default None
-    bin_legends : List[str], optional
-        The bins to use, by default None
-    n_bins : int, optional
-        The number of bins to use, by default None
-    show_legend : bool, optional
-        Whether to show the legend, by default True
-    loc : str, optional
-        The location of the legend, by default "upper right"
-    figsize : tuple, optional
-        The size of the figure, by default (10, 10)
-    **kwargs
-        Extra keyword arguments passed to the `plot` method of the
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            The gdf to plot.
+        col (str):
+            The column to highlight.
+        ax (plt.Axes):
+            The axes to plot on, by default None.
+        cmap (str):
+            The colormap to use, by default None.
+        bin_legends (List[str]):
+            The bins to use, by default None.
+        n_bins (int):
+            The number of bins to use, by default None.
+        show_legend (bool):
+            Whether to show the legend, by default True.
+        loc (str):
+            The location of the legend, by default "upper right".
+        figsize (tuple):
+            The size of the figure, by default (10, 10).
+        **kwargs (Dict[str, Any])):
+            Extra keyword arguments passed to the `plot` method of the GeoDataFrame.
 
-    Returns
-    -------
-    plt.Axes
-        The axes used for plotting.
+    Returns:
+        plt.Axes:
+            The axes used for plotting.
     """
     if cmap is not None:
         cmap = get_cmap(cmap, n_bins)
@@ -95,39 +93,37 @@ def plot_all(
     edge_kws: Dict[str, Any] = None,
     **kwargs,
 ) -> plt.Axes:
-    """Plot the slide with areas, cells, and interface areas highlighted.
+    """Plot the areas, cells, and spatial context areas together.
 
-    Parameters
-    ----------
-    area_gdf : gpd.GeoDataFrame
-        GeoDataFrame containing the areas of interest.
-    cell_gdf : gpd.GeoDataFrame
-        GeoDataFrame containing the cells.
-    context_gdf : gpd.GeoDataFrame, optional
-        GeoDataFrame containing the context, by default None
-    network_gdf : gpd.GeoDataFrame, optional
-        GeoDataFrame containing the network, by default None
-    grid_gdf : gpd.GeoDataFrame, optional
-        GeoDataFrame containing the grid, by default None
-    show_legends : bool, default=True
-        Flag, whether to include legends for each in the plot.
-    color : str, optional
-        A color for the interfaces or rois, Ignored if `show_legends=True`.
-    figsize : Tuple[int, int], default=(12, 12)
-        Size of the figure.
-    grid_cmap : str, default="jet"
-        The colormap to use for the grid. If `grid_gdf` is None, this is ignored.
-    grid_col : str, default=None
-        The column to use for the grid. If `grid_gdf` is None, this is ignored.
-    grid_n_bins : int, default=None
-        The number of bins to use for the grid. If `grid_gdf` is None, this is ignored.
-    **kwargs
-        Extra keyword arguments passed to the `plot` method of the
-        geodataframes.
+    Parameters:
+        area_gdf (gpd.GeoDataFrame):
+            GeoDataFrame containing the areas of interest.
+        cell_gdf (gpd.GeoDataFrame):
+            GeoDataFrame containing the cells.
+        context_gdf (gpd.GeoDataFrame):
+            GeoDataFrame containing the context, by default None.
+        network_gdf (gpd.GeoDataFrame):
+            GeoDataFrame containing the network, by default None.
+        grid_gdf (gpd.GeoDataFrame):
+            GeoDataFrame containing the grid, by default None.
+        show_legends (bool):
+            Flag, whether to include legends for each in the plot.
+        color (str):
+            A color for the interfaces or rois, Ignored if `show_legends=True`.
+        figsize (Tuple[int, int]):
+            Size of the figure.
+        grid_cmap (str):
+            The colormap to use for the grid. If `grid_gdf` is None, this is ignored.
+        grid_col (str):
+            The column to use for the grid. If `grid_gdf` is None, this is ignored.
+        grid_n_bins (int):
+            The number of bins to use for the grid. If `grid_gdf` is None, this is ignored.
+        **kwargs (Dict[str, Any])):
+            Extra keyword arguments passed to the `plot` method of the geodataframes.
 
-    Returns
-    -------
-        AxesSubplot: The axes used for plotting.
+    Returns:
+        AxesSubplot:
+            The axes used for plotting.
     """
     _, ax = plt.subplots(figsize=figsize)
 

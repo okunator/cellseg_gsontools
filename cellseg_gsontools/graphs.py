@@ -21,41 +21,38 @@ def fit_graph(
     thresh: Optional[float] = None,
     **kwargs,
 ) -> W:
-    """Fit a libpysal spatial weights graph to a gdf.
+    """Fit a `libpysal` spatial weights graph to a gdf.
 
     Optionally, a distance threshold can be set for edges that are too long.
 
-    Basically, a wrapper to fit libpysal graph with additional distance threshing.
+    This is a wrapper to fit `libpysal` graph with additional distance threshing.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The input geodataframe.
-        type : str
+        type (str):
             The type of the libpysal graph. Allowed: "delaunay", "knn", "distband",
             "relative_nhood"
-        id_col : str, optional
+        id_col (str, optional):
             The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        thresh : float, optional
+        thresh (float, optional):
             A distance threshold for too long edges.
-        **kwargs:
+        **kwargs (Dict[str, Any]):
             Arbitrary keyword arguments for the Graph init functions.
 
-    Returns
-    -------
+    Returns:
         libpysal.weights.W or None:
             A libpysal spatial weights object, containing the neighbor graph data.
             Returns None if the input gdf is empty.
 
-    Examples
-    --------
-    Fit a DistanceBand to a gdf with a dist threshold of 120.0.
-    >>> from cellseg_gsontools.graphs import fit_graph
-    >>> w = fit_graph(gdf, type="distband", thresh=120)
+    Examples:
+        Fit a DistanceBand to a gdf with a dist threshold of 120.0.
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> w = fit_graph(gdf, type="distband", thresh=120)
 
-    Fit a delaunay graph to a gdf without a dist threshold.
-    >>> from cellseg_gsontools.graphs import fit_graph
-    >>> w = fit_graph(gdf, type="delaunay", thresh=None)
+        Fit a delaunay graph to a gdf without a dist threshold.
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> w = fit_graph(gdf, type="delaunay", thresh=None)
     """
     allowed = (
         "delaunay",
@@ -130,21 +127,19 @@ def dist_thresh_weights_sequential(
 ) -> W:
     """Threshold edges based on distance to center node.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The input geodataframe.
-        w : libpysal.weights.W
+        w (libpysal.weights.W):
             The input spatial weights object.
-        thresh : float
+        thresh (float):
             The distance threshold.
-        id_col : str, optional
+        id_col (str, optional):
             The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        include_self : bool, default=True
+        include_self (bool, default=True):
             Whether to include self-loops in the neighbors.
 
-    Returns
-    -------
+    Returns:
         libpysal.weights.W:
             A libpysal spatial weights object, containing the neighbor graph data.
     """
@@ -178,24 +173,22 @@ def get_border_crosser_links(
 ) -> W:
     """Get the links that cross the border between the ROI and interface cells.
 
-    Parameters
-    ----------
-    union_weights : W
-        The union of the ROI and interface weights. NOTE: contains links between ROI
-        & interface cells.
-    roi_weights : W
-        The ROI weights. NOTE: contains only links between ROI cells.
-    iface_weights : W
-        The interface weights. NOTE: contains only links between interface cells.
-    only_border_crossers : bool, optional
-        Whether to return only the links that cross the border between the ROI and
-        interface cells or all neighbors of the node that has a border crossing link.
-        This includes also the liks that do not cross the border. By default True.
+    Parameters:
+        union_weights (W):
+            The union of the ROI and interface weights. NOTE: contains links between ROI
+            & interface cells.
+        roi_weights (W):
+            The ROI weights. NOTE: contains only links between ROI cells.
+        iface_weights (W):
+            The interface weights. NOTE: contains only links between interface cells.
+        only_border_crossers (bool, optional):
+            Whether to return only the links that cross the border between the ROI and
+            interface cells or all neighbors of the node that has a border crossing link.
+            This includes also the liks that do not cross the border. By default True.
 
-    Returns
-    -------
-    W:
-        The links that cross the border between the ROI and interface cells.
+    Returns:
+        W:
+            The links that cross the border between the ROI and interface cells.
     """
     # loop the nodes in the union graph and check if they are border crossing links
     graph = {}

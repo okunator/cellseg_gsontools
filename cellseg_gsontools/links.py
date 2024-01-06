@@ -12,7 +12,12 @@ __all__ = ["weights2gdf", "link_counts", "get_link_combinations"]
 
 
 def get_link_combinations(classes: Tuple[str, ...]) -> List[str]:
-    """Return a list of link combinations between the classes in `classes`."""
+    """Return a list of link combinations between the classes in `classes`.
+
+    Parameters:
+        classes (Tuple[str, ...]):
+            A list/tuple containing the classes of your dataset.
+    """
     combos = ["-".join(t) for t in list(combinations_with_replacement(classes, 2))]
 
     return combos
@@ -21,17 +26,15 @@ def get_link_combinations(classes: Tuple[str, ...]) -> List[str]:
 def _create_link(focal: Point, neighbor: Point) -> LineString:
     """Create a LineString between two centroids.
 
-    Parameters
-    ----------
-    focal : Point
-        Focal centroid.
-    neighbor : Point
-        Neighbor centroid.
+    Parameters:
+        focal (Point):
+            Focal centroid.
+        neighbor (Point):
+            Neighbor centroid.
 
-    Returns
-    -------
-    LineString
-        LineString between the two centroids.
+    Returns:
+        LineString:
+            LineString between the two centroids.
     """
     return LineString([focal, neighbor])
 
@@ -41,19 +44,17 @@ def _get_link_class(
 ) -> str:
     """Get link class based on focal and neighbor class.
 
-    Parameters
-    ----------
-    focal_class : str
-        Focal class name.
-    neighbor_class : str
-        Neighbor class name.
-    link_combos : List[str]
-        List of all possible link class combinations.
+    Parameters:
+        focal_class (str):
+            Focal class name.
+        neighbor_class (str):
+            Neighbor class name.
+        link_combos (List[str]):
+            List of all possible link class combinations.
 
-    Returns
-    -------
-    str
-        Link class name.
+    Returns:
+        str:
+            Link class name.
     """
     for link_class in link_combos:
         class1, class2 = link_class.split("-")
@@ -67,44 +68,40 @@ def _get_link_class(
 def weights2gdf(
     gdf: gpd.GeoDataFrame, w: W, parallel: bool = False
 ) -> gpd.GeoDataFrame:
-    """Convert a pysal weights object to a geopandas dataframe.
+    """Convert a `libpysal` weights object to a `geopandas.GeoDataFrame`.
 
     Add class names and node centroids to the dataframe.
 
-    NOTE: if w.neighbors is empty, this will return None.
+    Note:
+        if `w.neighbors` is empty, this will return None.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        GeoDataFrame of the nodes.
-    w : W
-        PySAL weights object.
-    parallel : bool, default=False
-        Whether to use parallel processing.
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            GeoDataFrame of the nodes.
+        w (W):
+            PySAL weights object.
+        parallel (bool, default=False):
+            Whether to use parallel processing.
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        GeoDataFrame of the links.
+    Returns:
+        gpd.GeoDataFrame:
+            GeoDataFrame of the links.
 
-    Example
-    -------
-    Convert a pysal weights object from InterfaceContext to a geopandas dataframe.
-    >>> from cellseg_gsontools.spatial_context import InterfaceContext
-    >>> from cellseg_gsontools.links import weights2gdf
-
-    >>> iface_context = InterfaceContext(
-            area_gdf=areas,
-            cell_gdf=cells,
-            top_labels="area_cin",
-            bottom_labels="areastroma",
-            silence_warnings=True,
-            verbose=True,
-            min_area_size=100000.0
-        )
-
-    >>> w = iface_context.context2weights("border_network")
-    >>> link_gdf = weights2gdf(cells, w)
+    Examples:
+        Convert `libpysal` weights from `InterfaceContext` to `geopandas.GeoDataFrame`.
+        >>> from cellseg_gsontools.spatial_context import InterfaceContext
+        >>> from cellseg_gsontools.links import weights2gdf
+        >>> iface_context = InterfaceContext(
+        ...     area_gdf=areas,
+        ...     cell_gdf=cells,
+        ...     top_labels="area_cin",
+        ...     bottom_labels="areastroma",
+        ...     silence_warnings=True,
+        ...     min_area_size=100000.0,
+        ... )
+        >>> iface_context.fit(verbose=False)
+        >>> w = iface_context.context2weights("border_network")
+        >>> link_gdf = weights2gdf(cells, w)
     """
     if not w.neighbors:
         return
@@ -148,62 +145,57 @@ def weights2gdf(
 def link_counts(
     gdf: gpd.GeoDataFrame, w: W, classes: Tuple[str, ...]
 ) -> Dict[str, int]:
-    """Get the link-type counts of a geodataframe given a spatial weight object `w`.
+    """Get the link-type counts of a geodataframe given a spatial weights object `w`.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             Input geodataframe. Has to have a `class_name` column.
-        w : libysal.weights.W
+        w (libysal.weights.W):
             Libpysal spatial weights object of the gdf.
-        classes : Tuple[str, ...]
+        classes (Tuple[str, ...]):
             A list/tuple containing the classes of your dataset.
 
-    Returns
-    -------
-        Dict[str, int]: A contigency dictionary.
+    Returns:
+        Dict[str, int]:
+            A contigency dictionary.
 
-    Example
-    -------
-    Get the link types of the tumor-stroma interfaces in a slide.
-    >>> from cellseg_gsontools.spatial_context import InterfaceContext
-    >>> from cellseg_gsontools.links import link_counts
-
-    >>> iface_context = InterfaceContext(
-            area_gdf=areas,
-            cell_gdf=cells,
-            top_labels="area_cin",
-            bottom_labels="areastroma",
-            silence_warnings=True,
-            verbose=True,
-            min_area_size=100000.0
-        )
-    >>> classes = [
-            "inflammatory",
-            "connective",
-            "glandular_epithel",
-            "squamous_epithel",
-            "neoplastic"
-        ]
-
-    >>> w = iface_context.merge_weights("border_network")
-    >>> link_counts(cells, w, t)
-    Processing interface area: 4: 100%|██████████| 4/4 [00:01<00:00,  2.58it/s]
-    {'inflammatory-inflammatory': 31,
-    'inflammatory-connective': 89,
-    'inflammatory-glandular_epithel': 0,
-    'inflammatory-squamous_epithel': 0,
-    'inflammatory-neoplastic': 86,
-    'connective-connective': 131,
-    'connective-glandular_epithel': 0,
-    'connective-squamous_epithel': 0,
-    'connective-neoplastic': 284,
-    'glandular_epithel-glandular_epithel': 0,
-    'glandular_epithel-squamous_epithel': 0,
-    'glandular_epithel-neoplastic': 0,
-    'squamous_epithel-squamous_epithel': 0,
-    'squamous_epithel-neoplastic': 0,
-    'neoplastic-neoplastic': 236}
+    Examples:
+        Get the link types of the tumor-stroma interfaces.
+        >>> from cellseg_gsontools.spatial_context import InterfaceContext
+        >>> from cellseg_gsontools.links import link_counts
+        >>> iface_context = InterfaceContext(
+        ...     area_gdf=areas,
+        ...     cell_gdf=cells,
+        ...     top_labels="area_cin",
+        ...     bottom_labels="areastroma",
+        ...     silence_warnings=True,
+        ...     min_area_size=100000.0,
+        ... )
+        >>> classes = [
+        ...     "inflammatory",
+        ...     "connective",
+        ...     "glandular_epithel",
+        ...     "squamous_epithel",
+        ...     "neoplastic",
+        ... ]
+        >>> iface_context.fit(verbose=False)
+        >>> w = iface_context.context2weights("border_network")
+        >>> link_counts(cells, w, classes)
+        {'inflammatory-inflammatory': 31,
+        'inflammatory-connective': 89,
+        'inflammatory-glandular_epithel': 0,
+        'inflammatory-squamous_epithel': 0,
+        'inflammatory-neoplastic': 86,
+        'connective-connective': 131,
+        'connective-glandular_epithel': 0,
+        'connective-squamous_epithel': 0,
+        'connective-neoplastic': 284,
+        'glandular_epithel-glandular_epithel': 0,
+        'glandular_epithel-squamous_epithel': 0,
+        'glandular_epithel-neoplastic': 0,
+        'squamous_epithel-squamous_epithel': 0,
+        'squamous_epithel-neoplastic': 0,
+        'neoplastic-neoplastic': 236}
     """
     combos = get_link_combinations(classes)
     link_cnt = {combo: 0 for combo in combos}

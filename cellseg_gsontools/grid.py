@@ -28,23 +28,50 @@ __all__ = [
 def fit_spatial_grid(
     gdf: gpd.GeoDataFrame, grid_type: str = "square", **kwargs
 ) -> gpd.GeoDataFrame:
-    """Quick wrapper to fit either a hex or square grid to a GeoDataFrame.
+    """Quick wrapper to fit either a hex or square grid to a `geopandas.GeoDataFrame`.
 
-    NOTE: Hex grid only works for a gdf containing single polygon.
+    Note:
+        - Hexagonal grid requires the `h3` package to be installed.
+        - Hexagonal grid only works for a gdf containing one single polygon.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        GeoDataFrame to fit grid to.
-    grid_type : str, optional
-        Type of grid to fit, by default "square".
-    **kwargs
-        Keyword arguments to pass to grid fitting functions.
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            GeoDataFrame to fit grid to.
+        grid_type (str):
+            Type of grid to fit, by default "square".
+        **kwargs (Dict[str, Any]):
+            Keyword arguments to pass to grid fitting functions.
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        Fitted grid.
+    Returns:
+        gpd.GeoDataFrame:
+            Fitted grid.
+
+    Raises:
+        ValueError: If grid_type is not one of "square" or "hex".
+        ImportError: If grid_type is "hex" and the `h3` package is not installed.
+
+    Examples:
+        Fit a hexagonal grid to a gdf:
+        >>> from cellseg_gsontools import read_gdf
+        >>> from cellseg_gsontools.grid import fit_spatial_grid
+        >>> # Read in the tissue areas
+        >>> area_gdf = gpd.read_file("path/to/area.geojson")
+        >>> # Fit the grid
+        >>> hex_grid = fit_spatial_grid(area_gdf, grid_type="hex", resolution=9)
+        >>> hex_grid
+        gpd.GeoDataFrame
+
+        Fit a square grid to a gdf:
+        >>> from cellseg_gsontools import read_gdf
+        >>> from cellseg_gsontools.grid import fit_spatial_grid
+        >>> # Read in the tissue areas
+        >>> area_gdf = gpd.read_file("path/to/area.geojson")
+        >>> # Fit the grid
+        >>> sq_grid = fit_spatial_grid(
+        ...     area_gdf, grid_type="square", patch_size=(256, 256), stride=(256, 256)
+        ... )
+        >>> sq_grid
+        gpd.GeoDataFrame
     """
     allowed = ["square", "hex"]
     if grid_type not in allowed:
@@ -63,21 +90,30 @@ def fit_spatial_grid(
 def hexgrid_overlay(
     gdf: gpd.GeoDataFrame, resolution: int = 9, to_lonlat: bool = True
 ) -> gpd.GeoDataFrame:
-    """Fit a h grid on top of a gdf.
+    """Fit a `h3` hexagonal grid on top of a `geopandas.GeoDataFrame`.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        GeoDataFrame to fit grid to.
-    resolution : int, optional
-        H3 resolution, by default 9.
-    to_lonlat : bool, optional
-        Whether to convert to lonlat coordinates, by default True.
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            GeoDataFrame to fit grid to.
+        resolution (int):
+            H3 resolution, by default 9.
+        to_lonlat (bool):
+            Whether to convert to lonlat coordinates, by default True.
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        Fitted h3 hex grid.
+    Returns:
+        gpd.GeoDataFrame:
+            Fitted h3 hex grid.
+
+    Examples:
+        Fit a hexagonal grid to a gdf:
+        >>> from cellseg_gsontools import read_gdf
+        >>> from cellseg_gsontools.grid import hexgrid_overlay
+        >>> # Read in the tissue areas
+        >>> area_gdf = gpd.read_file("path/to/area.geojson")
+        >>> # Fit the grid
+        >>> hex_grid = hexgrid_overlay(area_gdf, resolution=9)
+        >>> hex_grid
+        gpd.GeoDataFrame
     """
     if gdf.empty or gdf is None:
         return
@@ -104,29 +140,42 @@ def grid_overlay(
     pad: int = 20,
     predicate: str = "intersects",
 ) -> gpd.GeoDataFrame:
-    """Overlay a grid to the given areas of a GeoDataFrame.
+    """Overlay a square grid to the given areas of a `geopandas.GeoDataFrame`.
 
-    NOTE: returns None if the gdf is empty.
+    Note:
+        Returns None if the gdf is empty.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        GeoDataFrame to fit the grid to. Uses the bounding box of the GeoDataFrame.
-        to fit the grid.
-    patch_size : Tuple[int, int]
-        Patch size of the grid.
-    stride : Tuple[int, int]
-        Stride of the sliding window in the grid.
-    pad : int, optional
-        Pad the bounding box with the given number of pixels, by default None.
-    predicate : str, optional
-        Predicate to use for the spatial join, by default "intersects".
-        Allowed values are "intersects" and "within".
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            GeoDataFrame to fit the grid to. Uses the bounding box of the GeoDataFrame
+            to fit the grid.
+        patch_size (Tuple[int, int]):
+            Patch size of the grid.
+        stride (Tuple[int, int]):
+            Stride of the sliding window in the grid.
+        pad (int):
+            Pad the bounding box with the given number of pixels, by default None.
+        predicate (str):
+            Predicate to use for the spatial join, by default "intersects".
+            Allowed values are "intersects" and "within".
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        GeoDataFrame with the grid fitted to the given GeoDataFrame.
+    Returns:
+        gpd.GeoDataFrame:
+            GeoDataFrame with the grid fitted to the given GeoDataFrame.
+
+    Raises:
+        ValueError: If predicate is not one of "intersects" or "within".
+
+    Examples:
+        Fit a square grid to a gdf:
+        >>> from cellseg_gsontools import read_gdf
+        >>> from cellseg_gsontools.grid import grid_overlay
+        >>> # Read in the tissue areas
+        >>> area_gdf = gpd.read_file("path/to/area.geojson")
+        >>> # Fit the grid
+        >>> sq_grid = grid_overlay(area_gdf, patch_size=(256, 256), stride=(256, 256))
+        >>> sq_grid
+        gpd.GeoDataFrame
     """
     if gdf.empty or gdf is None:
         return
@@ -146,19 +195,17 @@ def poly2hexgrid(
 ) -> gpd.GeoDataFrame:
     """Convert a shapely Polygon to a h3 hexagon grid.
 
-    Parameters
-    ----------
-    poly : Polygon
-        Polygon to convert.
-    resolution : int, optional
-        H3 resolution, by default 9.
-    to_lonlat : bool, optional
-        Whether to convert to lonlat coordinates, by default True.
+    Parameters:
+        poly (Polygon):
+            Polygon to convert.
+        resolution (int, optional):
+            H3 resolution, by default 9.
+        to_lonlat (bool, optional):
+            Whether to convert to lonlat coordinates, by default True.
 
-    Returns
-    -------
-    gpd.GeoDataFrame
-        GeoDataFrame of h3 hexagons.
+    Returns:
+        gpd.GeoDataFrame:
+            GeoDataFrame of h3 hexagons.
     """
     x, y = poly.exterior.coords.xy
     if to_lonlat:
@@ -178,17 +225,15 @@ def poly2hexgrid(
 def polygonise(hex_id: str, to_cartesian: bool = True) -> Polygon:
     """Polygonise a h3 hexagon.
 
-    Parameters
-    ----------
-    hex_id : str
-        H3 hexagon id.
-    to_cartesian : bool, optional
-        Whether to convert to cartesian coordinates, by default True.
+    Parameters:
+        hex_id (str):
+            H3 hexagon id.
+        to_cartesian (bool, optional):
+            Whether to convert to cartesian coordinates, by default True.
 
-    Returns
-    -------
-    Polygon
-        Polygonised h3 hexagon.
+    Returns:
+        Polygon:
+            Polygonised h3 hexagon.
     """
     poly = Polygon(h3.h3_to_geo_boundary(hex_id, geo_json=True))
 
@@ -203,19 +248,18 @@ def polygonise(hex_id: str, to_cartesian: bool = True) -> Polygon:
 def bounding_box(gdf: gpd.GeoDataFrame, pad: int = 0) -> gpd.GeoDataFrame:
     """Get the bounding box of a GeoDataFrame.
 
-    NOTE: returns None if the gdf is empty.
+    Note:
+        returns None if the gdf is empty.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        The input GeoDataFrame.
-    pad : int, default=0
-        The padding to add to the bounding box.
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            The input GeoDataFrame.
+        pad (int):
+            The padding to add to the bounding box.
 
-    Returns
-    -------
-    gpd.GeoDataFrame:
-        The bounding box as a GeoDataFrame.
+    Returns:
+        gpd.GeoDataFrame:
+            The bounding box as a GeoDataFrame.
     """
     if gdf.empty or gdf is None:
         return
@@ -230,21 +274,19 @@ def _get_margins(
 ) -> Tuple[int, int]:
     """Get the number of slices needed for one direction and the overlap.
 
-    Parameters
-    ----------
-    first_endpoint : int
-        The first coordinate of the patch.
-    size : int
-        The size of the input.
-    stride : int
-        The stride of the sliding window.
-    pad : int, default=None
-        The padding to add to the patch
+    Parameters:
+        first_endpoint (int):
+            The first coordinate of the patch.
+        size (int):
+            The size of the input.
+        stride (int):
+            The stride of the sliding window.
+        pad (int):
+            The padding to add to the patch
 
-    Returns
-    -------
-    Tuple[int, int]:
-        The number of patches needed for one direction and the overlap.
+    Returns:
+        Tuple[int, int]:
+            The number of patches needed for one direction and the overlap.
     """
     pad = int(pad) if pad is not None else 20  # at least some padding needed
     size += pad
@@ -273,23 +315,22 @@ def get_grid(
 ) -> gpd.GeoDataFrame:
     """Get a grid of patches from a GeoDataFrame.
 
-    NOTE: returns None if the gdf is empty.
+    Note:
+        returns None if the gdf is empty.
 
-    Parameters
-    ----------
-    gdf : gpd.GeoDataFrame
-        The input GeoDataFrame.
-    patch_size : Tuple[int, int]
-        The size of the patch.
-    stride : Tuple[int, int]
-        The stride of the sliding window.
-    pad : int, default=None
-        The padding to add to the patch
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            The input GeoDataFrame.
+        patch_size (Tuple[int, int]):
+            The size of the patch.
+        stride (Tuple[int, int]):
+            The stride of the sliding window.
+        pad (int):
+            The padding to add to the patch
 
-    Returns
-    -------
-    gpd.GeoDataFrame:
-        The grid of patches.
+    Returns:
+        gpd.GeoDataFrame:
+            The grid of patches.
     """
     if gdf.empty or gdf is None:
         return
@@ -329,22 +370,20 @@ def get_rect_metric(
 ) -> Any:
     """Get the metric of the given rectangle.
 
-    Parameters
-    ----------
-    rect : Polygon
-        The rectangle to get the metric of.
-    objs : gpd.GeoDataFrame
-        The objects to use for the metric.
-    metric_func : Callable
-        The metric function to use.
-    predicate : str
-        The predicate to use for the spatial join. Allowed values are "intersects"
-        and "within".
+    Parameters:
+        rect (Polygon):
+            The rectangle to get the metric of.
+        objs (gpd.GeoDataFrame):
+            The objects to use for the metric.
+        metric_func (Callable):
+            The metric function to use.
+        predicate (str):
+            The predicate to use for the spatial join. Allowed values are "intersects"
+            and "within".
 
-    Returns
-    -------
-    Any:
-        The metric of the rectangle.
+    Returns:
+        Any:
+            The metric of the rectangle.
     """
     if predicate == "intersects":
         sub_objs: gpd.GeoDataFrame = objs[objs.geometry.intersects(rect)]
@@ -369,92 +408,89 @@ def grid_classify(
     pbar: bool = False,
     **kwargs,
 ) -> gpd.GeoDataFrame:
-    """Classify the grid based on objs inside.
+    """Classify the grid based on objs inside the grid cells.
 
-    Parameters
-    ----------
-    grid : gpd.GeoDataFrame
-        The grid of rectangles to classify.
-    objs : gpd.GeoDataFrame
-        The objects to use for classification.
-    metric_func : Callable
-        The metric/heuristic function to use for classification.
-    predicate : str
-        The predicate to use for the spatial join. Allowed values are "intersects"
-        and "within".
-    new_col_names : Union[Tuple[str, ...], str]
-        The name of the new column(s) in the grid gdf.
-    parallel : bool, default=True
-        Whether to use parallel processing.
-    num_processes : int, default=-1
-        The number of processes to use. If -1, uses all available cores.
-        Ignored if parallel=False.
-    pbar : bool, default=False
-        Whether to show a progress bar. Ignored if parallel=False.
+    Parameters:
+        grid (gpd.GeoDataFrame):
+            The grid of rectangles to classify.
+        objs (gpd.GeoDataFrame):
+            The objects to use for classification.
+        metric_func (Callable):
+            The metric/heuristic function to use for classification.
+        predicate (str):
+            The predicate to use for the spatial join. Allowed values are "intersects"
+            and "within".
+        new_col_names (Union[Tuple[str, ...], str]):
+            The name of the new column(s) in the grid gdf.
+        parallel (bool):
+            Whether to use parallel processing.
+        num_processes (int):
+            The number of processes to use. If -1, uses all available cores.
+            Ignored if parallel=False.
+        pbar (bool):
+            Whether to show a progress bar. Ignored if parallel=False.
 
-    Example
-    -------
-    Get the number of immune cells in each grid cell at the tumor stroma interface:
+    Returns:
+        gpd.GeoDataFrame:
+            The grid with the new columns added.
 
-    >>> import geopandas as gpd
-    >>> from cellseg_gsontools.grid import grid_classify
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from shapely.geometry import Polygon
-    >>> from functools import partial
-    >>> from cellseg_gsontools.context import InterfaceContext
-    >>> from cellseg_gsontools.grid import grid_overlay
+    Raises:
+        ValueError: If predicate is not one of "intersects" or "within".
 
-    >>> # Define a heuristic function to get the number of immune cells
-    >>> def get_immune_cell_cnt(gdf: gpd.GeoDataFrame, **kwargs) -> int:
-    >>>     try:
-    >>>         cnt = gdf.class_name.value_counts()["inflammatory"]
-    >>>     except KeyError:
-    >>>         cnt = 0
-
-    >>>     return int(cnt)
-
-    >>> # Read in the tissue areas and cells
-    >>> area_gdf = gpd.read_file("path/to/area.geojson")
-    >>> cell_gdf = gpd.read_file("path/to/cell.geojson")
-
-    >>> # Fit a tumor-stroma interface
-    >>> tumor_stroma_iface = InterfaceContext(
-    >>>     area_gdf=area_gdf,
-    >>>     cell_gdf=cell_gdf,
-    >>>     top_labels="area_cin",
-    >>>     bottom_labels="areastroma",
-    >>>     buffer_dist=250,
-    >>>     graph_type="distband",
-    >>>     dist_thresh=75,
-    >>>     patch_size=(128, 128),
-    >>>     stride=(128, 128),
-    >>>     min_area_size=50000
-    >>> )
-    >>> tumor_stroma_iface.fit(parallel=False)
-
-    >>> # Get the grid and the cells at the interface
-    >>> iface_grid = grid_overlay(
-    ...     tumor_stroma_iface.context2gdf("interface_area"),
-    ...     patch_size=(128, 128),
-    ...     stride=(128, 128)
-    ... )
-    >>> cells = tumor_stroma_iface.context2gdf("interface_cells")
-
-    >>> # Classify the grid
-    >>> iface_grid = grid_classify(
-    >>>     grid=iface_grid,
-    >>>     objs=cells,
-    >>>     metric_func=get_immune_cnt,
-    >>>     predicate="intersects",
-    >>>     new_col_name="immune_cnt",
-    >>>     parallel=True,
-    >>>     pbar=True,
-    >>>     num_processes=-1
-    >>> )
-    >>> iface_grid
-                                                 geometry  immune_cnt
-    28  POLYGON ((20032.00000 54098.50000, 20160.00000...               15
-    29  POLYGON ((20160.00000 54098.50000, 20288.00000...               3
+    Examples:
+        Get the number of immune cells in each grid cell at the tumor stroma interface:
+        >>> import geopandas as gpd
+        >>> from shapely.geometry import Polygon
+        >>> from functools import partial
+        >>> from cellseg_gsontools import gdf_apply, read_gdf
+        >>> from cellseg_gsontools.grid import grid_classify, grid_overlay
+        >>> from cellseg_gsontools.context import InterfaceContext
+        >>> # Define a heuristic function to get the number of immune cells
+        >>> def get_immune_cell_cnt(gdf: gpd.GeoDataFrame, **kwargs) -> int:
+        ...     try:
+        ...         cnt = gdf.class_name.value_counts()["inflammatory"]
+        ...     except KeyError:
+        ...         cnt = 0
+        ...     return int(cnt)
+        >>> # Read in the tissue areas and cells
+        >>> area_gdf = gpd.read_file("path/to/area.geojson")
+        >>> cell_gdf = gpd.read_file("path/to/cell.geojson")
+        >>> # Fit a tumor-stroma interface
+        >>> tumor_stroma_iface = InterfaceContext(
+        ...     area_gdf=area_gdf,
+        ...     cell_gdf=cell_gdf,
+        ...     top_labels="area_cin",
+        ...     bottom_labels="areastroma",
+        ...     buffer_dist=250,
+        ...     graph_type="distband",
+        ...     dist_thresh=75,
+        ...     patch_size=(128, 128),
+        ...     stride=(128, 128),
+        ...     min_area_size=50000,
+        ... )
+        >>> tumor_stroma_iface.fit(verbose=False)
+        >>> # Get the grid and the cells at the interface
+        >>> iface_grid = grid_overlay(
+        ...     tumor_stroma_iface.context2gdf("interface_area"),
+        ...     patch_size=(128, 128),
+        ...     stride=(128, 128),
+        ... )
+        >>> cells = tumor_stroma_iface.context2gdf("interface_cells")
+        >>> # Classify the grid
+        >>> iface_grid = grid_classify(
+        >>>     grid=iface_grid,
+        >>>     objs=cells,
+        >>>     metric_func=get_immune_cnt,
+        >>>     predicate="intersects",
+        >>>     new_col_name="immune_cnt",
+        >>>     parallel=True,
+        >>>     pbar=True,
+        >>>     num_processes=-1
+        >>> )
+        >>> iface_grid
+        geometry  immune_cnt
+        28  POLYGON ((20032.00000 54098.50000, 20160.00000... 15
+        29  POLYGON ((20160.00000 54098.50000, 20288.00000... 3
     """
     allowed = ["intersects", "within"]
     if predicate not in allowed:
