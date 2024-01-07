@@ -263,16 +263,19 @@ def local_diversity(
             You can also pass in a list of columns, in which case the diversity is
             computed for each column.
         id_col (str):
-            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
+            Defaults to None.
         metrics (Tuple[str, ...]):
             A Tuple/List of diversity metrics. Allowed metrics: "shannon_index",
             "simpson_index", "gini_index", "theil_index". Defaults to None.
         scheme (str):
-            `pysal.mapclassify` classification scheme. Defaults to "HeadTailBreaks".
-        parallel (bool, optional):
-            Flag whether to use parallel apply operations when computing the diversities. Defaults to True.
+            `mapclassify` classification scheme. Defaults to "FisherJenks".
+        parallel (bool):
+            Flag whether to use parallel apply operations when computing the diversities.
+            Defaults to True.
         rm_nhood_cols (bool):
-            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
+            Flag, whether to remove the extra neighborhood columns from the result gdf.
+            Defaults to True.
         col_prefix (str):
             Prefix for the new column names. Defaults to None.
         create_copy (bool):

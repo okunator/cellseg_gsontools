@@ -91,21 +91,26 @@ def local_character(
         val_col (Union[str, Tuple[str, ...]]):
             The name of the column in the gdf for which the reduction is computed.
             If a tuple, the reduction is computed for each column.
-        id_col (str, optional):
-            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
-        reductions (Tuple[str, ...], optional):
+        id_col (str):
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
+            Defaults to None.
+        reductions (Tuple[str, ...]):
             A list of reduction methods for the neighborhood. One of
             "sum", "mean", "median", "min", "max", "std". Defaults to ("sum", ).
-        weight_by_area (bool, optional):
-            Flag whether to weight the neighborhood values by the area of the object. Defaults to False.
-        parallel (bool, optional):
-            Flag whether to use parallel apply operations when computing the character. Defaults to True.
-        rm_nhood_cols (bool, optional):
-            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
-        col_prefix (str, optional):
+        weight_by_area (bool):
+            Flag whether to weight the neighborhood values by the area of the object.
+            Defaults to False.
+        parallel (bool):
+            Flag whether to use parallel apply operations when computing the character.
+            Defaults to True.
+        rm_nhood_cols (bool):
+            Flag, whether to remove the extra neighborhood columns from the result gdf.
+            Defaults to True.
+        col_prefix (str):
             Prefix for the new column names.
-        create_copy (bool, optional):
-            Flag whether to create a copy of the input gdf and return that. Defaults to True.
+        create_copy (bool):
+            Flag whether to create a copy of the input gdf and return that.
+            Defaults to True.
 
     Returns:
         gpd.GeoDataFrame:
@@ -221,20 +226,26 @@ def local_distances(
             The input GeoDataFrame.
         spatial_weights (libysal.weights.W):
             Libpysal spatial weights object.
-        id_col (str, optional):
-            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
-        reductions (Tuple[str, ...], optional):
-            A list of reduction methods for the neighborhood. One of "sum", "mean", "median". Defaults to ("sum", ).
-        weight_by_area (bool, optional):
-            Flag whether to weight the neighborhood values by the area of the object. Defaults to False.
-        parallel (bool, optional):
-            Flag whether to use parallel apply operations when computing the character. Defaults to True.
-        rm_nhood_cols (bool, optional):
-            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
-        col_prefix (str, optional):
+        id_col (str):
+            The unique id column in the gdf. If None, this uses `set_uid` to set it.
+            Defaults to None.
+        reductions (Tuple[str, ...]):
+            A list of reduction methods for the neighborhood. One of "sum", "mean",
+            "median", "min", "max", "std". Defaults to ("sum", ).
+        weight_by_area (bool):
+            Flag whether to weight the neighborhood values by the area of the object.
+            Defaults to False.
+        parallel (bool):
+            Flag whether to use parallel apply operations when computing the character.
+            Defaults to True.
+        rm_nhood_cols (bool):
+            Flag, whether to remove the extra neighborhood columns from the result gdf.
+            Defaults to True.
+        col_prefix (str):
             Prefix for the new column names.
-        create_copy (bool, optional):
-            Flag whether to create a copy of the input gdf and return that. Defaults to True.
+        create_copy (bool):
+            Flag whether to create a copy of the input gdf and return that.
+            Defaults to True.
 
     Returns:
         gpd.GeoDataFrame:
