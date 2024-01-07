@@ -19,25 +19,25 @@ def reduce(
 ) -> float:
     """Reduce a numeric sequence.
 
-    NOTE: Optionally can weight the input values based on area.
+    Note:
+        Optionally can weight the input values based on area.
 
-    Parameters
-    ----------
-        x : Sequence
+    Parameters:
+        x (Sequence):
             The input value-vector. Shape (n, )
-        areas : Sequence, optional
+        areas (Sequence, optional):
             The areas of the spatial objects. This is for weighting. Optional.
-        how : str, default="sum"
-            The reduction method for the neighborhood. One of "sum", "mean", "median".
+        how (str, default="sum"):
+            The reduction method for the neighborhood. One of:
+            "sum", "mean", "median", "min", "max", "std".
 
-    Raises
-    ------
-        ValueError: If an illegal reduction method is given.
+    Raises:
+        ValueError:
+            If an illegal reduction method is given.
 
-    Returns
-    -------
+    Returns:
         float:
-            The mean, sum or median of the input array.
+            The reduced value of the input array.
     """
     w = 1.0
     if areas is not None:
@@ -50,8 +50,14 @@ def reduce(
         res = np.mean(x * w)
     elif how == "median":
         res = np.median(x * w)
+    elif how == "max":
+        res = np.max(x * w)
+    elif how == "min":
+        res = np.min(x * w)
+    elif how == "std":
+        res = np.std(x * w)
     else:
-        allowed = ("sum", "mean", "median")
+        allowed = ("sum", "mean", "median", "min", "max", "std")
         ValueError(f"Illegal param `how`. Got: {how}, Allowed: {allowed}")
 
     return float(res)
@@ -71,56 +77,54 @@ def local_character(
 ) -> gpd.GeoDataFrame:
     """Compute the local sum/mean/median of a specified metric for each row in a gdf.
 
-    Local character: The sum/mean/median of the immediate neighborhood of a cell.
+    Local character: The sum/mean/median/min/max/std of the immediate neighborhood
+    of a cell.
 
-    NOTE: Option to weight the nhood values by their area before reductions.
+    Note:
+        Option to weight the nhood values by their area before reductions.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The input GeoDataFrame.
-        spatial_weights : libysal.weights.W
+        spatial_weights (libysal.weights.W):
             Libpysal spatial weights object.
-        val_col: Union[str, Tuple[str, ...]]
+        val_col (Union[str, Tuple[str, ...]]):
             The name of the column in the gdf for which the reduction is computed.
             If a tuple, the reduction is computed for each column.
-        id_col : str, default=None
-            The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        reductions : Tuple[str, ...], default=("sum", )
-            A list of reduction methods for the neighborhood. One of "sum", "mean",
-            "median".
-        weight_by_area : bool, default=False
-            Flag wheter to weight the neighborhood values by the area of the object.
-        parallel : bool, default=True
-            Flag whether to use parallel apply operations when computing the character
-        rm_nhood_cols : bool, default=True
-            Flag, whether to remove the extra neighborhood columns from the result gdf.
-        col_prefix : str, optional
+        id_col (str, optional):
+            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
+        reductions (Tuple[str, ...], optional):
+            A list of reduction methods for the neighborhood. One of
+            "sum", "mean", "median", "min", "max", "std". Defaults to ("sum", ).
+        weight_by_area (bool, optional):
+            Flag whether to weight the neighborhood values by the area of the object. Defaults to False.
+        parallel (bool, optional):
+            Flag whether to use parallel apply operations when computing the character. Defaults to True.
+        rm_nhood_cols (bool, optional):
+            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
+        col_prefix (str, optional):
             Prefix for the new column names.
-        create_copy : bool, default=True
-            Flag whether to create a copy of the input gdf and return that.
+        create_copy (bool, optional):
+            Flag whether to create a copy of the input gdf and return that. Defaults to True.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The input geodataframe with computed character column added.
 
-    Examples
-    --------
-    Compute the mean of eccentricity values for each neighborhood
-    >>> from libpysal.weights import DistanceBand
-    >>> from cellseg_gsontools.character import local_character
-
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-    >>> local_character(
-    ...     gdf,
-    ...     spatial_weights=w_dist,
-    ...     val_col=["eccentricity", "area"],
-    ...     reduction=["mean", "median"],
-    ...     weight_by_area=True
-    ... )
+    Examples:
+        Compute the mean of eccentricity values for each cell neighborhood
+        >>> from cellseg_gsontools.character import local_character
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> w = fit_graph(gdf, type="distband", thres=75.0)
+        >>> local_character(
+        ...     gdf,
+        ...     spatial_weights=w,
+        ...     val_col=["eccentricity", "area"],
+        ...     reduction=["mean", "median"],
+        ...     weight_by_area=True,
+        ... )
     """
-    allowed = ("mean", "median", "sum")
+    allowed = ("sum", "mean", "median", "min", "max", "std")
     if not all(r in allowed for r in reductions):
         raise ValueError(
             f"Illegal reduction in `reductions`. Got: {reductions}. "
@@ -206,52 +210,44 @@ def local_distances(
     col_prefix: str = None,
     create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
-    """Compute the local sum/mean/median of the neighborhood distances for each row.
+    """Compute the local sum/mean/median/min/max/std distance of the neighborhood
+    distances for each row.
 
-    NOTE: Option to weight the nhood values by their area before reductions.
+    Note:
+        Option to weight the nhood values by their area before reductions.
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The input GeoDataFrame.
-        spatial_weights : libysal.weights.W
+        spatial_weights (libysal.weights.W):
             Libpysal spatial weights object.
-        id_col : str, default=None
-            The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        reductions : Tuple[str, ...], default=("sum", )
-            A list of reduction methods for the neighborhood. One of "sum", "mean",
-            "median".
-        weight_by_area : bool, default=False
-            Flag wheter to weight the neighborhood values by the area of the object.
-        parallel : bool, default=True
-            Flag whether to use parallel apply operations when computing the character
-        rm_nhood_cols : bool, default=True
-            Flag, whether to remove the extra neighborhood columns from the result gdf.
-        col_prefix : str, optional
+        id_col (str, optional):
+            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
+        reductions (Tuple[str, ...], optional):
+            A list of reduction methods for the neighborhood. One of "sum", "mean", "median". Defaults to ("sum", ).
+        weight_by_area (bool, optional):
+            Flag whether to weight the neighborhood values by the area of the object. Defaults to False.
+        parallel (bool, optional):
+            Flag whether to use parallel apply operations when computing the character. Defaults to True.
+        rm_nhood_cols (bool, optional):
+            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
+        col_prefix (str, optional):
             Prefix for the new column names.
-        create_copy : bool, default=True
-            Flag whether to create a copy of the input gdf and return that.
+        create_copy (bool, optional):
+            Flag whether to create a copy of the input gdf and return that. Defaults to True.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The input geodataframe with computed distances column added.
 
-    Examples
-    --------
-    Compute the mean of eccentricity values for each neighborhood
-    >>> from libpysal.weights import DistanceBand
-    >>> from cellseg_gsontools.character import local_character
-
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-    >>> local_distances(
-    ...     gdf,
-    ...     spatial_weights=w_dist,
-    ...     reduction=["mean"],
-    ...     weight_by_area=True
-    ... )
+    Examples:
+        Compute the mean of eccentricity values for each neighborhood
+        >>> from cellseg_gsontools.character import local_distances
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> w = fit_graph(gdf, type="distband", thres=75.0)
+        >>> local_distances(gdf, spatial_weights=w, reduction=["mean"], weight_by_area=True)
     """
-    allowed = ("mean", "median", "sum")
+    allowed = ("sum", "mean", "median", "min", "max", "std")
     if not all(r in allowed for r in reductions):
         raise ValueError(
             f"Illegal reduction in `reductions`. Got: {reductions}. "

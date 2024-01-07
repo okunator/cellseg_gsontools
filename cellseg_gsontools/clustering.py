@@ -16,51 +16,54 @@ def cluster_points(
 ) -> gpd.GeoDataFrame:
     """Apply a clustering to centroids in a gdf.
 
-    NOTE: this is just a quick wrapper for a few clustering algos adapted
+    This is just a quick wrapper for a few clustering algos adapted
     to geodataframes.
 
-    For now dbscan and its variants can be used as the clustering method.
-    (dbscan, optics, adbscan). This means that label -1 equals to noise!
+    Note:
+        Allowed clustering methods are:
 
-    Parameters
-    ----------
-        gdf : np.ndarray or gpd.GeoDataFrame
+        - `dbscan` (sklearn.cluster.DBSCAN)
+        - `hdbscan` (sklearn.cluster.HDBSCAN)
+        - `optics` (sklearn.cluster.OPTICS)
+        - `adbscan` (esda.adbscan.ADBSCAN)
+
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             Input geo dataframe with a properly set geometry column.
-        eps : float, default=0.5
+        eps (float):
             The maximum distance between two samples for one to be considered as in the
             neighborhood of the other. This is not a maximum bound on the distances of
             gdf within a cluster.
-        min_samples : int, default=35
+        min_samples (int):
             The number of samples (or total weight) in a neighborhood for a point to be
             considered as a core point. This includes the point itself.
-        method : str, default="dbscan"
+        method (str):
             The clustering method to be used. Allowed: ("dbscan", "adbscan", "optics").
-        n_jobs : int, default=-1
+        n_jobs (int):
             The number of parallel jobs to run. None means 1. -1 means using all
             processors.
-        **kwargs:
+        **kwargs (Dict[str, Any]):
             Arbitrary key-word arguments passed to the clustering methods.
 
-    Raises
-    ------
-        ValueError if illegal method is given or input `gdf` is of wrong type.
+    Raises:
+        ValueError:
+            If illegal method is given or input `gdf` is of wrong type.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The input gdf with a new "labels" columns of the clusters.
 
-    Examples
-    --------
-    Cluster immune cell centroids in a gdf using dbscan.
-    >>> from cellseg_gsontools.clustering import cluster_points
-    >>> gdf = read_gdf("cells.json")
-    >>> gdf = cluster_points(
-    ...     gdf[gdf["class_name"] == "immune"],
-    ...     method="dbscan",
-    ...     eps=350.0,
-    ...     min_samples=30
-    ... )
+    Examples:
+        Cluster immune cell centroids in a gdf using dbscan.
+
+        >>> from cellseg_gsontools.clustering import cluster_points
+        >>> gdf = read_gdf("cells.json")
+        >>> gdf = cluster_points(
+        ...     gdf[gdf["class_name"] == "immune"],
+        ...     method="dbscan",
+        ...     eps=350.0,
+        ...     min_samples=30,
+        ... )
     """
     allowed = ("dbscan", "adbscan", "optics", "hdbscan")
     if method not in allowed:

@@ -238,59 +238,65 @@ def local_diversity(
     col_prefix: str = None,
     create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
-    """Compute the local diversity/heterogenity metric for each row in a gdf.
+    """Compute the local diversity/heterogenity metric for cell neighborhood.
 
-    Local diversity: The diversity metric is computed from the immediate
-        neighborhood of the node/cell.
+    Note:
+        Allowed diversity metrics:
 
-    Parameters
-    ----------
-        gdf : gpd.GeoDataFrame
+        - `simpson_index` - for both categorical and real valued neighborhoods
+        - `shannon_index` - for both categorical and real valued neighborhoods
+        - `gini_index` - for only real valued neighborhoods
+        - `theil_index` - for only real valued neighborhoods
+
+    Note:
+        If `val_col` is not categorical, the values are binned using `mapclassify`.
+        The bins are then used to compute the diversity metrics. If `val_col` is
+        categorical, the values are used directly.
+
+    Parameters:
+        gdf (gpd.GeoDataFrame):
             The input GeoDataFrame.
-        spatial_weights : libysal.weights.W
+        spatial_weights (libysal.weights.W):
             Libpysal spatial weights object.
-        val_col : Union[str, Tuple[str, ...]]
+        val_col (Union[str, Tuple[str, ...]]):
             The name of the column in the gdf for which the diversity is computed.
             You can also pass in a list of columns, in which case the diversity is
             computed for each column.
-        id_col : str, default=None
-            The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        metrics : Tuple[str, ...]
+        id_col (str):
+            The unique id column in the gdf. If None, this uses `set_uid` to set it. Defaults to None.
+        metrics (Tuple[str, ...]):
             A Tuple/List of diversity metrics. Allowed metrics: "shannon_index",
-            "simpson_index", "gini_index", "theil_index"
-        scheme : str, default="HeadTailBreaks"
-            `pysal.mapclassify` classification scheme.
-        parallel : bool, default=True
-            Flag whether to use parallel apply operations when computing the diversities
-        rm_nhood_cols : bool, default=True
-            Flag, whether to remove the extra neighborhood columns from the result gdf.
-        col_prefix : str, optional
-            Prefix for the new column names.
-        create_copy : bool, default=True
-            Flag whether to create a copy of the input gdf or not.
+            "simpson_index", "gini_index", "theil_index". Defaults to None.
+        scheme (str):
+            `pysal.mapclassify` classification scheme. Defaults to "HeadTailBreaks".
+        parallel (bool, optional):
+            Flag whether to use parallel apply operations when computing the diversities. Defaults to True.
+        rm_nhood_cols (bool):
+            Flag, whether to remove the extra neighborhood columns from the result gdf. Defaults to True.
+        col_prefix (str):
+            Prefix for the new column names. Defaults to None.
+        create_copy (bool):
+            Flag whether to create a copy of the input gdf or not. Defaults to True.
 
-    Raises
-    ------
-        ValueError: If an illegal metric is given.
+    Raises:
+        ValueError:
+            If an illegal metric is given.
 
-    Returns
-    -------
+    Returns:
         gpd.GeoDataFrame:
             The input geodataframe with computed diversity metric columns added.
 
-    Examples
-    --------
-    Compute the simpson diversity of eccentricity values for each neighborhood
-    >>> from libpysal.weights import DistanceBand
-    >>> from cellseg_gsontools.diversity import local_diversity
-
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-    >>> local_diversity(
-    ...     gdf,
-    ...     spatial_weights=w_dist,
-    ...     val_col="eccentricity",
-    ...     metrics=["simpson_index"]
-    ... )
+    Examples:
+        Compute the simpson diversity of eccentricity values for each cell neighborhood
+        >>> from cellseg_gsontools.diversity import local_diversity
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> w = fit_graph(gdf, type="distband", thres=75.0)
+        >>> local_diversity(
+        ...     gdf,
+        ...     spatial_weights=w_dist,
+        ...     val_col="eccentricity",
+        ...     metrics=["simpson_index"],
+        ... )
     """
     allowed = list(DIVERSITY_LOOKUP.keys())
     if not all(m in allowed for m in metrics):

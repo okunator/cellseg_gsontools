@@ -27,6 +27,14 @@ def fit_graph(
 
     This is a wrapper to fit `libpysal` graph with additional distance threshing.
 
+    Note:
+        Allowed graph fitting methods:
+
+        - `delaunay`
+        - `knn`
+        - `distband`
+        - `relative_nhood`
+
     Parameters:
         gdf (gpd.GeoDataFrame):
             The input geodataframe.
