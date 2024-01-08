@@ -54,38 +54,44 @@ SMALL = np.finfo("float").tiny
 
 
 def simpson_index(counts: Sequence) -> float:
-    """Compute the simpson diversity index on a count vector.
+    """Compute the Simpson diversity index on a count vector.
 
-    Simpson diversity index: 1 - sum((species_count / total_count)^2)
+    **Simpson index:**
+    $$
+    D = 1 - \\sum_{i=1}^n \\left(\\frac{n_i}{N}\\right)^2
+    $$
 
-    Parameters
-    ----------
-        counts : Sequence
+    where $n_i$ is the count of species $i$ and $N$ is the total count of species.
+
+    Parameters:
+        counts (Sequence):
             A count vector/list of shape (C, ).
 
-    Returns
-    -------
+    Returns:
         float:
-            The computed simpson diversity index.
+            The computed Simpson diversity index.
     """
     N = np.sum(counts) + SMALL
     return 1 - np.sum([(n / N) ** 2 for n in counts if n != 0])
 
 
 def shannon_index(counts: Sequence) -> float:
-    """Compute the shannon index/entropy on a count vector.
+    """Compute the Shannon index/entropy on a count vector.
 
-    Shannon index: -sum(p_i * ln(p_i))
+    **Shannon index:**
+    $$
+    H^{\\prime} = -\\sum_{i=1}^n p_i \\ln(p_i)
+    $$
 
-    Parameters
-    ----------
-        counts : Sequence
+    where $p_i$ is the proportion of species $i$ and $n$ is the total count of species.
+
+    Parameters:
+        counts (Sequence):
             A count vector/list of shape (C, ).
 
-    Returns
-    -------
+    Returns:
         float:
-            The computed shannon diversity index.
+            The computed Shannon diversity index.
     """
     N = np.sum(counts) + SMALL
     probs = [float(n) / N for n in counts]
@@ -101,20 +107,26 @@ def shannon_index(counts: Sequence) -> float:
 def gini_index(x: Sequence) -> float:
     """Compute the gini coefficient of inequality for species.
 
-    This is based on
-    http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm.
+    Note:
+        This is based on
+        http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm.
 
-    Parameters
-    ----------
-        x : Sequence
+    **Gini-index:**
+    $$
+    G = \\frac{\\sum_{i=1}^n (2i - n - 1)x_i} {n \\sum_{i=1}^n x_i}
+    $$
+
+    where $x_i$ is the count of species $i$ and $n$ is the total count of species.
+
+    Parameters:
+        x (Sequence):
             The input value-vector. Shape (n, )
 
-    Raises
-    ------
-        ValueError: If there are negative input values.
+    Raises:
+        ValueError:
+            If there are negative input values.
 
-    Returns
-    -------
+    Returns:
         float:
             The computed Gini coefficient.
     """
@@ -132,13 +144,21 @@ def gini_index(x: Sequence) -> float:
 def theil_index(x: Sequence) -> float:
     """Compute the Theil index of inequality for species.
 
-    Parameters
-    ----------
-        x : Sequence
+    **Theil-index:**
+    $$
+    T = \\sum_{i=1}^n \\left(
+        \\frac{y_i}{\\sum_{i=1}^n y_i} \\ln \\left[
+            N \\frac{y_i} {\\sum_{i=1}^n y_i}
+        \\right]\\right)
+    $$
+
+    where $y_i$ is the count of species $i$ and $N$ is the total count of species.
+
+    Parameters:
+        x (Sequence):
             The input value-vector. Shape (n, )
 
-    Returns
-    -------
+    Returns:
         float:
             The computed Theil index.
     """
@@ -154,17 +174,15 @@ def theil_index(x: Sequence) -> float:
 
 
 def theil_between_group(x: Sequence, partition: Sequence) -> float:
-    """Between group Theil index.
+    """Compute the between group Theil index.
 
-    Parameters
-    ----------
-        x : Sequence
+    Parameters:
+        x (Sequence):
             The input value-vector. Shape (n, )
-        partition : Sequence
+        partition (Sequence):
             The groups for each x value. Shape (n, ).
 
-    Returns
-    -------
+    Returns:
         float:
             The computed between group Theil index.
     """
@@ -192,17 +210,15 @@ def theil_between_group(x: Sequence, partition: Sequence) -> float:
 
 
 def theil_within_group(x: Sequence, partition: Sequence) -> float:
-    """Within group Theil index.
+    """Compute the within group Theil index.
 
-    Parameters
-    ----------
-        x : Sequence
+    Parameters:
+        x (Sequence):
             The input value-vector. Shape (n, )
-        partition : Sequence
+        partition (Sequence):
             The groups for each x value. Shape (n, ).
 
-    Returns
-    -------
+    Returns:
         float:
             The computed within group Theil index.
     """

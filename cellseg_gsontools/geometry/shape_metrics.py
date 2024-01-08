@@ -34,6 +34,12 @@ __all__ = [
 def major_axis_len(polygon: Polygon) -> float:
     """Compute the major axis length of a polygon.
 
+    Note:
+        The major axis is the (x,y) endpoints of the longest line that
+        can be drawn through the object. Major axis length is the pixel
+        distance between the major-axis endpoints
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     Parameters:
         polygon (Polygon):
             Input shapely polygon object.
@@ -48,6 +54,13 @@ def major_axis_len(polygon: Polygon) -> float:
 
 def minor_axis_len(polygon: Polygon) -> float:
     """Compute the minor axis length of a polygon.
+
+    Note:
+        The minor axis is the (x,y) endpoints of the longest line that
+        can be drawn through the object whilst remaining perpendicular
+        with the major-axis. Minor axis length is the pixel distance
+        between the minor-axis endpoints
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
 
     Parameters:
         polygon (Polygon):
@@ -64,6 +77,12 @@ def minor_axis_len(polygon: Polygon) -> float:
 def major_axis_angle(polygon: Polygon) -> float:
     """Compute the major axis angle of a polygon.
 
+    Note:
+        The major axis is the (x,y) endpoints of the longest line that
+        can be drawn through the object. Major axis angle is the angle of
+        the major axis with respect to the x-axis.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     Parameters:
         polygon (Polygon):
             Input shapely polygon object.
@@ -79,6 +98,13 @@ def major_axis_angle(polygon: Polygon) -> float:
 def minor_axis_angle(polygon: Polygon) -> float:
     """Compute the minor axis angle of a polygon.
 
+    Note:
+        The minor axis is the (x,y) endpoints of the longest line that
+        can be drawn through the object whilst remaining perpendicular
+        with the major-axis. Minor axis angle is the angle of the minor
+        axis with respect to the x-axis.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     Parameters:
         polygon (Polygon):
             Input shapely polygon object.
@@ -93,6 +119,13 @@ def minor_axis_angle(polygon: Polygon) -> float:
 
 def compactness(polygon: Polygon, **kwargs) -> float:
     """Compute the compactness of a polygon.
+
+    Note:
+        Compactness is defined as the ratio of the area of an object
+        to the area of a circle with the same perimeter. A circle is the
+        most compact shape. Objects that are elliptical or have complicated,
+        irregular (not smooth) boundaries have larger compactness.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
 
     **Compactness:**
     $$
@@ -121,6 +154,14 @@ def compactness(polygon: Polygon, **kwargs) -> float:
 def circularity(polygon: Polygon, **kwargs) -> float:
     """Compute the circularity of a polygon.
 
+    Note:
+        Circularity (sometimes roundness) is the ratio of the area of
+        an object to the area of a circle with the same convex perimeter.
+        Circularity equals 1 for a circular object and less than 1 for
+        non-circular objects. Note that circularity is insensitive to
+        irregular boundaries.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     **Circularity:**
     $$
     \\frac{4 \\times \\pi A_{poly}}{P_{convex}^2}
@@ -148,6 +189,15 @@ def circularity(polygon: Polygon, **kwargs) -> float:
 def convexity(polygon: Polygon, **kwargs) -> float:
     """Compute the convexity of a polygon.
 
+    Note:
+        Convexity is the relative amount that an object differs from a
+        convex object. Convexity is defined by computing the ratio of
+        the perimeter of an object's convex hull to the perimeter of
+        the object itself. This will take the value of 1 for a convex
+        object, and will be less than 1 if the object is not convex, such
+        as one having an irregular boundary.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     **Convexity:**
     $$
     \\frac{P_{convex}}{P_{poly}}
@@ -155,9 +205,6 @@ def convexity(polygon: Polygon, **kwargs) -> float:
 
     where $P_{convex}$ is the perimeter of the convex hull and $P_{poly}$ is the
     perimeter of the polygon.
-
-    Note:
-        Object is convex if convexity = 1.
 
     Parameters:
         polygon (Polygon):
@@ -178,6 +225,14 @@ def convexity(polygon: Polygon, **kwargs) -> float:
 def solidity(polygon: Polygon, **kwargs) -> float:
     """Compute the solidity of a polygon.
 
+    Note:
+        Solidity measures the density of an object. It is defined as the
+        ratio of the area of an object to the area of a convex hull of the
+        object. A value of 1 signifies a solid object, and a value less than
+        1 will signify an object having an irregular boundary, or containing
+        holes.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     **Solidity:**
     $$
     \\frac{A_{poly}}{A_{convex}}
@@ -185,9 +240,6 @@ def solidity(polygon: Polygon, **kwargs) -> float:
 
     where $A_{poly}$ is the area of the polygon and $A_{convex}$ is the area of the
     convex hull.
-
-    Note:
-        Object is solid if solidity = 1.
 
     Parameters:
         polygon (Polygon):
@@ -205,6 +257,13 @@ def solidity(polygon: Polygon, **kwargs) -> float:
 
 def elongation(polygon: Polygon, **kwargs) -> float:
     """Compute the elongation of a polygon.
+
+    Note:
+        Elongation is the ratio between the length and width of the
+        object bounding box. If the ratio is equal to 1, the object
+        is roughly square or circularly shaped. As the ratio decreases
+        from 1, the object becomes more elongated.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
 
     **Elongation:**
     $$
@@ -235,6 +294,13 @@ def elongation(polygon: Polygon, **kwargs) -> float:
 def eccentricity(polygon: Polygon, **kwargs) -> float:
     """Compute the eccentricity of a polygon.
 
+    Note:
+        Eccentricity (sometimes ellipticity) measures how far the object is
+        from an ellipse. It is defined as the ratio of the length of the minor
+        axis to the length of the major axis of an object. The closer the
+        object is to an ellipse, the closer the eccentricity is to 1
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
     **Eccentricity:**
     $$
     \\sqrt{1 - \\frac{\\text{minor axis}^2}{\\text{major axis}^2}}
@@ -257,6 +323,14 @@ def eccentricity(polygon: Polygon, **kwargs) -> float:
 def fractal_dimension(polygon: Polygon, **kwargs) -> float:
     """Compute the fractal dimension of a polygon.
 
+    Note:
+        The fractal dimension is the rate at which the perimeter of an
+        object increases as the measurement scale is reduced. The fractal
+        dimension produces a single numeric value that summarizes the
+        irregularity of "roughness" of the feature boundary.
+        - [Wirth](http://www.cyto.purdue.edu/cdroms/micro2/content/education/wirth10.pdf)
+
+
     **Fractal dimension:**
     $$
     2 \\times \\frac{\\log(\\frac{P_{poly}}{4})}{\\log(A_{poly})}
@@ -264,10 +338,6 @@ def fractal_dimension(polygon: Polygon, **kwargs) -> float:
 
     where $P_{poly}$ is the perimeter of the polygon and $A_{poly}$ is the area of the
     polygon.
-
-    'Fractal dimension is a measure of how "complicated" a self-similar
-    figure is. In a rough sense, it measures "how many points" lie in a given set.'
-    - first google search results
 
     Parameters:
         polygon (Polygon):
@@ -285,6 +355,11 @@ def fractal_dimension(polygon: Polygon, **kwargs) -> float:
 
 def sphericity(polygon: Polygon, **kwargs) -> float:
     """Compute the sphericity of a polygon.
+
+    Note:
+        Sphericity measures how close an object is to the shape of a “sphere”.
+        It is defined as the ratio of the radius of the minimum inscribing circle
+        to the radius of the minimum bounding circle.
 
     **Sphericity:**
     $$
@@ -311,6 +386,9 @@ def sphericity(polygon: Polygon, **kwargs) -> float:
 def shape_index(polygon: Polygon, **kwargs) -> float:
     """Compute the shape index of a polygon.
 
+    Note:
+        Basically, the inverse of circularity.
+
     **Shape Index:**
     $$
     \\frac{\\sqrt{\\frac{A_{poly}}{\\pi}}}{\\text{MBR}}
@@ -318,9 +396,6 @@ def shape_index(polygon: Polygon, **kwargs) -> float:
 
     where $A_{poly}$ is the area of the polygon and $\\text{MBR}$ is the radius of the
     minimum bounding radius.
-
-    Note:
-        $\\text{MBR}$ = radius of the minimum circumscribing circle.
 
     Parameters:
         polygon (Polygon):
@@ -338,6 +413,9 @@ def shape_index(polygon: Polygon, **kwargs) -> float:
 
 def squareness(polygon: Polygon, **kwargs) -> float:
     """Compute the squareness of a polygon.
+
+    Note:
+        Squareness is a measure of how close an object is to a square.
 
     **Squareness:**
     $$
@@ -368,6 +446,11 @@ def squareness(polygon: Polygon, **kwargs) -> float:
 def rectangularity(polygon: Polygon, **kwargs) -> float:
     """Compute the rectangularity of a polygon.
 
+    Note:
+        Rectangularity is the ratio of the object to the area of the
+        minimum bounding rectangle. Rectangularity has a value of 1
+        for perfectly rectangular object.
+
     **Rectangularity:**
     $$
     \\frac{A_{poly}}{A_{MRR}}
@@ -392,7 +475,9 @@ def rectangularity(polygon: Polygon, **kwargs) -> float:
 def equivalent_rectangular_index(polygon: Polygon) -> float:
     """Compute the equivalent rectangular index.
 
-    I.e. the deviation of a polygon from an equivalent rectangle
+    Note:
+        Equivalent rectangluar index is the deviation of a polygon from
+        an equivalent rectangle.
 
     **ERI:**
     $$
