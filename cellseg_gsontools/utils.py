@@ -121,7 +121,7 @@ def read_gdf(
     Parameters:
         fname (Union[Path, str]):
             The filename of the gson file.
-        silence_warnings (bool, optional):
+        silence_warnigns (bool):
             Whether to silence warnings, by default True.
 
     Raises:
