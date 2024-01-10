@@ -292,10 +292,7 @@ def nhood_type_count(
     >>> # get the neighborhood fractions of immune cells
     >>> func = partial(nhood_type_count, cls="inflammatory", frac=True)
     >>> gdf["local_infiltration_fraction"] = gdf_apply(
-    ...     gdf,
-    ...     func,
-    ...     columns=[f"{val_col}_nhood_vals"],
-    ...     parallel=True
+    ...     gdf, func, columns=[f"{val_col}_nhood_vals"], parallel=True
     ... ).head(14)
     uid
     1     0.000000
@@ -336,7 +333,10 @@ def nhood_type_count(
 
 
 def nhood_dists(
-    nhood: Sequence[int], centroids: pd.Series, ids: pd.Series = None
+    nhood: Sequence[int],
+    centroids: pd.Series,
+    ids: pd.Series = None,
+    invert: bool = False,
 ) -> np.ndarray:
     """Compute the neihborhood distances between the center node.
 
@@ -353,6 +353,8 @@ def nhood_dists(
             A pd.Series array containing the centroid Points of the full gdf.
         ids : pd.Series, optional
             A pd.Series array containing the ids of the full gdf.
+        invert : bool, default=False
+            Flag, whether to invert the distances. E.g. 1/dists
 
     Returns
     -------
@@ -396,7 +398,9 @@ def nhood_dists(
         center_node = centroids.loc[node]
         nhood_nodes = centroids.loc[nhood].to_numpy()
         nhood_dists = np.array(
-            [np.round(_dist(center_node, c), 2) for c in nhood_nodes]
+            [np.round(_dist(center_node, c), 3) for c in nhood_nodes]
         )
+        if invert:
+            nhood_dists = np.round(np.reciprocal(nhood_dists, where=nhood_dists > 0), 3)
 
     return nhood_dists

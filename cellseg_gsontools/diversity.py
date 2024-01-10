@@ -56,6 +56,14 @@ SMALL = np.finfo("float").tiny
 def simpson_index(counts: Sequence) -> float:
     """Compute the Simpson diversity index on a count vector.
 
+    Note:
+        Simpson diversity index is a quantitative measure that reflects how many
+        different types (such as species) there are in a dataset (a community). It
+        is a probability measure, when it is low, the greater the probability that
+        two randomly selected individuals will be the same species.
+        - [A. Wilson, N. Gownaris](https://bio.libretexts.org/Courses/Gettysburg_College/01%3A_Ecology_for_All/22%3A_Biodiversity/22.02%3A_Diversity_Indices)
+
+
     **Simpson index:**
     $$
     D = 1 - \\sum_{i=1}^n \\left(\\frac{n_i}{N}\\right)^2
@@ -76,7 +84,16 @@ def simpson_index(counts: Sequence) -> float:
 
 
 def shannon_index(counts: Sequence) -> float:
-    """Compute the Shannon index/entropy on a count vector.
+    """Compute the Shannon Weiner index/entropy on a count vector.
+
+    Note:
+        "*The Shannon index is related to the concept of uncertainty. If for example,
+        a community has very low diversity, we can be fairly certain of the identity of
+        an organism we might choose by random (high certainty or low uncertainty). If a
+        community is highly diverse and we choose an organism by random, we have a
+        greater uncertainty of which species we will choose (low certainty or high
+        uncertainty).*"
+        - [A. Wilson, N. Gownaris](https://bio.libretexts.org/Courses/Gettysburg_College/01%3A_Ecology_for_All/22%3A_Biodiversity/22.02%3A_Diversity_Indices)
 
     **Shannon index:**
     $$

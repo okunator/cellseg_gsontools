@@ -75,10 +75,8 @@ def local_character(
     col_prefix: str = None,
     create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
-    """Compute the local sum/mean/median of a specified metric for each row in a gdf.
-
-    Local character: The sum/mean/median/min/max/std of the immediate neighborhood
-    of a cell.
+    """Compute the local sum/mean/median/min/max/std of a specified metric for each
+    neighborhood of geometry objects in a gdf.
 
     Note:
         Option to weight the nhood values by their area before reductions.
@@ -210,13 +208,14 @@ def local_distances(
     id_col: str = None,
     reductions: Tuple[str, ...] = ("mean",),
     weight_by_area: bool = False,
+    invert: bool = False,
     parallel: bool = True,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
 ) -> gpd.GeoDataFrame:
     """Compute the local sum/mean/median/min/max/std distance of the neighborhood
-    distances for each row.
+    distances for each geometry object in a gdf.
 
     Note:
         Option to weight the nhood values by their area before reductions.
@@ -235,6 +234,8 @@ def local_distances(
         weight_by_area (bool):
             Flag whether to weight the neighborhood values by the area of the object.
             Defaults to False.
+        invert (bool):
+            Flag whether to invert the distances. Defaults to False.
         parallel (bool):
             Flag whether to use parallel apply operations when computing the character.
             Defaults to True.
@@ -286,7 +287,7 @@ def local_distances(
         )
 
     # get distances
-    func = partial(nhood_dists, centroids=gdf.centroid)
+    func = partial(nhood_dists, centroids=gdf.centroid, invert=invert)
     gdf["nhood_dists"] = gdf_apply(
         gdf, func, columns=["nhood"], axis=1, parallel=parallel
     )

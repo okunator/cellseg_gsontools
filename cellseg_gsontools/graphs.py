@@ -19,6 +19,7 @@ def fit_graph(
     type: str,
     id_col: Optional[str] = None,
     thresh: Optional[float] = None,
+    silence_warnings: bool = True,
     **kwargs,
 ) -> W:
     """Fit a `libpysal` spatial weights graph to a gdf.
@@ -41,10 +42,12 @@ def fit_graph(
         type (str):
             The type of the libpysal graph. Allowed: "delaunay", "knn", "distband",
             "relative_nhood"
-        id_col (str, optional):
+        id_col (str):
             The unique id column in the gdf. If None, this uses `set_uid` to set it.
-        thresh (float, optional):
+        thresh (float):
             A distance threshold for too long edges.
+        silence_warnings (bool):
+            Flag to silence the warnings.
         **kwargs (Dict[str, Any]):
             Arbitrary keyword arguments for the Graph init functions.
 
@@ -75,7 +78,8 @@ def fit_graph(
         return
 
     # warn if id_col is not provided
-    _graph_warn(type, id_col)
+    if not silence_warnings:
+        _graph_warn(type, id_col)
 
     # can't fit delaunay or relative nhood graphs with less than 4 points
     if type in ("delaunay", "relative_nhood"):
@@ -84,7 +88,9 @@ def fit_graph(
 
     if type == "delaunay":
         # NOTE: neighbor keys start from 0
-        w = Delaunay.from_dataframe(gdf.centroid, silence_warnings=True, **kwargs)
+        w = Delaunay.from_dataframe(
+            gdf.centroid, silence_warnings=True, use_index=True, **kwargs
+        )
     elif type == "relative_nhood":
         # NOTE: neighbor indices start from 0
         w = Relative_Neighborhood.from_dataframe(
