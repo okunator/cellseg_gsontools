@@ -25,56 +25,53 @@ def neighborhood(
 ) -> Union[List[int], int]:
     """Get immediate neighborhood of a node given the spatial weights obj.
 
-    NOTE: The neighborhood contains the given node itself.
+    Note:
+        This function is designed to be used with the `gdf_apply` function.
+        See the example.
 
-    Parameters
-    ----------
-        node : int or pd.Series
+    Note:
+        The neighborhood contains the given node itself by default.
+
+    Parameters:
+        node (int or pd.Series):
             Input node uid.
-        spatial_weights : libysal.weights.W
+        spatial_weights (libysal.weights.W):
             Libpysal spatial weights object.
-        include_self : bool, default=True
+        include_self (bool):
             Flag, whether to include the node itself in the neighborhood.
-        ret_n_neighbors : bool, default=False
-            If True, instead of returnig a sequence of the neigbor node uids
-            returns just the number of neighbors.
+            Defaults to True.
+        ret_n_neighbors (bool):
+            If True, instead of returning a sequence of the neighbor node uids
+            returns just the number of neighbors. Defaults to False.
 
-    Returns
-    -------
+    Returns:
         List[int] or int:
             A list of the neighboring node uids. E.g. [1, 4, 19].
-            or the number of neighbors if `ret_n_neighbors=True.`
+            or the number of neighbors if `ret_n_neighbors=True`.
 
-    Examples
-    --------
-    Use `gdf_apply` to extract the neighboring nodes for each node/cell
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from cellseg_gsontools.neighbors import neighborhood
-    >>> from cellseg_gsontools.utils import set_uid
-    >>> from functools import partial
-
-    >>> # Set uid to the gdf
-    >>> gdf = set_uid(gdf, id_col="uid")
-
-    >>> # Get spatial weights
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-
-    >>> # Get the neihgboring nodes of the graph
-    >>> func = partial(neighborhood, spatial_weights=w_dist)
-    >>> gdf_apply(gdf, func, columns=["uid"])
-    0                            [0]
-    1                     [1, 9, 19]
-    2                            [2]
-    3                      [3, 4, 6]
-    4            [4, 3, 5, 6, 8, 14]
-                    ...
-    361              [360, 336, 338]
-    362    [361, 331, 348, 350, 363]
-    363         [362, 339, 345, 365]
-    364    [363, 331, 348, 350, 361]
-    365    [364, 340, 341, 349, 352]
-    Name: uid, Length: 365, dtype: object
-
+    Examples:
+        Use `gdf_apply` to extract the neighboring nodes for each node/cell
+        >>> from functools import partial
+        >>> from cellseg_gsontools.data import gland_cells
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> from cellseg_gsontools.utils import set_uid
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import neighborhood
+        >>> gc = gland_cells()
+        >>> # To fit the delaunay graph, we need to set a unique id for each cell first
+        >>> gc = set_uid(gc, id_col="uid")
+        >>> w = fit_graph(gc, type="delaunay", thresh=100, id_col="uid")
+        >>> # Get the neihgboring nodes of the graph
+        >>> func = partial(neighborhood, spatial_weights=w)
+        >>> gc["nhood"] = gdf_apply(gc, func, columns=["uid"])
+        >>> gc["nhood"].head(5)
+                uid
+        0       [0, 1, 3, 4, 483, 484]
+        1     [1, 0, 4, 482, 483, 487]
+        2       [2, 3, 5, 6, 484, 493]
+        3      [3, 0, 2, 4, 5, 7, 484]
+        4    [4, 0, 1, 3, 7, 487, 488]
+        Name: nhood, dtype: object
     """
     if isinstance(node, pd.Series):
         node = node.iloc[0]  # assume that the series is a row
@@ -94,59 +91,53 @@ def neighborhood(
 def nhood_vals(nhood: Sequence[int], values: pd.Series, **kwargs) -> np.ndarray:
     """Get the values of objects in the neighboring nodes.
 
-    Parameters
-    ----------
-        nhood : Sequence[int]
-            A list or array of neighboring node uids.
-        values : pd.Series
-            A value column-vector of shape (N, ).
+    Note:
+        This function is designed to be used with the `gdf_apply` function.
+        See the example.
 
-    Returns
-    -------
+    Parameters:
+        nhood (Sequence[int]):
+            A list or array of neighboring node uids.
+        values (pd.Series):
+            A value column-vector of shape (N, ).
+        **kwargs (Dict[str, Any]):
+            Additional keyword arguments. Not used.
+
+    Returns:
         np.ndarray:
             The counts vector of the given values vector. Shape (n_classes, )
 
-    Examples
-    --------
-    Use `gdf_apply` to get the neihgborhood values for each node/cell given a metric
-    >>> from libpysal.weights import DistanceBand
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
-    >>> from cellseg_gsontools.utils import set_uid
-    >>> from functools import partial
-
-    >>> # Set uid to the gdf
-    >>> gdf = set_uid(gdf, id_col="uid")
-
-    >>> # Get spatial weights
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-
-    >>> # Get the neihgboring nodes of the graph
-    >>> func = partial(neighborhood, spatial_weights=w_dist)
-    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
-
-    >>> # Define the gdf column of interest
-    >>> values = gdf["eccentricity"]
-
-    >>> # get the neighborhood metric values
-    >>> func = partial(nhood_vals, values=values)
-    >>> gdf_apply(
-    ...     gdf,
-    ...     func,
-    ...     columns=["nhood"],
-    ... )
-
-    0                                   [0.42]
-    1                       [0.92, 0.83, 0.68]
-    2                                    [0.8]
-    3                        [0.81, 0.4, 0.74]
-    4      [0.4, 0.81, 0.59, 0.74, 0.46, 0.44]
-                        ...
-    361                      [0.53, 0.82, 0.5]
-    362         [0.26, 0.31, 0.93, 0.58, 0.29]
-    363                 [0.7, 0.69, 0.5, 0.36]
-    364         [0.29, 0.31, 0.93, 0.58, 0.26]
-    365         [0.25, 0.28, 0.44, 0.59, 0.42]
+    Examples:
+        Use `gdf_apply` to get the neighborhood values for each area of a cell
+        >>> from functools import partial
+        >>> from cellseg_gsontools.data import gland_cells
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> from cellseg_gsontools.utils import set_uid
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
+        >>> gc = gland_cells()
+        >>> # To fit the delaunay graph, we need to set a unique id for each cell first
+        >>> gc = set_uid(gc, id_col="uid")
+        >>> w = fit_graph(gc, type="delaunay", thresh=100, id_col="uid")
+        >>> # Get the neihgboring nodes of the graph
+        >>> func = partial(neighborhood, spatial_weights=w)
+        >>> gc["nhood"] = gdf_apply(gc, func, columns=["uid"])
+        >>> # get the area values of the neighbors
+        >>> func = partial(nhood_vals, values=gc.area.round(2))
+        >>> gc["neighbor_areas"] = gdf_apply(
+        ...     gc,
+        ...     func=func,
+        ...     parallel=True,
+        ...     columns=["nhood"],
+        ... )
+        >>> gc["neighbor_areas"].head(5)
+            uid
+        0     [520.24, 565.58, 435.91, 302.26, 241.85, 418.02]
+        1     [565.58, 520.24, 302.26, 318.15, 241.85, 485.71]
+        2      [721.5, 435.91, 556.05, 466.96, 418.02, 678.35]
+        3    [435.91, 520.24, 721.5, 302.26, 556.05, 655.42...
+        4    [302.26, 520.24, 565.58, 435.91, 655.42, 485.7...
+        Name: neighbor_areas, dtype: object
     """
     if isinstance(nhood, pd.Series):
         nhood = nhood.iloc[0]  # assume that the series is a row
@@ -163,63 +154,65 @@ def nhood_counts(
 ) -> np.ndarray:
     """Get the counts of objects that belong to bins/classes in the neighborhood.
 
-    Parameters
-    ----------
-        nhood : Sequence[int]
-            A list or array of neighboring node uids.
-        values : pd.Series
-            A value column-vector of shape (N, ).
-        bins : Sequence
-            The bins of any value vector. Shape (n_bins, ).
-        return_vals : bool, default=False
-            If True, also, the values the values are
+    Note:
+        This function is designed to be used with the `gdf_apply` function.
+        See the example.
 
-    Returns
-    -------
+    Parameters:
+        nhood (Sequence[int]):
+            A list or array of neighboring node uids.
+        values (pd.Series):
+            A value column-vector of shape (N, ).
+        bins (Sequence):
+            The bins of any value vector. Shape (n_bins, ).
+        return_vals (bool, optional):
+            If True, also, the values the values are. Defaults to False.
+        **kwargs (Dict[str, Any]):
+            Additional keyword arguments. Not used.
+
+    Returns:
         np.ndarray:
             The counts vector of the given values vector. Shape (n_classes, )
 
-    Examples
-    --------
-    Use `gdf_apply` to compute the neihgborhood counts for each node/cell given a metric
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_counts
-    >>> from cellseg_gsontools.utils import set_uid
-    >>> from functools import partial
-
-    >>> # Set uid to the gdf
-    >>> gdf = set_uid(gdf, id_col="uid")
-
-    >>> # Get spatial weights
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-
-    >>> # Get the neihgboring nodes of the graph
-    >>> func = partial(neighborhood, spatial_weights=w_dist)
-    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
-
-    >>> # Define the gdf column that will be binned
-    >>> values = gdf["eccentricity"]
-
-    >>> # compute the counts of the bins inside the neighborhood
-    >>> func = partial(nhood_counts, values=values, bins=bins)
-    >>> gdf_apply(
-    ...     gdf,
-    ...     func,
-    ...     columns=["nhood"],
-    ... )
-
-    0      [1, 0, 0, 0, 0, 0, 0]
-    1      [0, 1, 1, 1, 0, 0, 0]
-    2      [0, 0, 1, 0, 0, 0, 0]
-    3      [1, 1, 1, 0, 0, 0, 0]
-    4      [4, 1, 1, 0, 0, 0, 0]
-                ...
-    361    [2, 0, 1, 0, 0, 0, 0]
-    362    [4, 0, 0, 1, 0, 0, 0]
-    363    [2, 2, 0, 0, 0, 0, 0]
-    364    [4, 0, 0, 1, 0, 0, 0]
-    365    [5, 0, 0, 0, 0, 0, 0]
-    Name: nhood, Length: 365, dtype: object
+    Examples:
+        Use `gdf_apply` to compute the neighborhood counts for each areal bin
+        >>> import mapclassify
+        >>> from functools import partial
+        >>> from cellseg_gsontools.data import gland_cells
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> from cellseg_gsontools.utils import set_uid
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals, nhood_counts
+        >>> gc = gland_cells()
+        >>> # To fit the delaunay graph, we need to set a unique id for each cell first
+        >>> gc = set_uid(gc, id_col="uid")
+        >>> w = fit_graph(gc, type="delaunay", thresh=100, id_col="uid")
+        >>> # Get the neihgboring nodes of the graph
+        >>> func = partial(neighborhood, spatial_weights=w)
+        >>> gc["nhood"] = gdf_apply(gc, func, columns=["uid"])
+        >>> # get the area values of the neighbors
+        >>> func = partial(nhood_vals, values=gc.area.round(2))
+        >>> gc["neighbor_areas"] = gdf_apply(
+        ...     gc,
+        ...     func=func,
+        ...     parallel=True,
+        ...     columns=["nhood"],
+        ... )
+        >>> bins = mapclassify.Quantiles(gc.area, k=5)
+        >>> func = partial(nhood_counts, values=gc.area, bins=bins.bins)
+        >>> gc["area_bins"] = gdf_apply(
+        ...     gc,
+        ...     func,
+        ...     columns=["nhood"],
+        ... )
+        >>> gc["area_bins"].head(5)
+        uid
+        0    [0, 2, 0, 3, 1]
+        1    [0, 2, 1, 2, 1]
+        2    [0, 0, 0, 3, 3]
+        3    [0, 1, 0, 3, 3]
+        4    [0, 1, 0, 3, 3]
+        Name: area_bins, dtype: object
     """
     if isinstance(nhood, pd.Series):
         nhood = nhood.iloc[0]  # assume that the series is a row
@@ -242,74 +235,69 @@ def nhood_type_count(
 ) -> float:
     """Get the number of nodes of a specific category in a neighborhood of a node.
 
-    Parameters
-    ----------
-        cls_neihbors : Sequence
-            A array/list (int or str) containing a category for each value in the data.
-        cls : int or str
-            The specific category
-        frac : bool, default=True
-            Flag, whether to return the fraction instead of the count
+    Note:
+        This function is designed to be used with the `gdf_apply` function.
+        See the example.
 
-    Returns
-    -------
+    Parameters:
+        cls_neihbors (Sequence):
+            A array/list (int or str) containing a category for each value in the data.
+        cls (int or str):
+            The specific category.
+        frac (bool, optional):
+            Flag, whether to return the fraction instead of the count. Defaults to True.
+        **kwargs (Dict[str, Any])]):
+            Additional keyword arguments. Not used.
+    Returns:
         float:
             The count or fraction of a node of specific category in a neighborhood.
 
-    Raises
-    ------
-        TypeError: If the `cls_neighbors` is not cadtegorical.
+    Raises:
+        TypeError:
+            If the `cls_neighbors` is not categorical.
 
-    Example
-    -------
-    Use `gdf_apply` to get the neihgborhood fractions of immune cells for each node
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from cellseg_gsontools.neighbors import neighborhood, nhood_vals
-    >>> from cellseg_gsontools.utils import set_uid
-    >>> from functools import partial
-
-    >>> # Set uid to the gdf
-    >>> gdf = set_uid(gdf, id_col="uid")
-
-    >>> # Get spatial weights
-    >>> w_dist = DistanceBand.from_dataframe(gdf, threshold=55.0, alpha=-1.0)
-
-    >>> # Get the neihgboring nodes of the graph
-    >>> func = partial(neighborhood, spatial_weights=w_dist)
-    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
-
-    >>> # Define the class name column
-    >>> values = gdf["class_name"]
-
-    >>> # get the neighborhood classes
-    >>> func = partial(nhood_vals, values=values)
-    >>> gdf[f"{val_col}_nhood_vals"] = gdf_apply(
-    ...     gdf,
-    ...     func,
-    ...     columns=["nhood"],
-    ... )
-
-    >>> # get the neighborhood fractions of immune cells
-    >>> func = partial(nhood_type_count, cls="inflammatory", frac=True)
-    >>> gdf["local_infiltration_fraction"] = gdf_apply(
-    ...     gdf, func, columns=[f"{val_col}_nhood_vals"], parallel=True
-    ... ).head(14)
-    uid
-    1     0.000000
-    2     0.500000
-    3     0.000000
-    4     0.250000
-    5     0.000000
-    6     1.000000
-    7     0.000000
-    8     0.250000
-    9     0.333333
-    10    0.333333
-    11    0.000000
-    12    0.250000
-    13    0.333333
-    14    0.000000
-    Name: class_name_nhood_vals, dtype: float64
+    Examples:
+        Use `gdf_apply` to get the neighborhood fractions of immune cells for each node
+        >>> from functools import partial
+        >>> from cellseg_gsontools.data import gland_cells
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> from cellseg_gsontools.utils import set_uid
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import (
+        ...     neighborhood,
+        ...     nhood_vals,
+        ...     hnood_type_count,
+        ... )
+        >>> gc = gland_cells()
+        >>> # To fit the delaunay graph, we need to set a unique id for each cell first
+        >>> gc = set_uid(gc, id_col="uid")
+        >>> w = fit_graph(gc, type="delaunay", thresh=100, id_col="uid")
+        >>> # Get the neihgboring nodes of the graph
+        >>> func = partial(neighborhood, spatial_weights=w)
+        >>> gc["nhood"] = gdf_apply(gc, func, columns=["uid"])
+        >>> # get the classes of the neighbors
+        >>> func = partial(nhood_vals, values=gc.class_name)
+        >>> gc["neighbor_classes"] = gdf_apply(
+        ...     gc,
+        ...     func=func,
+        ...     parallel=True,
+        ...     columns=["nhood"],
+        ... )
+        >>> func = partial(nhood_type_count, cls="inflammatory", frac=True)
+        >>> gc["n_immune_neighbors"] = gdf_apply(
+        ...    gc,
+        ...    func=func,
+        ...    parallel=True,
+        ...    columns=["neighbor_classes"],
+        >>> )
+        >>> gc[gc["n_immune_neighbors"] > 0]["n_immune_neighbors"].head(5)
+        uid
+        39    0.333333
+        40    0.111111
+        42    0.166667
+        44    0.375000
+        48    0.166667
+        Name: n_immune_neighbors, dtype: float64
     """
     if isinstance(cls_neighbors, pd.Series):
         cls_neighbors = cls_neighbors.iloc[0]  # assume that the series is a row
@@ -338,53 +326,61 @@ def nhood_dists(
     ids: pd.Series = None,
     invert: bool = False,
 ) -> np.ndarray:
-    """Compute the neihborhood distances between the center node.
+    """Compute the neighborhood distances between the center node.
 
-    NOTE: It is assumed that the center node is the first index in the `nhood`
-    array. To get the neighborhoods use for example:
-    `gdf_apply(d, neighborhood, col="uid", spatial_weights=w_dist, include_self=True)`
+    Note:
+        This function is designed to be used with the `gdf_apply` function.
+        See the example.
 
-    Parameters
-    ----------
-        nhood : Sequence[int]
-            An array containig neighbor indices. The first index is assumed to be
+    Note:
+        It is assumed that the center node is the first index in the `nhood`
+        array. use `include_self` param in `neighborhood` to include the center.
+
+    Parameters:
+        nhood (Sequence[int]):
+            An array containing neighbor indices. The first index is assumed to be
             the center node.
-        centroids : pd.Series
+        centroids (pd.Series):
             A pd.Series array containing the centroid Points of the full gdf.
-        ids : pd.Series, optional
+        ids (pd.Series):
             A pd.Series array containing the ids of the full gdf.
-        invert : bool, default=False
-            Flag, whether to invert the distances. E.g. 1/dists
+        invert (bool):
+            Flag, whether to invert the distances. E.g. 1/dists. Defaults to False.
 
-    Returns
-    -------
+    Returns:
         np.ndarray:
-            An array containing the distances between the center node and it's nhood.
+            An array containing the distances between the center node and its
+            neighborhood.
 
-    Example
-    -------
-    >>> from libpysal.weights import Delaney
-    >>> from cellseg_gsontools.apply import gdf_apply
-    >>> from cellseg_gsontools.neighbors import neighborhood
-    >>> from cellseg_gsontools.utils import set_uid
-    >>> from functools import partial
-
-    >>> # Set uid to the gdf
-    >>> gdf = set_uid(gdf, id_col="uid")
-
-    >>> # Get spatial weights
-    >>> w = Delaunay.from_dataframe(gdf.centroid)
-
-    >>> # Get the neihgboring nodes of the graph
-    >>> func = partial(neighborhood, spatial_weights=w_dist)
-    >>> gdf["nhood"] = gdf_apply(gdf, func, columns=["uid"])
-
-    >>> func = partial(neighborhood, centroids=gdf.centroid)
-    >>> gdf["nhood_dists"] = gdf_apply(
-    ...     gdf,
-    ...     func,
-    ...     columns=["nhood"],
-    ... )
+    Examples:
+        Use `gdf_apply` to extract the neighboring node distances for each node/cell
+        >>> from functools import partial
+        >>> from cellseg_gsontools.data import gland_cells
+        >>> from cellseg_gsontools.graphs import fit_graph
+        >>> from cellseg_gsontools.utils import set_uid
+        >>> from cellseg_gsontools.apply import gdf_apply
+        >>> from cellseg_gsontools.neighbors import neighborhood, nhood_dists
+        >>> gc = gland_cells()
+        >>> # To fit the delaunay graph, we need to set a unique id for each cell first
+        >>> gc = set_uid(gc, id_col="uid")
+        >>> w = fit_graph(gc, type="delaunay", thresh=100, id_col="uid")
+        >>> # Get the neihgboring nodes of the graph
+        >>> func = partial(neighborhood, spatial_weights=w)
+        >>> gc["nhood"] = gdf_apply(gc, func, columns=["uid"])
+        >>> func = partial(nhood_dists, centroids=gc.centroid)
+        >>> gc["nhood_dists"] = gdf_apply(
+        ...     gc,
+        ...     func,
+        ...     columns=["nhood"],
+        ... )
+        >>> gc["nhood_dists"].head(5)
+        uid
+        0        [0.0, 26.675, 24.786, 30.068, 30.228, 41.284]
+        1        [0.0, 26.675, 23.428, 42.962, 39.039, 23.949]
+        2        [0.0, 25.577, 39.348, 46.097, 34.309, 29.478]
+        3    [0.0, 24.786, 25.577, 39.574, 37.829, 47.16, 3...
+        4    [0.0, 30.068, 23.428, 39.574, 29.225, 36.337, ...
+        Name: nhood_dists, dtype: object
     """
     if isinstance(nhood, pd.Series):
         nhood = nhood.iloc[0]  # assume that the series is a row
