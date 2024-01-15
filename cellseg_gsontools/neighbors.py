@@ -334,7 +334,7 @@ def nhood_dists(
 
     Note:
         It is assumed that the center node is the first index in the `nhood`
-        array. use `include_self` param in `neighborhood` to include the center.
+        array. Use `include_self=True` in `neighborhood` to include the center.
 
     Parameters:
         nhood (Sequence[int]):
