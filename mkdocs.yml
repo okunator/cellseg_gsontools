@@ -1,11 +1,27 @@
 site_name: cellseg_gsontools
+site_description: A Python package for analyzing cell and tissue segmentation maps
+site_author: Oskari Lehtonen
+site_url: https://okunator.github.io/cellseg-gsontools/
+
 
 theme:
   name: "material"
+  logo: img/logo.png
+  favicon: img/logo.png
+  palette:
+    primary: black
+    accent: cyan
+  font:
+    text: Raleway
+  icon:
+    repo: fontawesome/brands/github
   features:
     - content.code.copy
     - content.tabs.link
     - navigation.indexes
+
+repo_url: https://github.com/okunator/cellseg_gsontools
+repo_name: cellseg_gsontools
 
 plugins:
   - search
@@ -19,11 +35,14 @@ plugins:
             show_source: true
   - mkdocs-jupyter:
       include: ["*.ipynb"]
+
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+  - pymdownx.arithmatex:
+      generic: true
   - codehilite
   - markdown.extensions.def_list
   - pymdownx.inlinehilite
@@ -38,9 +57,28 @@ markdown_extensions:
   - toc:
         permalink: true
 
+extra_javascript:
+  - javascripts/katex.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
+
+extra_css:
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+
 nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: "getting_started/installation.md"
+    - Quick Start: "getting_started/quick_start.md"
   - User Guide:
-    - Merging:
+    - Cell Morphology: "user_guide/cell_morphology.ipynb"
+    - Cell Neighborhoods: "user_guide/cell_neighborhoods.ipynb"
+    - Cell Neighborhood Characteristics: "user_guide/cell_neighborhood_characteristics.ipynb"
+    - Cell Neighborhood Diversity: "user_guide/cell_neighborhood_diversity.ipynb"
+    - Spatial Grids: "user_guide/spatial_grids.ipynb"
+    - Global Spatial Autocorrelation: "user_guide/global_spatial_autocorrelation.ipynb"
+    - Local Spatial Autocorrelation: "user_guide/local_spatial_autocorrelation.ipynb"
+    - Merging Segmentation Maps:
       - "user_guide/merging/index.ipynb"
       - Merging WSI-level Segmenation: "user_guide/merging/WSI_merge.ipynb"
     - Spatial Contexts:
@@ -57,3 +95,71 @@ nav:
     - Merging:
       - CellMerger: "reference/merging/cell_merger_ref.md"
       - AreaMerger: "reference/merging/area_merger_ref.md"
+    - I/O:
+      - read_gdf: "reference/io/read_gdf_ref.md"
+      - gdf_to_file: "reference/io/gdf_to_file_ref.md"
+    - Data:
+      - cervix_cells: "reference/data/cervix_cells_ref.md"
+      - cervix_tissue: "reference/data/cervix_tissue_ref.md"
+      - gland_cells: "reference/data/gland_cells_ref.md"
+      - gland_tissue: "reference/data/gland_tissue_ref.md"
+      - tumor_stroma_interface_cells: "reference/data/tumor_stroma_interface_cells_ref.md"
+      - tumor_stroma_interface_tissue: "reference/data/tumor_stroma_interface_tissue_ref.md"
+    - Geometry:
+      - shape_metric: "reference/geometry/shape_metric_ref.md"
+      - major_axis_len: "reference/geometry/major_axis_len_ref.md"
+      - minor_axis_len: "reference/geometry/minor_axis_len_ref.md"
+      - major_axis_angle: "reference/geometry/major_axis_angle_ref.md"
+      - minor_axis_angle: "reference/geometry/minor_axis_angle_ref.md"
+      - convexity: "reference/geometry/convexity_ref.md"
+      - compactness: "reference/geometry/compactness_ref.md"
+      - circularity: "reference/geometry/circularity_ref.md"
+      - rectangularity: "reference/geometry/rectangularity_ref.md"
+      - squareness: "reference/geometry/squareness_ref.md"
+      - shape_index: "reference/geometry/shape_index_ref.md"
+      - sphericity: "reference/geometry/sphericity_ref.md"
+      - solidity: "reference/geometry/solidity_ref.md"
+      - fractal_dimension: "reference/geometry/fractal_dimension_ref.md"
+      - eccentricity: "reference/geometry/eccentricity_ref.md"
+      - elongation: "reference/geometry/elongation_ref.md"
+      - equivalent_rectangular_index: "reference/geometry/equivalent_rectangular_index_ref.md"
+    - Cell Neighbors:
+      - neighborhood: "reference/cell_neighbors/neighborhood_ref.md"
+      - nhood_vals: "reference/cell_neighbors/nhood_vals_ref.md"
+      - nhood_type_count: "reference/cell_neighbors/nhood_type_count_ref.md"
+      - nhood_counts: "reference/cell_neighbors/nhood_counts_ref.md"
+      - nhood_dists: "reference/cell_neighbors/nhood_dists_ref.md"
+    - Cell Neighborhoods:
+      - local_character: "reference/cell_neighborhoods/local_character_ref.md"
+      - local_distances: "reference/cell_neighborhoods/local_distances_ref.md"
+      - local_diversity: "reference/cell_neighborhoods/local_diversity_ref.md"
+    - Diversity:
+      - simpson_index: "reference/diversity/simpson_index_ref.md"
+      - shannon_index: "reference/diversity/shannon_index_ref.md"
+      - gini_index: "reference/diversity/gini_index_ref.md"
+      - theil_index: "reference/diversity/theil_index_ref.md"
+    - Graph:
+      - fit_graph: "reference/graph/fit_graph_ref.md"
+      - get_border_crosser_links: "reference/graph/get_border_crosser_links_ref.md"
+      - dist_thresh_weights_sequential: "reference/graph/dist_thresh_weights_sequential_ref.md"
+    - Clustering:
+      - cluster_points: "reference/clustering/cluster_points_ref.md"
+    - Links:
+      - weights2gdf: "reference/links/weights2gdf_ref.md"
+      - link_counts: "reference/links/link_counts_ref.md"
+      - get_link_combinations: "reference/links/get_link_combinations_ref.md"
+    - Grid:
+       - fit_spatial_grid: "reference/grid/fit_spatial_grid_ref.md"
+       - hexgrid_overlay: "reference/grid/hexgrid_overlay_ref.md"
+       - grid_overlay: "reference/grid/grid_overlay_ref.md"
+       - grid_classify: "reference/grid/grid_classify_ref.md"
+    - Tools:
+      - gdf_apply: "reference/tools/gdf_apply_ref.md"
+      - clip_gdf: "reference/tools/clip_gdf_ref.md"
+      - pre_proc_gdf: "reference/tools/pre_proc_gdf_ref.md"
+      - set_uid: "reference/tools/set_uid_ref.md"
+      - xy_to_lonlat: "reference/tools/xy_to_lonlat_ref.md"
+      - lonlat_to_xy: "reference/tools/lonlat_to_xy_ref.md"
+    - Plotting:
+      - plot_gdf: "reference/plotting/plot_gdf_ref.md"
+      - plot_all: "reference/plotting/plot_all_ref.md"
