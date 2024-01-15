@@ -71,19 +71,6 @@ class _SpatialContextGP(_SpatialBackend):
         if objs_within is None or objs_within.empty:
             return
 
-        # rename spatial join columns
-        objs_within = objs_within.rename(
-            columns={
-                "index_right": "spatial_context_id",
-                "global_id_left": "global_id",
-                "class_name_left": "class_name",
-                "class_name_right": "spatial_context",
-            },
-        )
-
-        # drop unnecessary columns and return
-        objs_within.drop(columns=["global_id_right"], inplace=True)
-
         return objs_within.set_geometry("geometry")
 
     def interface(

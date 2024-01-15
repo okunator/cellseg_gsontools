@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import List, Union
 
 import geopandas as gpd
-from libpysal.weights import W, w_subset, w_union
 
 __all__ = ["_SpatialBackend"]
 
@@ -103,35 +102,3 @@ class _SpatialBackend(ABC):
             area_gdf = area_gdf.loc[area_gdf.geometry.area >= min_area_size]
 
         return area_gdf
-
-    def context2weights(self, key: str) -> W:
-        """Merge the networks of type `key` in the context into one spatial weights obj.
-
-        Parameters
-        ----------
-            key : str
-                The key of the context dictionary that contains the spatial
-                weights to be merged. One of "roi_network", "full_network",
-                "interface_network", "border_network"
-
-        Returns
-        -------
-            libpysal.weights.W:
-                A spatial weights object containing all the distinct networks
-                in the context.
-        """
-        allowed = ("roi_network", "full_network", "interface_network", "border_network")
-        if key not in allowed:
-            raise ValueError(f"Illegal key. Got: {key}. Allowed: {allowed}")
-
-        cxs = list(self.context.items())
-        wout = W({0: [0]})
-        for _, c in cxs:
-            w = c[key]
-            if isinstance(w, W):
-                wout = w_union(wout, w, silence_warnings=True)
-
-        # remove self loops
-        wout = w_subset(wout, list(wout.neighbors.keys())[1:], silence_warnings=True)
-
-        return wout

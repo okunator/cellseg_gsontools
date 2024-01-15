@@ -385,14 +385,11 @@ def get_rect_metric(
         Any:
             The metric of the rectangle.
     """
-    if predicate == "intersects":
-        sub_objs: gpd.GeoDataFrame = objs[objs.geometry.intersects(rect)]
-    elif predicate == "within":
-        sub_objs: gpd.GeoDataFrame = objs[objs.geometry.within(rect)]
-    else:
-        raise ValueError(
-            f"Illegal predicate: {predicate}. Allowed: 'intersects', 'within'"
-        )
+    allowed = ["intersects", "within"]
+    if predicate not in allowed:
+        raise ValueError(f"predicate must be one of {allowed}. Got {predicate}.")
+
+    sub_objs = objs.iloc[objs.geometry.sindex.query(rect, predicate=predicate)]
 
     return metric_func(sub_objs)
 
