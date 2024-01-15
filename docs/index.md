@@ -5,7 +5,7 @@
 
 <p align="center">
 
-<img src="/img/index.png"/>
+<img src="./img/index.png"/>
 
 </p>
 

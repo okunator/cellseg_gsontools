@@ -1,7 +1,7 @@
 site_name: cellseg_gsontools
 site_description: A Python package for analyzing cell and tissue segmentation maps
 site_author: Oskari Lehtonen
-site_url: https://okunator.github.io/cellseg-gsontools/
+site_url: https://okunator.github.io/cellseg_gsontools/
 
 
 theme:
