@@ -69,7 +69,7 @@ nav:
   - Home: index.md
   - Getting Started:
     - Installation: "getting_started/installation.md"
-    - Quick Start: "getting_started/quick_start.md"
+    - Quick Start: "getting_started/quick_start.ipynb"
   - User Guide:
     - Cell Morphology: "user_guide/cell_morphology.ipynb"
     - Cell Neighborhoods: "user_guide/cell_neighborhoods.ipynb"
@@ -87,7 +87,6 @@ nav:
       - Interface Context: "user_guide/spatial_contexts/interface_context.ipynb"
       - Point Cluster Context: "user_guide/spatial_contexts/point_cluster_context.ipynb"
   - API Reference:
-    - "reference/index.md"
     - Spatial Contexts:
       - WithinContext: "reference/spatial_contexts/within_context_ref.md"
       - InterfaceContext: "reference/spatial_contexts/iface_context_ref.md"
