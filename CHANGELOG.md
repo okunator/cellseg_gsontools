@@ -15,6 +15,12 @@
 
 - Add `h3` hexgrid support in grid fitting for spatial context classes
 
+## Performance
+- sjoin operations replaced with sindex ops. This makes subsetting 10-100x faster.
+
+## Docs
+New documentation website: https://okunator.github.io/cellseg_gsontools/
+
 <a id='changelog-0.1.2'></a>
 # 0.1.2 — 2023-11-01
 
