@@ -3,7 +3,7 @@
 # cellseg_gsontools
 
 [![Github Test](https://img.shields.io/github/actions/workflow/status/okunator/cellseg_gsontools/tests.yml?label=tests)](https://github.com/okunator/cellseg_models.pytorch/actions/workflows/tests.yml) [![Generic badge](https://img.shields.io/github/license/okunator/cellseg_gsontools)](https://github.com/okunator/cellseg_gsontools/blob/master/LICENSE) [![Python - Version](https://img.shields.io/pypi/pyversions/cellseg_gsontools)](https://www.python.org/) [![Package - Version](https://img.shields.io/pypi/v/cellseg_gsontools)](https://pypi.org/project/cellseg-gsontools/)
-[![Docs](https://img.shields.io/badge/docs?style=flat&link=https%3A%2F%2Fokunator.github.io%2Fcellseg_gsontools%2F)](https://okunator.github.io/cellseg_gsontools/)
+
 
 Tools for feature extraction in cell and tissue segmentation maps.
 
