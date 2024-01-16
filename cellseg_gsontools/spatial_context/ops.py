@@ -2,6 +2,7 @@ import warnings
 from typing import Union
 
 import geopandas as gpd
+import numpy as np
 
 try:
     import dask_geopandas
@@ -159,9 +160,8 @@ def get_objs(
             The objects (cells) within the area gdf.
     """
     # NOTE, gdfs need to have same crs, otherwise warning flood.
-    objs_within: gpd.GeoDataFrame = objects.iloc[
-        objects.geometry.sindex.query(area.iloc[0].geometry, predicate=predicate)
-    ]
+    inds = objects.geometry.sindex.query(area.iloc[0].geometry, predicate=predicate)
+    objs_within: gpd.GeoDataFrame = objects.iloc[np.unique(inds)]
 
     if objs_within.empty and not silence_warnings:
         warnings.warn(

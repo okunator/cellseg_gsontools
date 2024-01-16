@@ -2,6 +2,7 @@ from functools import partial
 from typing import Any, Callable, Tuple, Union
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import shapely
 from shapely.geometry import Polygon, box, mapping
@@ -130,7 +131,9 @@ def hexgrid_overlay(
             output.append(hexes)
         hexagons = pd.concat(output)
 
-    return hexagons.set_crs(orig_crs, inplace=True, allow_override=True)
+    return hexagons.set_crs(
+        orig_crs, inplace=True, allow_override=True
+    ).drop_duplicates("geometry")
 
 
 def grid_overlay(
@@ -185,7 +188,9 @@ def grid_overlay(
         raise ValueError(f"predicate must be one of {allowed}. Got {predicate}")
     grid = get_grid(gdf, patch_size, stride, pad=pad)
     grid.set_crs(epsg=4328, inplace=True, allow_override=True)
-    grid = grid.sjoin(gdf, predicate=predicate)
+    _, grid_inds = grid.sindex.query(gdf.geometry, predicate=predicate)
+    grid = grid.iloc[np.unique(grid_inds)]
+    # grid = grid.sjoin(gdf, predicate=predicate)
 
     return grid.drop_duplicates("geometry")
 
