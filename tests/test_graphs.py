@@ -13,7 +13,7 @@ def test_fit_graph(cell_gson, type, thresh):
     if type == "distband" and thresh is None:
         thresh = 20
     w = fit_graph(
-        set_uid(cell_gson, start_ix=1), type=type, thresh=thresh, id_col="uid"
+        set_uid(cell_gson, start_ix=0), type=type, thresh=thresh, id_col="uid"
     )
 
-    assert 0 not in list(w.neighbors.keys())
+    assert w.n == len(cell_gson)

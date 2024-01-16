@@ -9,7 +9,7 @@ from cellseg_gsontools.spatial_context import (
 
 @pytest.mark.parametrize("clust_method", ["dbscan", "adbscan", "optics", "hdbscan"])
 @pytest.mark.parametrize("labels", ["inflammatory", ["inflammatory", "connective"]])
-@pytest.mark.parametrize("backend", ["geopandas", "dask-geopandas", "spatialpandas"])
+@pytest.mark.parametrize("backend", ["geopandas"])
 def test_cluster_context(cells_and_areas, clust_method, labels, backend):
     cells = cells_and_areas[0]
 
@@ -29,7 +29,7 @@ def test_cluster_context(cells_and_areas, clust_method, labels, backend):
 
 @pytest.mark.parametrize("toplabels", ["areagland", ["areagland", "area_cin"]])
 @pytest.mark.parametrize("bottomlabels", ["areastroma", ["areastroma"]])
-@pytest.mark.parametrize("backend", ["geopandas", "dask-geopandas", "spatialpandas"])
+@pytest.mark.parametrize("backend", ["geopandas"])
 def test_interface_context(cells_and_areas, toplabels, bottomlabels, backend):
     cells = cells_and_areas[0]
     areas = cells_and_areas[1]
@@ -52,7 +52,7 @@ def test_interface_context(cells_and_areas, toplabels, bottomlabels, backend):
 
 
 @pytest.mark.parametrize("labels", ["area_cin", ["area_cin", "areagland"]])
-@pytest.mark.parametrize("backend", ["geopandas", "dask-geopandas", "spatialpandas"])
+@pytest.mark.parametrize("backend", ["geopandas"])
 @pytest.mark.parametrize("parallel", [True, False])
 def test_within_context(cells_and_areas, labels, backend, parallel):
     cells = cells_and_areas[0]

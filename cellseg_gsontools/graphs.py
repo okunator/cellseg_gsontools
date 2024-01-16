@@ -85,11 +85,14 @@ def fit_graph(
     if type in ("delaunay", "relative_nhood"):
         if len(gdf) < 4:
             return
-
     if type == "delaunay":
         # NOTE: neighbor keys start from 0
         w = Delaunay.from_dataframe(
-            gdf.centroid, silence_warnings=True, use_index=True, **kwargs
+            gdf.centroid,
+            silence_warnings=True,
+            use_index=True,
+            ids=gdf[id_col],
+            **kwargs,
         )
     elif type == "relative_nhood":
         # NOTE: neighbor indices start from 0
