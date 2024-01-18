@@ -78,6 +78,7 @@ nav:
     - Spatial Grids: "user_guide/spatial_grids.ipynb"
     - Global Spatial Autocorrelation: "user_guide/global_spatial_autocorrelation.ipynb"
     - Local Spatial Autocorrelation: "user_guide/local_spatial_autocorrelation.ipynb"
+    - Cell Clustering: "user_guide/cell_clustering.ipynb"
     - Merging Segmentation Maps:
       - "user_guide/merging/index.ipynb"
       - Merging WSI-level Segmenation: "user_guide/merging/WSI_merge.ipynb"
