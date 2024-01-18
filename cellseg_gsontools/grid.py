@@ -119,6 +119,10 @@ def hexgrid_overlay(
     if gdf.empty or gdf is None:
         return
 
+    # drop invalid geometries if there are any after buffer
+    gdf.geometry = gdf.geometry.buffer(0)
+    gdf = gdf[gdf.is_valid]
+
     orig_crs = gdf.crs
 
     poly = shapely.force_2d(gdf.unary_union)
