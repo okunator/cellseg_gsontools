@@ -20,7 +20,7 @@ def _load(f):
 
 
 def cervix_tissue():
-    """A GeoDataframe containing the cervix tissue areas.
+    """A GeoDataframe containing cervical tissue areas.
 
     Examples:
         >>> from cellseg_gsontools.data import cervix_tissue
@@ -35,7 +35,7 @@ def cervix_tissue():
 
 
 def cervix_cells():
-    """A GeoDataframe containing the cells of the cervix tissue.
+    """A GeoDataframe containing cells of the cervical tissue.
 
     Examples:
         >>> from cellseg_gsontools.data import cervix_cells
@@ -50,7 +50,7 @@ def cervix_cells():
 
 
 def gland_cells():
-    """A GeoDataframe containing the cells of cervical gland tissue.
+    """A GeoDataframe containing cells of cervical gland tissue.
 
     Examples:
         >>> from cellseg_gsontools.data import gland_cells
@@ -72,7 +72,7 @@ def gland_tissue():
 
 
 def tumor_stroma_intreface_cells():
-    """A GeoDataframe containing the cells of the TS-interface.
+    """A GeoDataframe containing cells of a TS-interface.
 
     Examples:
         >>> from cellseg_gsontools.data import tumor_stroma_intreface_cells
@@ -83,7 +83,7 @@ def tumor_stroma_intreface_cells():
 
 
 def tumor_stroma_intreface_tissue():
-    """A GeoDataframe containing the tissues of the TS-interface.
+    """A GeoDataframe containing tissues of a TS-interface.
 
     Examples:
         >>> from cellseg_gsontools.data import tumor_stroma_intreface_tissue
