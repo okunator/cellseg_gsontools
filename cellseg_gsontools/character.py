@@ -296,20 +296,17 @@ def local_distances(
 
     # loop over the reduction methods
     for r in reductions:
-        for r in reductions:
-            columns = ["nhood_dists"]
-            new_col = f"{col_prefix}nhood_dists_{r}"
-            if area_col in gdf.columns:
-                columns.append(area_col)
-                new_col = f"{col_prefix}nhood_dists_{r}_area_weighted"
+        columns = ["nhood_dists"]
+        new_col = f"{col_prefix}nhood_dists_{r}"
+        if area_col in gdf.columns:
+            columns.append(area_col)
+            new_col = f"{col_prefix}nhood_dists_{r}_area_weighted"
 
-            func = partial(reduce, how=r)
-            gdf[new_col] = gdf_apply(
-                gdf, func, columns=columns, axis=1, parallel=parallel
-            )
+        func = partial(reduce, how=r)
+        gdf[new_col] = gdf_apply(gdf, func, columns=columns, axis=1, parallel=parallel)
 
     if rm_nhood_cols:
-        labs = ["nhood"]
+        labs = ["nhood", "nhood_dists"]
         if weight_by_area:
             labs.append(area_col)
         gdf = gdf.drop(labels=labs, axis=1)
