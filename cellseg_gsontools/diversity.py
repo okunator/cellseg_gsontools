@@ -267,6 +267,7 @@ def local_diversity(
     metrics: Tuple[str, ...] = ("simpson_index",),
     scheme: str = "FisherJenks",
     parallel: bool = True,
+    num_processes: int = -1,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -306,6 +307,9 @@ def local_diversity(
         parallel (bool):
             Flag whether to use parallel apply operations when computing the diversities.
             Defaults to True.
+        num_processes (int, default=-1):
+            The number of processes to use when parallel=True. If -1,
+            this will use all available cores.
         rm_nhood_cols (bool):
             Flag, whether to remove the extra neighborhood columns from the result gdf.
             Defaults to True.
@@ -361,7 +365,14 @@ def local_diversity(
 
     # Get the immediate node neighborhood
     func = partial(neighborhood, spatial_weights=spatial_weights)
-    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
+    gdf["nhood"] = gdf_apply(
+        gdf,
+        func,
+        columns=[id_col],
+        axis=1,
+        parallel=parallel,
+        num_processes=num_processes,
+    )
 
     if isinstance(val_col, str):
         val_col = (val_col,)
@@ -384,6 +395,7 @@ def local_diversity(
                 columns=["nhood"],
                 axis=1,
                 parallel=parallel,
+                num_processes=num_processes,
             )
 
         if ret_vals:
@@ -394,6 +406,7 @@ def local_diversity(
                 columns=["nhood"],
                 axis=1,
                 parallel=parallel,
+                num_processes=num_processes,
             )
 
         # Compute the diversity metrics for the neighborhood counts
@@ -406,6 +419,7 @@ def local_diversity(
                 DIVERSITY_LOOKUP[metric],
                 columns=[colname],
                 parallel=parallel,
+                num_processes=num_processes,
             )
 
         if rm_nhood_cols:

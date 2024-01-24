@@ -71,6 +71,7 @@ def local_character(
     reductions: Tuple[str, ...] = ("sum",),
     weight_by_area: bool = False,
     parallel: bool = True,
+    num_processes: int = -1,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -101,6 +102,9 @@ def local_character(
         parallel (bool):
             Flag whether to use parallel apply operations when computing the character.
             Defaults to True.
+        num_processes (int, default=-1):
+            The number of processes to use when parallel=True. If -1,
+            this will use all available cores.
         rm_nhood_cols (bool):
             Flag, whether to remove the extra neighborhood columns from the result gdf.
             Defaults to True.
@@ -144,7 +148,14 @@ def local_character(
 
     # Get the immediate node neighborhood
     func = partial(neighborhood, spatial_weights=spatial_weights)
-    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
+    gdf["nhood"] = gdf_apply(
+        gdf,
+        func,
+        columns=[id_col],
+        axis=1,
+        parallel=parallel,
+        num_processes=num_processes,
+    )
 
     # get areas
     area_col = None
@@ -152,7 +163,12 @@ def local_character(
         area_col = "nhood_areas"
         func = partial(nhood_vals, values=gdf.geometry.area)
         gdf[area_col] = gdf_apply(
-            gdf, func, columns=["nhood"], axis=1, parallel=parallel
+            gdf,
+            func,
+            columns=["nhood"],
+            axis=1,
+            parallel=parallel,
+            num_processes=num_processes,
         )
 
     if isinstance(val_col, str):
@@ -171,6 +187,7 @@ def local_character(
             columns=["nhood"],
             axis=1,
             parallel=parallel,
+            num_processes=num_processes,
         )
 
         # loop over the reduction methods
@@ -188,6 +205,7 @@ def local_character(
                 columns=columns,
                 axis=1,
                 parallel=parallel,
+                num_processes=num_processes,
             )
 
         if rm_nhood_cols:
@@ -210,6 +228,7 @@ def local_distances(
     weight_by_area: bool = False,
     invert: bool = False,
     parallel: bool = True,
+    num_processes: int = -1,
     rm_nhood_cols: bool = True,
     col_prefix: str = None,
     create_copy: bool = True,
@@ -239,6 +258,9 @@ def local_distances(
         parallel (bool):
             Flag whether to use parallel apply operations when computing the character.
             Defaults to True.
+        num_processes (int, default=-1):
+            The number of processes to use when parallel=True. If -1,
+            this will use all available cores.
         rm_nhood_cols (bool):
             Flag, whether to remove the extra neighborhood columns from the result gdf.
             Defaults to True.
@@ -276,20 +298,37 @@ def local_distances(
 
     # get the immediate node neighborhood
     func = partial(neighborhood, spatial_weights=spatial_weights)
-    gdf["nhood"] = gdf_apply(gdf, func, columns=[id_col], axis=1, parallel=parallel)
+    gdf["nhood"] = gdf_apply(
+        gdf,
+        func,
+        columns=[id_col],
+        axis=1,
+        parallel=parallel,
+        num_processes=num_processes,
+    )
 
     # get areas
     area_col = None
     if weight_by_area:
         func = partial(nhood_vals, values=gdf.geometry.area)
         gdf[area_col] = gdf_apply(
-            gdf, func, columns=["nhood"], axis=1, parallel=parallel
+            gdf,
+            func,
+            columns=["nhood"],
+            axis=1,
+            parallel=parallel,
+            num_processes=num_processes,
         )
 
     # get distances
     func = partial(nhood_dists, centroids=gdf.centroid, invert=invert)
     gdf["nhood_dists"] = gdf_apply(
-        gdf, func, columns=["nhood"], axis=1, parallel=parallel
+        gdf,
+        func,
+        columns=["nhood"],
+        axis=1,
+        parallel=parallel,
+        num_processes=num_processes,
     )
 
     col_prefix = "" if col_prefix is None else col_prefix
@@ -303,7 +342,14 @@ def local_distances(
             new_col = f"{col_prefix}nhood_dists_{r}_area_weighted"
 
         func = partial(reduce, how=r)
-        gdf[new_col] = gdf_apply(gdf, func, columns=columns, axis=1, parallel=parallel)
+        gdf[new_col] = gdf_apply(
+            gdf,
+            func,
+            columns=columns,
+            axis=1,
+            parallel=parallel,
+            num_processes=num_processes,
+        )
 
     if rm_nhood_cols:
         labs = ["nhood", "nhood_dists"]
