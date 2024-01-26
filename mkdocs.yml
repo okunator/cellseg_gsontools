@@ -79,6 +79,7 @@ nav:
     - Global Spatial Autocorrelation: "user_guide/global_spatial_autocorrelation.ipynb"
     - Local Spatial Autocorrelation: "user_guide/local_spatial_autocorrelation.ipynb"
     - Cell Clustering: "user_guide/cell_clustering.ipynb"
+    - Cell Regionalization: "user_guide/cell_regionalization.ipynb"
     - Merging Segmentation Maps:
       - "user_guide/merging/index.ipynb"
       - Merging WSI-level Segmenation: "user_guide/merging/WSI_merge.ipynb"
@@ -123,6 +124,13 @@ nav:
       - eccentricity: "reference/geometry/eccentricity_ref.md"
       - elongation: "reference/geometry/elongation_ref.md"
       - equivalent_rectangular_index: "reference/geometry/equivalent_rectangular_index_ref.md"
+    - Lines:
+      - medial_lines: "reference/lines/medial_lines_ref.md"
+      - voronoi_medial: "reference/lines/voronoi_medial_ref.md"
+      - perpendicular_lines: "reference/lines/perpendicular_lines_ref.md"
+      - perependicular_line: "reference/lines/perpendicular_line_ref.md"
+      - line_branches: "reference/lines/line_branches_ref.md"
+      - equal_interval_points: "reference/lines/equal_interval_points_ref.md"
     - Cell Neighbors:
       - neighborhood: "reference/cell_neighbors/neighborhood_ref.md"
       - nhood_vals: "reference/cell_neighbors/nhood_vals_ref.md"
