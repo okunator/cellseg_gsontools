@@ -24,17 +24,9 @@ libpysal = "4.9.2"
 mapclassify = "^2.5.0"
 pathos = "^0.3.1"
 numba = "^0.57.1"
-spatialpandas = "^0.4.9"
-dask-geopandas = "^0.3.1"
-dask = "^2023.12.1"
 h3 = "^3.7.6"
-geojson = { version = "^2.5.0", optional = true }
-esda = { version = "^2.4.3", optional = true }
-geomstats = { version = "^2.5.0", optional = true }
-pyarrow = { version = "^14.0.0", optional = true }
-
-[tool.poetry.extras]
-all = ["geojson", "esda", "geomstats", "pyarrow"]
+pyarrow = "^14.0.0"
+geojson = "^2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 scriv = { extras = ["toml"], version = "^0.16.0" }
