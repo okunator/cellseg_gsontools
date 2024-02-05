@@ -4,137 +4,7 @@ from typing import Union
 import geopandas as gpd
 import numpy as np
 
-try:
-    import dask_geopandas
-
-    _has_dask_geopandas = True
-except ImportError:
-    _has_dask_geopandas = False
-
-
-try:
-    from spatialpandas import GeoDataFrame
-    from spatialpandas import sjoin as sp_sjoin
-    from spatialpandas.dask import DaskGeoDataFrame
-
-    _has_spatialpandas = True
-except ImportError:
-    _has_spatialpandas = False
-
-try:
-    import dask.distributed  # noqa
-
-    _has_dask = True
-except ImportError:
-    _has_dask = False
-
-
-__all__ = ["get_interface_zones", "get_objs", "get_objs_sp"]
-
-
-def get_objs_sp(
-    area: GeoDataFrame,
-    objects: GeoDataFrame,
-    silence_warnings: bool = False,
-    predicate: str = "intersects",
-) -> GeoDataFrame:
-    """Get objects within the given area.
-
-    Note:
-        This function is a wrapper around the spatialpandas sjoin function.
-    Note:
-        Optionally parallel execution with Dask.
-
-    Parameters:
-        area (gpd.GeoDataFrame):
-            The area of interest.
-        objects (gpd.GeoDataFrame):
-            The objects to filter.
-        silence_warnings (bool):
-            Whether to silence warnings.
-        predicate (str):
-            The spatial predicate to use for the spatial join. One of "intersects"
-
-    Returns:
-        spatialpandas.GeoDataFrame:
-            The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
-    """
-    if not _has_spatialpandas:
-        raise ImportError(
-            "spatialpandas not installed. Please install spatialpandas to use this "
-            "function. `pip install spatialpandas`"
-        )
-
-    if isinstance(objects, DaskGeoDataFrame) and not _has_dask:
-        raise ImportError(
-            "Dask not installed. Please install Dask to use this function in parallel. "
-            '`python -m pip install "dask[distributed]"`'
-        )
-
-    # run spatialpandas sjoin
-    objs_within = sp_sjoin(objects, area, how="inner", op=predicate)
-
-    # if dask, compute
-    if isinstance(objects, DaskGeoDataFrame):
-        objs_within = objs_within.compute()
-
-    if len(objs_within.index) == 0 and not silence_warnings:
-        warnings.warn(
-            """`get_objs_sp` resulted in an empty GeoDataFrame. No objects were
-            found within the area. Returning None from `get_objs_sp`.,
-            """,
-            RuntimeWarning,
-        )
-        return
-
-    return objs_within
-
-
-def get_objs_dgp(
-    area: gpd.GeoDataFrame,
-    objects: dask_geopandas.core.GeoDataFrame,
-    silence_warnings: bool = False,
-    predicate: str = "intersects",
-) -> GeoDataFrame:
-    """Get objects within the given area.
-
-    Note:
-        This function is a wrapper around the dask_geopandas sjoin function.
-
-    Parameters:
-        area (gpd.GeoDataFrame):
-            The area of interest.
-        objects (dask_geopandas.core.GeoDataFrame):
-            The objects to filter.
-        silence_warnings (bool):
-            Whether to silence warnings.
-        predicate (str):
-            The spatial predicate to use for the spatial join. One of "intersects"
-
-    Returns:
-        gpd.GeoDataFrame:
-            The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
-    """
-    if not _has_dask_geopandas:
-        raise ImportError(
-            "dask-geopandas not installed. Please install spatialpandas to use this "
-            "function. `pip install dask-geopandas`"
-        )
-
-    # run spatialpandas sjoin
-    objs_within = dask_geopandas.sjoin(objects, area, how="inner", predicate=predicate)
-    objs_within: gpd.GeoDataFrame = objs_within.compute()
-
-    if len(objs_within.index) == 0 and not silence_warnings:
-        warnings.warn(
-            """`get_objs_sp` resulted in an empty GeoDataFrame. No objects were
-            found within the area. Returning None from `get_objs_sp`.,
-            """,
-            RuntimeWarning,
-        )
-        return
-
-    return objs_within
+__all__ = ["get_interface_zones", "get_objs"]
 
 
 def get_objs(
@@ -216,3 +86,131 @@ def get_interface_zones(
             inter = inter.overlay(buffer_area, how="difference")
 
     return inter
+
+
+# try:
+#     import dask_geopandas
+
+#     _has_dask_geopandas = True
+# except ImportError:
+#     _has_dask_geopandas = False
+
+
+# try:
+#     from spatialpandas import GeoDataFrame
+#     from spatialpandas import sjoin as sp_sjoin
+#     from spatialpandas.dask import DaskGeoDataFrame
+
+#     _has_spatialpandas = True
+# except ImportError:
+#     _has_spatialpandas = False
+
+# try:
+#     import dask.distributed  # noqa
+
+#     _has_dask = True
+# except ImportError:
+#     _has_dask = False
+# def get_objs_sp(
+#     area: GeoDataFrame,
+#     objects: GeoDataFrame,
+#     silence_warnings: bool = False,
+#     predicate: str = "intersects",
+# ) -> GeoDataFrame:
+#     """Get objects within the given area.
+
+#     Note:
+#         This function is a wrapper around the spatialpandas sjoin function.
+#     Note:
+#         Optionally parallel execution with Dask.
+
+#     Parameters:
+#         area (gpd.GeoDataFrame):
+#             The area of interest.
+#         objects (gpd.GeoDataFrame):
+#             The objects to filter.
+#         silence_warnings (bool):
+#             Whether to silence warnings.
+#         predicate (str):
+#             The spatial predicate to use for the spatial join. One of "intersects"
+
+#     Returns:
+#         spatialpandas.GeoDataFrame:
+#             The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
+#     """
+#     if not _has_spatialpandas:
+#         raise ImportError(
+#             "spatialpandas not installed. Please install spatialpandas to use this "
+#             "function. `pip install spatialpandas`"
+#         )
+
+#     if isinstance(objects, DaskGeoDataFrame) and not _has_dask:
+#         raise ImportError(
+#             "Dask not installed. Please install Dask to use this function in parallel. "
+#             '`python -m pip install "dask[distributed]"`'
+#         )
+
+#     # run spatialpandas sjoin
+#     objs_within = sp_sjoin(objects, area, how="inner", op=predicate)
+
+#     # if dask, compute
+#     if isinstance(objects, DaskGeoDataFrame):
+#         objs_within = objs_within.compute()
+
+#     if len(objs_within.index) == 0 and not silence_warnings:
+#         warnings.warn(
+#             """`get_objs_sp` resulted in an empty GeoDataFrame. No objects were
+#             found within the area. Returning None from `get_objs_sp`.,
+#             """,
+#             RuntimeWarning,
+#         )
+#         return
+
+#     return objs_within
+
+
+# def get_objs_dgp(
+#     area: gpd.GeoDataFrame,
+#     objects: dask_geopandas.core.GeoDataFrame,
+#     silence_warnings: bool = False,
+#     predicate: str = "intersects",
+# ) -> GeoDataFrame:
+#     """Get objects within the given area.
+
+#     Note:
+#         This function is a wrapper around the dask_geopandas sjoin function.
+
+#     Parameters:
+#         area (gpd.GeoDataFrame):
+#             The area of interest.
+#         objects (dask_geopandas.core.GeoDataFrame):
+#             The objects to filter.
+#         silence_warnings (bool):
+#             Whether to silence warnings.
+#         predicate (str):
+#             The spatial predicate to use for the spatial join. One of "intersects"
+
+#     Returns:
+#         gpd.GeoDataFrame:
+#             The objects within the given area. NOTE: This is a spatialpandas GeoDataFrame.
+#     """
+#     if not _has_dask_geopandas:
+#         raise ImportError(
+#             "dask-geopandas not installed. Please install spatialpandas to use this "
+#             "function. `pip install dask-geopandas`"
+#         )
+
+#     # run spatialpandas sjoin
+#     objs_within = dask_geopandas.sjoin(objects, area, how="inner", predicate=predicate)
+#     objs_within: gpd.GeoDataFrame = objs_within.compute()
+
+#     if len(objs_within.index) == 0 and not silence_warnings:
+#         warnings.warn(
+#             """`get_objs_sp` resulted in an empty GeoDataFrame. No objects were
+#             found within the area. Returning None from `get_objs_sp`.,
+#             """,
+#             RuntimeWarning,
+#         )
+#         return
+
+#     return objs_within
