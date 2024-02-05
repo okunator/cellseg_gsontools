@@ -30,10 +30,15 @@ Checkout the [documentation](https://okunator.github.io/cellseg_gsontools/) for 
 pip install cellseg-gsontools
 ```
 
-To add some extra capabilities, like, support for arrow files or abdscan clustering use:
+## Citation
 
-``` shell
-pip install cellseg-gsontools[all]
+```bibtex
+@misc{cellseg_gsontools2023,
+    title={{cellseg_gsontools}: Tools for feature extraction in cell and tissue segmentation maps.},
+    author={Oskari Lehtonen},
+    howpublished = {\url{https://github.com/okunator/cellseg_gsontools}},
+    year={2023}
+}
 ```
 
 ## Contribute
