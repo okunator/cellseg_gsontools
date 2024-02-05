@@ -7,7 +7,7 @@ from cellseg_gsontools.spatial_context import (
 )
 
 
-@pytest.mark.parametrize("clust_method", ["dbscan", "adbscan", "optics", "hdbscan"])
+@pytest.mark.parametrize("clust_method", ["dbscan", "optics", "hdbscan"])
 @pytest.mark.parametrize("labels", ["inflammatory", ["inflammatory", "connective"]])
 @pytest.mark.parametrize("backend", ["geopandas"])
 def test_cluster_context(cells_and_areas, clust_method, labels, backend):

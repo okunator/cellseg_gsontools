@@ -260,18 +260,18 @@ def perpendicular_lines(
 
     seg_len = major_axis_len(polygon)
     func = partial(perpendicular_line, seg_length=seg_len)
-    perp_lines = gdf_apply(lines, func, columns=["geometry"], parallel=False)
+    perp_lines = gdf_apply(lines, func, columns=["geometry"])
 
     # clip the perpendicular lines to the polygon
     perp_lines = gpd.GeoDataFrame(perp_lines, columns=["geometry"]).clip(polygon)
 
     # explode perpendicular lines & take only the ones that intersect w/ medial lines
-    perp_lines = perp_lines.explode().reset_index(drop=True)
+    perp_lines = perp_lines.explode(index_parts=False).reset_index(drop=True)
 
     # drop the perpendicular lines that are too short or too long
     # since these are likely artefacts
     perp_lines["len"] = perp_lines.geometry.length
     low, high = perp_lines.len.quantile([0.05, 0.85])
-    perp_lines = perp_lines.query("{low}<len<{high}".format(low=low, high=high))
+    perp_lines = perp_lines.query(f"{low}<len<{high}")
 
     return perp_lines

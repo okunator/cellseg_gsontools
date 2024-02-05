@@ -514,7 +514,7 @@ SHAPE_LOOKUP = {
     "solidity": solidity,
     "elongation": elongation,
     "eccentricity": eccentricity,
-    "fractal_dimension": eccentricity,
+    "fractal_dimension": fractal_dimension,
     "sphericity": sphericity,
     "shape_index": shape_index,
     "rectangularity": rectangularity,
