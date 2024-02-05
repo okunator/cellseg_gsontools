@@ -13,11 +13,7 @@ from cellseg_gsontools.graphs import fit_graph
 from cellseg_gsontools.grid import fit_spatial_grid
 from cellseg_gsontools.links import weights2gdf
 from cellseg_gsontools.plotting import plot_all
-from cellseg_gsontools.spatial_context.backend import (
-    _SpatialContextDGP,
-    _SpatialContextGP,
-    _SpatialContextSP,
-)
+from cellseg_gsontools.spatial_context.backend import _SpatialContextGP
 from cellseg_gsontools.utils import set_uid
 
 __all__ = ["WithinContext"]
@@ -124,12 +120,12 @@ class WithinContext:
         backend: str = "geopandas",
     ) -> None:
         self.backend_name = backend
-        if backend == "spatialpandas":
-            self.backend = _SpatialContextSP()
-        elif backend == "geopandas":
+        if backend == "geopandas":
             self.backend = _SpatialContextGP()
-        elif backend == "dask-geopandas":
-            self.backend = _SpatialContextDGP()
+        # elif backend == "spatialpandas":
+        #     self.backend = _SpatialContextSP()
+        # elif backend == "dask-geopandas":
+        #     self.backend = _SpatialContextDGP()
         else:
             raise ValueError(
                 f"Unknown backend: {backend}. "
