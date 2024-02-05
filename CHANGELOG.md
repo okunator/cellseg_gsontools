@@ -1,4 +1,19 @@
 
+<a id='changelog-0.1.4'></a>
+# 0.1.4 — 2024-02-05
+
+## Docs
+
+- Add cell clustering example
+- Add cell regionalization example
+- Add medial line extraction example
+
+## Features
+
+- Add medial line extraction funtion `cellseg_gsontools.geometry.medial_lines`. Extracts the medial lines using voronoi diagram.
+- Add perpendicular line extraction funtion `cellseg_gsontools.geometry.perpendicular_lines`. Extracts the perpendicular lines from a given line gdf.
+- Add `num_processes` arguments in `local_character`, `local_distances`, `local_diversity` and `shape_metric` functions.
+
 <a id='changelog-0.1.3'></a>
 # 0.1.3 — 2023-12-22
 
