@@ -3,6 +3,8 @@
 # cellseg_gsontools
 
 [![Github Test](https://img.shields.io/github/actions/workflow/status/okunator/cellseg_gsontools/tests.yml?label=tests)](https://github.com/okunator/cellseg_models.pytorch/actions/workflows/tests.yml) [![Generic badge](https://img.shields.io/github/license/okunator/cellseg_gsontools)](https://github.com/okunator/cellseg_gsontools/blob/master/LICENSE) [![Python - Version](https://img.shields.io/pypi/pyversions/cellseg_gsontools)](https://www.python.org/) [![Package - Version](https://img.shields.io/pypi/v/cellseg_gsontools)](https://pypi.org/project/cellseg-gsontools/)
+[![DOI](https://zenodo.org/badge/554131853.svg)](https://zenodo.org/doi/10.5281/zenodo.10617987)
+
 
 
 Tools for feature extraction in cell and tissue segmentation maps.
@@ -37,6 +39,7 @@ pip install cellseg-gsontools
     title={{cellseg_gsontools}: Tools for feature extraction in cell and tissue segmentation maps.},
     author={Oskari Lehtonen},
     howpublished = {\url{https://github.com/okunator/cellseg_gsontools}},
+    doi={https://zenodo.org/doi/10.5281/zenodo.10617987},
     year={2023}
 }
 ```
