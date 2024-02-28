@@ -64,7 +64,7 @@ def gdf_to_file(
     # add classification col (QuPath)
     if "classification" not in gdf.columns:
         gdf["classification"] = gdf_apply(
-            gdf, _add_qupath_classification, col=None, axis=1
+            gdf, _add_qupath_classification, columns=None, axis=1
         )
 
     if format == ".feather":

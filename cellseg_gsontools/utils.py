@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Sequence, Tuple, Union
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import shapely
 from pandas.api.types import (
@@ -89,9 +90,13 @@ def _set_gdf(gdf):
 
 def _get_class(property_dict: Dict) -> str:
     """Return the class of the gdf."""
-    if "classification" in property_dict.keys():
-        return property_dict["classification"]["name"]
-    return property_dict["name"]
+    try:
+        if "classification" in property_dict.keys():
+            return property_dict["classification"]["name"]
+        return property_dict["name"]
+    except Exception as e:
+        warnings.warn(f"Could not set a class to annotation due to a Error: {e}.")
+        return
 
 
 def _get_prob(property_dict: Dict) -> str:
@@ -168,7 +173,7 @@ def read_gdf(
     if "class_name" not in df.columns:
         try:
             df["class_name"] = gdf_apply(df, _get_class, columns=[property_col])
-        except KeyError:
+        except Exception:
             if not silence_warnigns:
                 warnings.warn(
                     f"Could not find 'name' key in {property_col} column."
@@ -178,7 +183,7 @@ def read_gdf(
     if "class_probs" not in df.columns:
         try:
             df["class_probs"] = gdf_apply(df, _get_prob, columns=[property_col])
-        except KeyError:
+        except Exception:
             if not silence_warnigns:
                 warnings.warn(
                     f"Could not find 'probabilities' key in {property_col} column. "
@@ -366,3 +371,53 @@ def get_holes(poly: Polygon, to_lonlat: bool = True) -> Sequence[Sequence[float]
         holes.append(list(zip(x, y)))
 
     return holes
+
+
+def gdf_slide_query(
+    gdf: gpd.GeoDataFrame,
+    slide_path: Union[Path, str],
+    width: int = None,
+    height: int = None,
+    level: int = 0,
+) -> np.ndarray:
+    """Queries a slide based on the total bound coordinates of the input gdf.
+
+    Parameters:
+        gdf (gpd.GeoDataFrame):
+            GeoDataFrame with a "class_name" column.
+        slide_path (Union[Path, str]):
+            Path to the slide file.
+        width (int):
+            Width of the query area. If None, the width will be calculated from the input gdf.
+        height (int):
+            Height of the query area. If None, the height will be calculated from the input gdf.
+        level (int):
+            Level of the slide to query.
+
+    Returns:
+        np.ndarray:
+            Image of the query area.
+    """
+    try:
+        from histoprep import SlideReader
+    except ImportError:
+        raise ImportError(
+            "The histoprep package is required for this function. "
+            "Please install it via `pip install histoprep`. Requires openslide"
+        )
+    reader = SlideReader(Path(slide_path))
+
+    # get slide bounds since there is possible offset
+    offset_x, offset_y, _, _ = reader.data_bounds
+    xmin, ymin, xmax, ymax = gdf.total_bounds
+    xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
+
+    if width is None or height is None:
+        width = xmax - xmin
+        height = ymax - ymin
+
+    im = reader.read_region(
+        (xmin + offset_x, ymin + offset_y, width, height), level=level
+    )
+
+    return im

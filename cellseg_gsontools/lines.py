@@ -161,8 +161,6 @@ def line_branches(edges: np.ndarray) -> np.ndarray:
     while stack:
         cur, prev, path = stack.pop()
 
-        cur, prev, path, w.neighbors[cur]
-
         if len(w.neighbors[cur]) == 1 or (prev and cur in branch_points):
             paths.append(path)
             continue
