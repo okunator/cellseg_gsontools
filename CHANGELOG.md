@@ -1,4 +1,13 @@
 
+<a id='changelog-0.1.5'></a>
+# 0.1.5 — 2024-02-28
+
+## Features
+
+- Add support for querying a WSI with bbox coords.
+- Add support for rasterizing a gdf into a instance or semantic segmentation mask
+- add support for intensity features
+
 <a id='changelog-0.1.4'></a>
 # 0.1.4 — 2024-02-05
 
