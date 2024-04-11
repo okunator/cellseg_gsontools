@@ -1,3 +1,8 @@
+<a id='changelog-0.1.6'></a>
+# 0.1.6 — 2024-04-11
+
+## Fixes
+Fix a bug `gdf_to_file`. Failed when qupath data fields were added to gdf.
 
 <a id='changelog-0.1.5'></a>
 # 0.1.5 — 2024-02-28
