@@ -85,8 +85,8 @@ class CellMerger(BaseGSONMerger):
                 Filename for the output file. If None, the merged gdf is saved to the
                 class attribute `self.annots` only.
             format (str):
-                The format of the output geojson file. One of: "feather", "parquet",
-                "geojson", None. This is ignored if `out_fn` is None.
+                The format of the output geojson file. One of: ".feather", ".parquet",
+                ".geojson", None. This is ignored if `out_fn` is None.
             verbose (bool):
                 Whether to show a progress bar or not.
 

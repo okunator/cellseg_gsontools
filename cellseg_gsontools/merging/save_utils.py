@@ -4,7 +4,7 @@ from typing import List, Tuple, Union
 
 import geopandas as gpd
 
-from ..apply import gdf_apply
+from cellseg_gsontools.apply import gdf_apply
 
 __all__ = [
     "check_format",
@@ -14,10 +14,9 @@ __all__ = [
 ]
 
 
-def _add_qupath_classification(row: gpd.GeoSeries) -> gpd.GeoSeries:
+def _add_qupath_classification(class_name: str) -> gpd.GeoSeries:
     """Add QuPath properties to a row of a gdf."""
-    c = row["class_name"]
-    props = {"name": c, "color": None}
+    props = {"name": class_name, "color": None}
     return props
 
 
@@ -64,7 +63,7 @@ def gdf_to_file(
     # add classification col (QuPath)
     if "classification" not in gdf.columns:
         gdf["classification"] = gdf_apply(
-            gdf, _add_qupath_classification, columns=None, axis=1
+            gdf, _add_qupath_classification, axis=1, columns=["class_name"]
         )
 
     if format == ".feather":
