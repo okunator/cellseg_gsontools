@@ -152,6 +152,10 @@ nav:
       - dist_thresh_weights_sequential: "reference/graph/dist_thresh_weights_sequential_ref.md"
     - Clustering:
       - cluster_points: "reference/clustering/cluster_points_ref.md"
+      - cluster_cells: "reference/clustering/cluster_cells_ref.md"
+      - find_lisa_clusters: "reference/clustering/find_lisa_clusters_ref.md"
+      - connected_components: "reference/clustering/connected_components_ref.md"
+      - label_connected_components: "reference/clustering/label_connected_components_ref.md"
     - Links:
       - weights2gdf: "reference/links/weights2gdf_ref.md"
       - link_counts: "reference/links/link_counts_ref.md"
