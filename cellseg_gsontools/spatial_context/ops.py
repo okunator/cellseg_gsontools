@@ -83,7 +83,7 @@ def get_interface_zones(
     # the roi from the interface 'sheet'
     if not inter.empty:
         if areas.covers(inter.geometry.loc[0]).any():  # len(inter) == 1
-            inter = inter.overlay(buffer_area, how="difference")
+            inter = inter.overlay(buffer_area, how="difference", keep_geom_type=True)
 
     return inter
 
