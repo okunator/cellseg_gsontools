@@ -150,6 +150,7 @@ def find_lisa_clusters(
     dist_thresh: int = 100,
     permutations: int = 100,
     seed: int = 42,
+    spatial_weights: W = None,
 ) -> Tuple[List[int], W]:
     """Calculate LISA clusters of objects with `class_name=label`.
 
@@ -181,6 +182,9 @@ def find_lisa_clusters(
             The number of permutations to use in the Moran_Local analysis.
         seed (int):
             The random seed to use in the Moran_Local analysis.
+        spatial_weights (W):
+            The spatial weights object to use in the analysis.
+            If None, the spatial weights are calculated.
 
     Returns:
         labels (List[int]):
@@ -203,16 +207,19 @@ def find_lisa_clusters(
             "Install it with: pip install esda"
         )
 
-    # Fit the distband
-    w = fit_graph(
-        gdf,
-        type=graph_type,
-        id_col="uid",
-        thresh=dist_thresh,
-    )
+    if spatial_weights is not None:
+        w = spatial_weights
+    else:
+        # Fit the distband
+        w = fit_graph(
+            gdf,
+            type=graph_type,
+            id_col="uid",
+            thresh=dist_thresh,
+        )
 
-    # Row-standardized weights
-    w.transform = "R"
+        # Row-standardized weights
+        w.transform = "R"
 
     # Get the neihgboring nodes of the graph
     func = partial(neighborhood, spatial_weights=w)
@@ -363,6 +370,7 @@ def cluster_cells(
     dist_thresh: int = 100,
     min_size: int = 10,
     seed: int = 42,
+    spatial_weights: W = None,
 ) -> gpd.GeoDataFrame:
     """Cluster the cells of the given type.
 
@@ -396,6 +404,9 @@ def cluster_cells(
             The minimum size of the cluster to assign a label.
         seed (int):
             The random seed to use in the Moran_Local analysis.
+        spatial_weights (W):
+            The spatial weights object to use in the analysis.
+            If None, the spatial weights are calculated.
 
     Returns:
         clustered_cells (gpd.GeoDataFrame):
@@ -422,6 +433,7 @@ def cluster_cells(
         graph_type=graph_type,
         dist_thresh=dist_thresh,
         seed=seed,
+        spatial_weights=spatial_weights,
     )
     cells["lisa_label"] = lisa_labels
 
