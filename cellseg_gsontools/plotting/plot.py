@@ -2,7 +2,6 @@ from typing import Any, Dict, List, Tuple
 
 import geopandas as gpd
 from matplotlib import pyplot as plt
-from matplotlib.cm import get_cmap
 
 __all__ = ["plot_all", "plot_gdf"]
 
@@ -20,7 +19,6 @@ def plot_gdf(
     ax: plt.Axes = None,
     cmap: str = None,
     bin_legends: List[str] = None,
-    n_bins: int = None,
     show_legend: bool = True,
     loc: str = "upper right",
     figsize: tuple = (10, 10),
@@ -39,8 +37,6 @@ def plot_gdf(
             The colormap to use, by default None.
         bin_legends (List[str]):
             The bins to use, by default None.
-        n_bins (int):
-            The number of bins to use, by default None.
         show_legend (bool):
             Whether to show the legend, by default True.
         loc (str):
@@ -54,9 +50,6 @@ def plot_gdf(
         plt.Axes:
             The axes used for plotting.
     """
-    if cmap is not None:
-        cmap = get_cmap(cmap, n_bins)
-
     ax = gdf.plot(
         ax=ax,
         column=col,
@@ -89,7 +82,6 @@ def plot_all(
     figsize: Tuple[int, int] = (12, 12),
     grid_cmap: str = None,
     grid_col: str = None,
-    grid_n_bins: int = None,
     edge_kws: Dict[str, Any] = None,
     **kwargs,
 ) -> plt.Axes:
@@ -186,19 +178,12 @@ def plot_all(
             ax.add_artist(leg3)
 
     if grid_gdf is not None:
-        cmap = None
-        if color is not None or grid_cmap is not None:
-            if grid_n_bins is not None:
-                cmap = get_cmap(grid_cmap, grid_n_bins)
-            else:
-                cmap = get_cmap(grid_cmap)
-
         grid_gdf.geometry = grid_gdf.geometry.boundary
         ax = grid_gdf.plot(
             ax=ax,
             color=color,
             alpha=0.7,
-            cmap=cmap,
+            cmap=grid_cmap,
             column=grid_col,
             categorical=True,
             legend=show_legends,
