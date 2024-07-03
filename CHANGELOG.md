@@ -1,8 +1,19 @@
+
+<a id='changelog-0.1.7'></a>
+# 0.1.7 — 2024-07-03
+
+## Chore
+- Update geopandas version ^1.0.0
+
+## Features
+
+- Add a new methods for clustering: `cluster_cells`, `find_lisa_clusters`, `connected_components` and `label_connected_components`. The `cluster_cells` works as a polished runner function to cluster spatially the cells of interest with local moran lisa analysis.
 <a id='changelog-0.1.6'></a>
 # 0.1.6 — 2024-04-11
 
 ## Fixes
-Fix a bug `gdf_to_file`. Failed when qupath data fields were added to gdf.
+- Fix a bug `gdf_to_file`. Failed when qupath data fields were added to gdf.
+- Remove `matplotlib.cm.get_cmap` function from source code. It was not used.
 
 <a id='changelog-0.1.5'></a>
 # 0.1.5 — 2024-02-28

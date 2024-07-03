@@ -26,6 +26,8 @@ Checkout the [documentation](https://okunator.github.io/cellseg_gsontools/) for 
 
 **NOTE**: The library is synergetic with the [cellseg_models.pytorch](https://github.com/okunator/cellseg_models.pytorch) segmentation library which enables you to segment your WSI into `GeoJSON` format.
 
+**Another NOTE**: The library expects that the cell type labels are in a field named `class_name` in your `geojson`. If not, you should rename that field to `class_name`.
+
 ## Installation
 
 ``` shell
