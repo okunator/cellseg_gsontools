@@ -1,4 +1,10 @@
 
+<a id='changelog-0.1.8'></a>
+# 0.1.8 — 2024-08-05
+
+## Fixes
+- Fix a bug in `read_gdf` method when the column values are stringified.
+
 <a id='changelog-0.1.7'></a>
 # 0.1.7 — 2024-07-03
 
