@@ -1,3 +1,4 @@
+import ast
 import warnings
 from pathlib import Path
 from typing import Dict, Sequence, Tuple, Union
@@ -91,6 +92,9 @@ def _set_gdf(gdf):
 def _get_class(property_dict: Dict) -> str:
     """Return the class of the gdf."""
     try:
+        if isinstance(property_dict, str):
+            property_dict = ast.literal_eval(property_dict.replace("null", "None"))
+
         if "classification" in property_dict.keys():
             return property_dict["classification"]["name"]
         return property_dict["name"]
